@@ -111,6 +111,12 @@ def _build_locked(root, output):
         target = stage/'releases'/release
         target.mkdir(parents=True)
         shutil.move(stage/'assets', target/'assets')
+        # Route shells stay at stable URLs; fetched chapters belong to the release.
+        # Otherwise a browser can combine a newly loaded module with cached old prose.
+        for chapter in (stage/'wiki').rglob('content.html'):
+            destination = target/'wiki'/chapter.relative_to(stage/'wiki')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(chapter, destination)
         (stage/'.nojekyll').touch()
         (stage/'site-manifest.json').write_bytes(encoded({'schemaVersion':1,'release':release,
             'projects':{slug:lock['projects'][slug] for slug in projects}}))

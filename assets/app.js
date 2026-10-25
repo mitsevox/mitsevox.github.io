@@ -23,7 +23,9 @@ function route(url){
   return project?{project}:null;
 }
 function template(name){
-  if(!templates.has(name))templates.set(name,fetch(name.startsWith('/')?name:'/assets/'+name+'.html').then(response=>{
+  // Keep chapter HTML in the same immutable release as its scripts and styles.
+  const url=name.startsWith('/wiki/')?new URL('../'+name.slice(1),import.meta.url).href:name.startsWith('/')?name:'/assets/'+name+'.html';
+  if(!templates.has(name))templates.set(name,fetch(url).then(response=>{
     if(!response.ok)throw Error('Layout unavailable');return response.text();
   }).catch(error=>{templates.delete(name);throw error;}));
   return templates.get(name);
