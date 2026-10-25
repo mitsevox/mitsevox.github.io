@@ -25,7 +25,7 @@ NFL Street 2 uses an authenticated, immutable package selected by `data/reports.
 
 MVP Baseball 2005 and Tiger Woods PGA Tour 2004 use synthetic layout fixtures. Their counts, file/function maps, timelines, contributor rankings, and revision strings are illustrative, not project measurements. Visual sample badges were removed during design iteration; these fixtures remain synthetic and must not be published as measured progress. Sample contributors do not link to real accounts or request avatars.
 
-For a new game, give its agent the [integration handoff](docs/reporting/onboarding.md) and both repository checkouts. It specifies producer and website changes, current NFL-specific assumptions, commands and completion evidence. The starter archive includes a standalone copy and prompt.
+For a new game, give its agent the [integration handoff](docs/reporting/onboarding.md) and both repository checkouts. It provides a reusable repository/CI structure, producer/consumer contract, module policy and completion checklist. The starter archive includes a standalone copy and prompt.
 
 The UI is approved. The [NFL adapter](docs/reporting/nflstreet2.md) implements authenticated ingestion, package validation, modular configuration and static assembly. The [shared architecture](docs/reporting/README.md) distinguishes this implementation from the remaining multi-game work.
 

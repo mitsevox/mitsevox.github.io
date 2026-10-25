@@ -33,13 +33,13 @@ game-slug/
   scratch/                 # ignored experiments
 ```
 
-File names above reflect NFL's pattern; their formats must be defined by the new project's tools. Creating an empty `units.json` does not make NFL's builder work on a different game. Optional contributor ledgers and history checkpoints belong in target configuration when the project's policy enables them.
+Use this layout for a new repository. In an existing repository, retain established paths and map these responsibilities onto them. Define and validate the formats of target configuration, accepted placements, comparisons and evidence. Optional contributor ledgers and history checkpoints belong alongside target configuration.
 
 ## Naming rules
 
 - **Original names:** preserve spelling and case when target evidence supports them. Keep the evidence locator.
 - **Descriptive names:** make them readable, but mark them inferred rather than claiming the original name was recovered.
-- **Unknown code/data:** retain stable neutral address labels. NFL uses `fn_XXXXXXXX` and `lbl_XXXXXXXX` with uppercase hexadecimal digits; these receive no named-function credit.
+- **Unknown code/data:** retain stable neutral address labels. Use a documented form such as `fn_XXXXXXXX` and `lbl_XXXXXXXX` with uppercase hexadecimal digits; these receive no named-function credit.
 - **Files:** use recovered source paths when established. A descriptive filename can count as named while its original boundaries remain provisional.
 - **Tools/docs:** use consistent repository conventions; Python tools commonly use `snake_case.py`, handbook pages use `kebab-case.md`.
 - **Site assets:** use stable project slugs, for example `assets/covers/game-slug.webp`. Store display names separately from paths.
@@ -48,7 +48,7 @@ Do not invent a source-file split merely to produce a pretty map or increase fil
 
 ## Source and partial reconstruction
 
-Useful incomplete functions stay in normal source files. Register their measured ranges separately. In NFL, an existing linked file can keep draft bodies behind the fixed `DECOMP_COMPARE` guard; promotion changes accepted placements and removes the guard, not the file location.
+Useful incomplete functions stay in normal source files. Register their measured ranges separately. When accepted and draft bodies coexist, select draft bodies through a documented comparison configuration or guard. Promotion updates accepted placement and removes obsolete selection metadata while keeping the source in place.
 
 Keep source comments about intent, invariants and non-obvious relationships. Matching scores, compiler experiments, agent notes and review history belong in metadata or PR records. Unsupported field meanings stay unresolved; unaccessed regions stay opaque.
 
@@ -60,7 +60,7 @@ Do not copy absolute paths from another contributor's machine into shared config
 
 ## Evidence format
 
-NFL uses one claim per TSV row:
+A simple evidence ledger can use one claim per TSV row:
 
 ```text
 kind  start  end  subject  origin  start_boundary  end_boundary  evidence
@@ -68,4 +68,4 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 
 The separators are tabs. Addresses are hexadecimal and end-exclusive. Use `-` where unknown or inapplicable. Origins distinguish `target`, `signature`, `related` and `inferred`; boundaries independently distinguish `exact`, `provisional`, `open` and no claim. Use separate rows for a name, function extent, field layout and source-unit boundary—one claim must not silently prove another.
 
-The [NFL evidence specification](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md) defines the full vocabulary. Adopt its schema intentionally and provide validators before relying on it in another repository.
+The project’s `config/README.md` defines the vocabulary, allowed claim types and validation rules. Version that schema and provide a validator before CI relies on it.

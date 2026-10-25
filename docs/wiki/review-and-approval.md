@@ -14,7 +14,7 @@ Review useful partial source for fidelity, evidence and comparison integrity. A 
 
 ## Records tied to a revision
 
-NFL posts the two passes as separate PR discussion comments, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.
+Use two separate PR discussion comments for the reconstruction review passes, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.
 
 ```text
 Revision: FULL_COMMIT_SHA
@@ -48,7 +48,7 @@ When batching contributions, preserve original PRs, author revisions and review 
 
 ## Owner clearance
 
-Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. NFL's current format is:
+Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. Use a machine-readable clearance format such as:
 
 ```text
 <!-- owner-review-clearance -->
@@ -59,10 +59,10 @@ Hostile: https://github.com/OWNER/REPO/pull/NUMBER#issuecomment-ID
 
 The record links must be distinct comments on the same PR, identify the current head and contain passing verdicts. A new commit makes old clearance stale. The check verifies record identity and formatting; it cannot prove reviewer independence or quality of reasoning.
 
-Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. Only the owner performs the merge under the NFL model.
+Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. The repository documents who may perform the merge and any explicit delegation. Agents follow the authorization given for the task.
 
 ## New-project bootstrap
 
 Adapt the owner identity, check names and record rules deliberately. Install the clearance logic using trusted base-branch code before requiring the check. Test missing, malformed, stale and withdrawn clearance plus draft PRs. Do not mark a status successful because a workflow file exists.
 
-The [NFL contribution policy](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md#review-records-and-owner-clearance) and [trusted clearance workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml) are the reference implementations. Their current same-repository contribution policy is a project choice; do not silently claim fork builds have private reference access.
+Put the review record specification in CONTRIBUTING.md and its verifier in trusted workflow code. Declare whether contributions use same-repository branches or forks; fork builds do not automatically have access to private references. Match review effort to scope: source reconstruction needs fidelity review; presentation and documentation changes need relevant checks without unnecessary binary-build or reconstruction-review passes.

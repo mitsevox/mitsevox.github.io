@@ -12,7 +12,7 @@
 <h2 id="review-partial-source-fairly">Review partial source fairly</h2>
 <p>Review useful partial source for fidelity, evidence and comparison integrity. A measured mismatch is not automatically a review failure. A reviewer may return SHIP with documented matching incompleteness when the applicable checks pass. Original bytes remain linked until promotion is validated.</p>
 <h2 id="records-tied-to-a-revision">Records tied to a revision</h2>
-<p>NFL posts the two passes as separate PR discussion comments, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.</p>
+<p>Use two separate PR discussion comments for the reconstruction review passes, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.</p>
 <pre><code class="language-text">Revision: FULL_COMMIT_SHA
 Accuracy: PASS
 
@@ -35,15 +35,15 @@ Coverage: earlier records carried forward and delta checked
 <p>After bringing in main, inspect the delta, conflict resolutions and shared dependencies. Produce final-head review records explaining what was rechecked and why earlier coverage still applies. Run required CI on the final integrated inputs. Constituent PR reports cannot be combined into proof of a batch build.</p>
 <p>When batching contributions, preserve original PRs, author revisions and review coverage. Close originals as incorporated after the batch merges. Compiler-profile and comparison changes need their own appropriate review; do not bury them inside unrelated source work.</p>
 <h2 id="owner-clearance">Owner clearance</h2>
-<p>Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. NFL's current format is:</p>
+<p>Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. Use a machine-readable clearance format such as:</p>
 <pre><code class="language-text">&lt;!-- owner-review-clearance --&gt;
 Revision: FULL_COMMIT_SHA
 Accuracy: https://github.com/OWNER/REPO/pull/NUMBER#issuecomment-ID
 Hostile: https://github.com/OWNER/REPO/pull/NUMBER#issuecomment-ID
 </code></pre>
 <p>The record links must be distinct comments on the same PR, identify the current head and contain passing verdicts. A new commit makes old clearance stale. The check verifies record identity and formatting; it cannot prove reviewer independence or quality of reasoning.</p>
-<p>Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. Only the owner performs the merge under the NFL model.</p>
+<p>Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. The repository documents who may perform the merge and any explicit delegation. Agents follow the authorization given for the task.</p>
 <h2 id="new-project-bootstrap">New-project bootstrap</h2>
 <p>Adapt the owner identity, check names and record rules deliberately. Install the clearance logic using trusted base-branch code before requiring the check. Test missing, malformed, stale and withdrawn clearance plus draft PRs. Do not mark a status successful because a workflow file exists.</p>
-<p>The <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md#review-records-and-owner-clearance">NFL contribution policy</a> and <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml">trusted clearance workflow</a> are the reference implementations. Their current same-repository contribution policy is a project choice; do not silently claim fork builds have private reference access.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/build-and-validation/"><small>Previous</small><span>Build &amp; validation</span></a><a href="/wiki/ci-and-publication/"><small>Next</small><span>CI &amp; publication</span></a></nav></div>
+<p>Put the review record specification in CONTRIBUTING.md and its verifier in trusted workflow code. Declare whether contributions use same-repository branches or forks; fork builds do not automatically have access to private references. Match review effort to scope: source reconstruction needs fidelity review; presentation and documentation changes need relevant checks without unnecessary binary-build or reconstruction-review passes.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/build-and-validation/"><small>Previous</small><span>Build &amp; validation</span></a><a href="/wiki/ci-and-publication/"><small>Next</small><span>CI &amp; publication</span></a></nav></div>
 <aside class="wiki-on-page"><nav aria-label="On this page"><a href="#contribution-sequence">Contribution sequence</a><a href="#review-partial-source-fairly">Review partial source fairly</a><a href="#records-tied-to-a-revision">Records tied to a revision</a><a href="#rechecks-and-integration">Rechecks and integration</a><a href="#owner-clearance">Owner clearance</a><a href="#new-project-bootstrap">New-project bootstrap</a></nav></aside></main>

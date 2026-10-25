@@ -5,56 +5,100 @@
 <details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-setup/"><span class="wiki-nav-number">02</span>Repository setup</a><a href="/wiki/layout-and-naming/"><span class="wiki-nav-number">03</span>Layout &amp; naming</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/evidence-and-reconstruction/"><span class="wiki-nav-number">04</span>Evidence</a><a href="/wiki/build-and-validation/" aria-current="page"><span class="wiki-nav-number">05</span>Build &amp; validation</a><p class="wiki-nav-group">Delivery</p><a href="/wiki/review-and-approval/"><span class="wiki-nav-number">06</span>Review &amp; approval</a><a href="/wiki/ci-and-publication/"><span class="wiki-nav-number">07</span>CI &amp; publication</a><a href="/wiki/credits-and-history/"><span class="wiki-nav-number">08</span>Credits &amp; history</a><p class="wiki-nav-group">Integration</p><a href="/wiki/website-integration/"><span class="wiki-nav-number">09</span>Website</a><a href="/wiki/operations/"><span class="wiki-nav-number">10</span>Troubleshooting &amp; upkeep</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">11</span>Starter kit</a></nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>Reconstruction <span aria-hidden="true">/</span> 05</span><a href="/docs/wiki/build-and-validation.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="build-validation">Build &amp; validation</h1>
-<p>Separate a working baseline, reconstructed source and independent comparison measurements.</p>
-<h2 id="three-different-results">Three different results</h2>
+<p>Define reproducible stages with explicit inputs, outputs and failure conditions.</p>
+<h2 id="validation-stages">Validation stages</h2>
 <div class="wiki-table"><table>
 <thead>
 <tr>
-<th>Result</th>
-<th>Establishes</th>
-<th>Does not establish</th>
+<th>Stage</th>
+<th>Required result</th>
+<th>Recorded evidence</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Original-object relink</td>
-<td>Target extraction, placement and relink can reproduce the executable</td>
-<td>Recovered source, original compiler identity or progress</td>
+<td>Input verification</td>
+<td>Authorized executable and required references match declared hashes</td>
+<td>Target/hash and input inventory</td>
+</tr>
+<tr>
+<td>Original-byte baseline</td>
+<td>Extraction, placement and relink reproduce the complete target where applicable</td>
+<td>Tool identities, geometry and complete-output comparison</td>
 </tr>
 <tr>
 <td>Accepted-source build</td>
-<td>Selected source replaces its accepted ranges and complete output still matches</td>
-<td>Exactness of every original file boundary</td>
+<td>Accepted source replaces its declared ranges while the complete build satisfies the project's objective</td>
+<td>Source/configuration tree, placement and build receipt</td>
 </tr>
 <tr>
-<td>Independent comparison</td>
-<td>Full registered functions/data have measured exact or fuzzy similarity</td>
-<td>Permission to replace their original linked bytes</td>
+<td>Independent comparisons</td>
+<td>Registered functions/data receive full-extent exact and fuzzy measurements</td>
+<td>Extents, dependencies, method and comparison receipt</td>
+</tr>
+<tr>
+<td>Public export</td>
+<td>Summaries and supported modules derive from those same measurements</td>
+<td>Manifest, checksums and semantic-validation result</td>
 </tr>
 </tbody>
 </table></div>
-<p>A new project must implement and document these distinctions for its executable format. NFL's DOL section layout and tool profiles cannot simply be copied to another target.</p>
-<h2 id="nfl-command-reference">NFL command reference</h2>
-<p>These commands are executable entry points in NFL Street 2, not commands available in an empty repository. Follow its README host/setup requirements first.</p>
-<pre><code class="language-sh">python3 tools/setup_compiler.py
-python3 tools/baseline.py --original /path/to/main.dol
-python3 tools/source_build.py --original /path/to/main.dol
-python3 tools/analyze.py --original /path/to/main.dol
-python3 tools/matching.py --original /path/to/main.dol
-python3 -m unittest discover -s tests -v
-</code></pre>
-<p>NFL additionally validates its SN-linker original-object relink. Run relevant focused checks during iteration and the required final checks before submission; do not repeatedly run the entire suite when nothing affecting it changed.</p>
-<h2 id="establish-the-new-projects-baseline">Establish the new project's baseline</h2>
-<p>Record executable identity, section sizes/addresses, entry point and target hash. Verify the complete reconstructed executable against the original, not only selected functions or a summary score. Document all placement, alignment, small-data and relocation handling. Keep unassigned bytes represented.</p>
-<p>Pin the usable compiler, linker, wrappers and conversion tools with hashes. Record unit/library compiler-profile evidence separately. A successful diagnostic compile can establish compatibility without uniquely identifying the original compiler version.</p>
-<h2 id="register-partial-comparisons">Register partial comparisons</h2>
-<p>Define source path, profile, full target extents, code/data placement and dependencies. Reject overlaps, missing functions, unresolved references and stale receipts. Compare compiler-produced bodies without truncating mismatches. Weight fuzzy similarity by the target extent, not the size of an expanded draft.</p>
-<p>Use normal source files for partial work. Where accepted and draft code coexist, a documented comparison guard can select draft bodies for measurement while preserving the accepted build. Keep original bytes linked until promotion; partial mismatch alone is not a reason to reject a well-supported reconstruction.</p>
+<p>Implement applicable stages for the target's executable format. Document any stage that cannot be supported and its effect on the claims the project can make.</p>
+<h2 id="command-contract">Command contract</h2>
+<p>The README must give a concrete command for each implemented stage. Keep local and CI commands aligned. Names may follow the repository's existing tools; the responsibilities remain consistent.</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>README entry</th>
+<th>Inputs</th>
+<th>Expected output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Setup</td>
+<td>Approved tool versions and hashes</td>
+<td>Usable pinned tools</td>
+</tr>
+<tr>
+<td>Baseline</td>
+<td>Verified original input and target configuration</td>
+<td>Complete baseline comparison and receipt</td>
+</tr>
+<tr>
+<td>Build</td>
+<td>Accepted source, headers and placement/profile configuration</td>
+<td>Reproducible target output and receipt</td>
+</tr>
+<tr>
+<td>Compare</td>
+<td>Registered source, full target extents and approved profiles</td>
+<td>Exact/fuzzy comparison report</td>
+</tr>
+<tr>
+<td>Validate</td>
+<td>Evidence, configuration, reports and dependencies</td>
+<td>Nonzero exit on invalid or stale inputs</td>
+</tr>
+<tr>
+<td>Export</td>
+<td>Validated measured report and prior history</td>
+<td>Public package conforming to the site contract</td>
+</tr>
+</tbody>
+</table></div>
+<p>The template intentionally does not assume a compiler, executable format or build system. Adapt these entries to the tools already used by the project; do not add duplicate build paths solely to rename commands.</p>
+<h2 id="target-and-tool-identity">Target and tool identity</h2>
+<p>Record executable hash, section sizes/addresses, entry point and measurement universe. Preserve unassigned ranges. Document placement, alignment, small-data and relocation rules where applicable.</p>
+<p>Pin usable compilers, linkers, wrappers and comparison tools by version and hash. Record evidence for unit/library profiles separately. A successful diagnostic compile establishes compatibility under those conditions; it does not uniquely identify the original compiler.</p>
+<h2 id="partial-reconstruction">Partial reconstruction</h2>
+<p>Keep useful incomplete bodies in normal source files. Register source path, full target extent, profile and dependencies separately. Compare the complete produced body; do not truncate a mismatch or adjust boundaries to improve a score.</p>
+<p>When accepted and draft code coexist, use a documented comparison configuration or guard. Preserve original linked bytes until replacement is validated. Fuzzy coverage describes measured similarity and does not grant exact-function credit.</p>
 <h2 id="promotion">Promotion</h2>
-<p>After review and validation, change the accepted source-placement configuration, remove obsolete guards/registrations and verify the entire executable. Do not move a function into a different source tree merely because it became exact. Preserve its attribution if tracking is enabled, and avoid counting a linked range again through a comparison entry.</p>
-<p>Uninitialized storage has no speculative fuzzy byte score. Validate its layout and the project's stated accounting rules. Code/data classification follows the declared target measurement universe, including documented data embedded in executable sections; do not silently change denominators for the chart.</p>
-<h2 id="bind-results-to-inputs">Bind results to inputs</h2>
-<p>Reports should identify target hash, tested revision/tree, source/header hashes, unit manifest, profile, tool versions and comparison methodology. Reject a stale report after its inputs change. A successful earlier build is not proof of the current tree.</p>
-<p>Validation tools need meaningful failure tests: wrong target, stale dependency, overlapping range, missing symbol, changed compiled extent, unsupported data placement and corrupt report. Do not weaken validators to accept the current patch. Record failures and unresolved questions honestly.</p>
-<p>See <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md">NFL target mechanics and comparison workflow</a> for concrete formats, constraints and implementation details.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/evidence-and-reconstruction/"><small>Previous</small><span>Evidence</span></a><a href="/wiki/review-and-approval/"><small>Next</small><span>Review &amp; approval</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#three-different-results">Three different results</a><a href="#nfl-command-reference">NFL command reference</a><a href="#establish-the-new-projects-baseline">Establish the new project&#x27;s baseline</a><a href="#register-partial-comparisons">Register partial comparisons</a><a href="#promotion">Promotion</a><a href="#bind-results-to-inputs">Bind results to inputs</a></nav></aside></main>
+<p>After review and validation, update accepted placement, remove obsolete comparison selection and verify the complete output. Keep source paths and original attribution stable. Prevent accepted ranges from being counted again through independent comparisons.</p>
+<p>Exact function status requires the complete declared extent to match. Exact file status additionally requires original boundary evidence and exact constituent content. A descriptive filename can count as named while its boundaries remain provisional.</p>
+<h2 id="receipts-and-stale-results">Receipts and stale results</h2>
+<p>Bind results to target hash, source revision/tree, relevant source/header/configuration hashes, tools, profiles and comparison method. Reject a receipt when any required input has changed. A build cache can accelerate work but cannot establish correctness.</p>
+<p>Validate wrong target, missing dependency, overlapping ranges, missing symbol, changed extent, unsupported placement and corrupt report through meaningful failure cases. Test the code that decides validity rather than reproducing its implementation in assertions.</p>
+<p>Run focused checks during iteration and required final checks for the actual integrated inputs. Broaden testing when a changed dependency, failure or coverage gap justifies it.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/evidence-and-reconstruction/"><small>Previous</small><span>Evidence</span></a><a href="/wiki/review-and-approval/"><small>Next</small><span>Review &amp; approval</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#validation-stages">Validation stages</a><a href="#command-contract">Command contract</a><a href="#target-and-tool-identity">Target and tool identity</a><a href="#partial-reconstruction">Partial reconstruction</a><a href="#promotion">Promotion</a><a href="#receipts-and-stale-results">Receipts and stale results</a></nav></aside></main>

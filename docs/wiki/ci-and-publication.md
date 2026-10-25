@@ -1,53 +1,74 @@
 # CI & publication
 
-Validate once, preserve the evidence and publish only a coherent verified result.
+Build once, validate the result, then publish an authenticated report.
 
-## Jobs and authority
+## Workflow structure
 
-| Job | Inputs and purpose | Authority |
-| --- | --- | --- |
-| Build/measure | Approved references and pinned tools; baseline, source and comparisons | Read source/packages; no source-branch writes |
-| Review clearance | Trusted workflow code and PR discussion records | Read PR records; write the named status |
-| Data publication | Authenticated successful measurements and prior history | Narrowly scoped report-store writes |
-| Website build | Public verified report packages and site source | Read packages; produce static artifact |
-| Pages deployment | Successful site artifact | Pages and deployment identity permissions |
+Use separate jobs for the responsibilities below. Map the commands to the repository's documented build tools.
 
-Pin reviewed Actions and shared tools to commits, build images to approved digests, and downloaded compilers/linkers by version and hash. Do not copy mutable image tags into the new archetype. Cache keys include target, environment and relevant configuration/source inputs; caches are acceleration, not validation evidence.
+| Job | Runs when | Work | Permissions |
+| --- | --- | --- | --- |
+| Configuration and evidence checks | PRs and main | Validate target configuration, declarations, evidence and changed dependencies | Source read |
+| Build and measure | PRs and eligible main runs | Verify inputs; build/compare; generate a candidate report and receipt | Source/packages read; approved private inputs only |
+| Review clearance | Relevant PR changes | Check revision, required review records and owner decision using trusted code | Read PR records; write its named status |
+| Report publication | Successful eligible main result | Authenticate the measured tree, validate prior history, export public data | Read artifacts; narrowly scoped history/report writes if needed |
+| Website validation | Site PRs and refreshes | Authenticate/import reports and assemble a coherent site candidate | Public source/artifact read |
+| Website deployment | Successful current site main | Preserve accepted reports, then deploy the exact candidate | Site data-store writes, Pages and deployment identity |
 
-## PR path
+Game build jobs do not need website deployment permissions. Publishing jobs process report data without executing scripts downloaded from artifacts. Keep private originals, complete debug exports and build credentials out of the website job.
 
-Validate the candidate revision and emit a receipt binding target, tested tree, environment, methodology, inputs and artifact checksums. Produce candidate reports for review without advancing public latest. Keep failures actionable and prevent stale output from an earlier successful run being uploaded after a failed export.
+## PR validation
 
-CI must fail if required inputs or enabled measurements are unavailable. Scope cheap validation separately from expensive reconstruction builds. The owner should enable required statuses only after observing real passing and failing behavior.
+Run the project's required baseline, accepted-source and comparison stages for the actual candidate inputs. Cheap checks should fail before expensive work where possible. Delete stale output before export; a failed exporter must not leave an earlier report available for upload.
 
-## Main path and proof reuse
+Emit a candidate artifact containing public measurements and a receipt binding repository, target/hash, full tested revision/tree, tools, methodology and payload checksums. Candidate artifacts support review; they do not advance public latest or the production timeline.
 
-NFL can reuse the final integrated PR's verified reports when trusted execution, artifact integrity, pinned environment and complete tested tree match the landed tree. Validate contributor provenance against actual landed/squashed history when that policy is enabled. Missing or incompatible proof falls back to full validation; invalid required attribution or history blocks publication.
+Pin Actions/shared tools to reviewed commits, images to approved digests and downloaded tools by version/hash. Cache keys include target, toolchain, relevant configuration and source inputs. Document the cache's scope and invalidation rules.
 
-An inventory-cache miss does not invalidate otherwise valid source-build proof. Regenerate the affected inventory separately. Do not repeat complete builds solely because review comments changed or an unchanged artifact can be authenticated.
+## Main validation and reuse
 
-Keep these guarantees when extracting reusable steps. Do not replace NFL's mature handoff checks with “download the latest artifact.”
+A main publication must have either a successful full validation or authenticated proof for the complete landed tree. Reuse requires matching target, tools/environment, methodology, complete tested inputs and original artifact integrity. Validate landed attribution too when the project's policy enables it.
 
-## History and ordering
+A missing or incompatible reusable proof requires the full validation path. An inventory-only change can regenerate inventory separately when source-build proof remains valid. Never combine reports from several independently tested branches into proof of an integrated build.
 
-Restore prior verified history before appending. Fetch or parse failure must not reset an established timeline. Make identical reruns idempotent. Distinguish commit time, measurement time and publication time.
+Keep original measurement time separate from publication time. Latest repository commit metadata is another input and does not make a previous build newly measured.
 
-The implemented website store is its data-only `report-data` branch, currently accepting NFL packages. It preserves immutable snapshots and a latest-good pointer. A separate data-only branch per game is an optional future producer store, not an onboarding requirement. Preserve existing game archives during migration and extend the site store for multiple projects as specified in the [integration handoff](/docs/reporting/onboarding.md). Git ancestry, immutable identity and an atomic pointer update prevent an older slow run from replacing newer progress; concurrency settings alone are insufficient.
+## Publication sequence
 
-A timeline records available verified measurements, not a guaranteed build for every commit. Preserve gaps and legacy evidence quality. Do not manufacture measurements by repeating a previous value and labeling it a fresh build.
+1. Select an eligible successful main run and its actual attempt.
+2. Authenticate repository, workflow revision, job/lane, tested tree and artifact digest.
+3. Restore validated prior history; an established history must not reset after a fetch/parse failure.
+4. Generate the public package from measured input and validate schema, arithmetic, extents, capabilities and history continuity.
+5. Store immutable snapshot files before updating the latest pointer atomically.
+6. Preserve the accepted package before deploying the matching website artifact.
 
-## Privileged workflows
+An identical rerun is a no-op. Different bytes for an existing immutable identity fail. A correction needs a new version/generation and recorded provenance. Check ancestry before advancing latest; concurrent job ordering alone cannot prevent stale publication.
 
-Treat PR text and report payloads as data. Never execute scripts from downloaded artifacts or untrusted PR code in a privileged publication/clearance job. Keep private references and build credentials out of the website job. The NFL clearance workflow evaluates trusted logic without checking out a contribution branch.
+The shared website owns a durable data-only report store so accepted measurements outlive temporary CI artifacts. Individual projects can retain their existing history/archive mechanism. A separate data branch in each game repository is optional.
 
-[GitHub's security guidance](https://docs.github.com/en/actions/reference/security/secure-use) covers pinned Actions and untrusted code. [workflow_run guidance](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run) explains why an upstream result must be authenticated before privileged follow-up work.
+## Failure behavior
+
+| Failure | Required behavior |
+| --- | --- |
+| Missing or malformed required report | Fail the refresh and keep the prior accepted package |
+| Unsupported optional capability | Declare it unsupported and configure its UI off |
+| Failed export of a supported capability | Fail; do not silently change it to unsupported |
+| Stale or diverged measured revision | Reject promotion and retain history |
+| Existing immutable identity with changed content | Reject the collision |
+| Concurrent store writer | Reread and reconcile after a normal push conflict; never force overwrite |
+| Obsolete site-source workflow | Reject deployment |
+| Missing private build access | Report the missing input; do not change dependency access or substitute tools |
+
+Define whether a refresh failure blocks the whole site deployment or allows other validated projects to publish. Test and document that policy explicitly. In either case, a failed project retains its last-good data.
+
+## Workflow security and approval
+
+Evaluate clearance using trusted base/default-branch logic. PR text, payload JSON and filenames are data, not commands. A privileged follow-up workflow must authenticate its upstream execution before using its artifacts. Declare how fork contributions receive build validation without assuming private secret access.
+
+See GitHub's [secure workflow guidance](https://docs.github.com/en/actions/reference/security/secure-use) and [workflow_run behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run). Configure required statuses after real passing, failing and stale cases have been observed; a workflow file alone does not enforce approval.
 
 ## Website deployment
 
-Use a separate build artifact and deployment job. GitHub Pages deployment needs `pages: write`, `id-token: write`, the appropriate environment and a dependency on the artifact-producing job. See [custom Pages workflows](https://docs.github.com/en/enterprise-cloud%40latest/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+Build one static artifact with fingerprinted assets. The deploy job depends on successful validation and storage and receives only the permissions it needs. GitHub Pages supports [custom Actions workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. To roll back UI, have the owner merge a source revert and let the current-main workflow rebuild with the latest verified reports. Old workflow reruns are rejected; measurement history is never rewound.
-
-The [NFL consumer implementation](/docs/reporting/nflstreet2.md) verifies existing artifacts and builds a locked static candidate without adding game CI work. Validation uses read-only permissions. A separate current-main job has site-repository write access for the data-only `report-data` branch, plus Pages and deployment-identity permissions. It preserves snapshots before deployment, rejects stale site revisions and never writes a game repository or merges main.
-
-The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) describes the remaining cross-game migration; distinguish it from the implemented site-only workflow.
+Verify home, direct project/wiki routes, refresh, back/forward and the selected report identity at the public URL. Use a reviewed site-source revert for a UI rollback while retaining current accepted measurement history. Do not deploy an obsolete workflow or rewrite measured history to roll back styling.

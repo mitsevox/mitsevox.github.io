@@ -5,88 +5,88 @@
 <details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-setup/"><span class="wiki-nav-number">02</span>Repository setup</a><a href="/wiki/layout-and-naming/"><span class="wiki-nav-number">03</span>Layout &amp; naming</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/evidence-and-reconstruction/"><span class="wiki-nav-number">04</span>Evidence</a><a href="/wiki/build-and-validation/"><span class="wiki-nav-number">05</span>Build &amp; validation</a><p class="wiki-nav-group">Delivery</p><a href="/wiki/review-and-approval/"><span class="wiki-nav-number">06</span>Review &amp; approval</a><a href="/wiki/ci-and-publication/"><span class="wiki-nav-number">07</span>CI &amp; publication</a><a href="/wiki/credits-and-history/"><span class="wiki-nav-number">08</span>Credits &amp; history</a><p class="wiki-nav-group">Integration</p><a href="/wiki/website-integration/"><span class="wiki-nav-number">09</span>Website</a><a href="/wiki/operations/"><span class="wiki-nav-number">10</span>Troubleshooting &amp; upkeep</a><a href="/wiki/starter-kit/" aria-current="page"><span class="wiki-nav-number">11</span>Starter kit</a></nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>Integration <span aria-hidden="true">/</span> 11</span><a href="/docs/wiki/starter-kit.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="starter-kit">Starter kit</h1>
-<p>A clean handoff for a new project, without pretending the game-specific build already exists.</p>
-<h2 id="download-and-read">Download and read</h2>
-<ul>
-<li><a href="/wiki/downloads/repository-starter.zip">Repository starter files</a> — README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, integration prompt and complete integration handoff.</li>
-<li><a href="/docs/reporting/schema/report-v1.schema.json">Report schema</a> and <a href="/docs/reporting/schema/project-v1.schema.json">project configuration schema</a>.</li>
-</ul>
-<p>The starter files contain visible placeholders. Fill them and review them with the owner before adoption. They do not contain a compiler, original game data, a functioning generic CI pipeline, or working multi-game reporting adapters. Do not claim setup is complete because the files were copied.</p>
-<h2 id="prompt-for-a-fresh-agent">Prompt for a fresh agent</h2>
-<pre><code class="language-text">Read this handbook and this project's README, CONTRIBUTING and AGENTS files.
-Inspect the existing repository before editing; preserve unrelated work.
+<p>Repository scaffolding and an agent prompt for applying this handbook.</p>
+<h2 id="files">Files</h2>
+<p>Download the <a href="/wiki/downloads/repository-starter.zip">repository starter archive</a>. It contains README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, an integration checklist and an agent prompt.</p>
+<p>Fill visible placeholders from verified project facts. The files define responsibilities and conventions; the project supplies its own compiler, build system, evidence formats, CI commands and report adapter. Existing repositories keep their established paths where those responsibilities are already implemented.</p>
+<h2 id="prompt-for-an-agent">Prompt for an agent</h2>
+<pre><code class="language-text">Read this wiki and the project's current README, CONTRIBUTING and AGENTS.
+Use its structure as the template for repository layout, naming, evidence,
+validation, review, CI, public reporting and shared-site integration.
+Inspect the existing project before editing and preserve unrelated work.
 Use a dedicated branch and checkout/worktree.
 
-First establish:
-- Owner, repository slug, target platform/region/revision and executable hash.
-- Authorized reference inventory and missing evidence/tool access.
-- Approved build environment, compiler/linker profiles and baseline status.
-- Existing CI, review rules, attribution policy and public reporting capability.
+Record the actual target/hash, approved toolchain, build commands, source
+objective, current validation and supported report capabilities. Adapt the
+handbook's responsibilities to this project's established structure.
 
-Adapt the starter files to verified project facts. Keep placeholders explicit.
-Build a bounded implementation plan with acceptance evidence for each stage.
-Do not assume NFL's compiler flags, layout, source boundaries or target IDs apply.
-Retain useful partial source and measure it honestly.
-Keep original binaries, bulk debug exports and experiments out of public Git.
-Do not change private dependency access, push, open PRs, publish, or merge without
-appropriate authorization. Only the documented project owner merges main.
-Distinguish implemented behavior, verified results, proposed work and blockers.
+Implement missing pieces needed for a reproducible build, honest exact/fuzzy
+measurements, versioned public reports, preserved history and site integration.
+Keep contribution acceptance, attribution tracking and rankings independent.
+Use the shared report contract and renderer rather than a separate game UI.
+
+Validate real inputs and both success/failure paths. Retain useful partial
+source. Do not invent metrics, evidence, authorship, approval or test results.
+Follow the project's task authorization for pushes, PRs, publication and merge.
+
+Deliver the changes with commands, tested revisions, artifacts, capability
+settings and remaining limitations. Verify the public route and next refresh
+before declaring the site integration complete.
 </code></pre>
-<h2 id="integrating-an-existing-game">Integrating an existing game</h2>
-<p>Use <a href="/wiki/website-integration/">Website</a> and the <a href="/docs/reporting/onboarding.md">complete technical handoff</a>. The archive includes <code>INTEGRATION-PROMPT.md</code> and <code>INTEGRATION.md</code>; give the agent both game and website checkouts. The handoff identifies current NFL-specific code, required common extensions, optional-data behavior, producer requirements, exact commands and the acceptance evidence. Implementing an adapter is part of the assignment; a generic multi-game importer is not already supplied.</p>
-<h2 id="new-project-acceptance-record">New-project acceptance record</h2>
+<h2 id="acceptance-checklist">Acceptance checklist</h2>
 <div class="wiki-table"><table>
 <thead>
 <tr>
 <th>Stage</th>
-<th>Evidence to record</th>
+<th>Evidence</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>Identity</td>
-<td>Owner, platform/region/revision, original executable hash</td>
+<td>Owner, source objective, platform/region/revision and executable hash</td>
 </tr>
 <tr>
-<td>References</td>
-<td>Parsed input inventory, reference hashes, missing evidence</td>
+<td>Structure</td>
+<td>Source, declarations, configuration, evidence, tools and generated output are discoverable</td>
 </tr>
 <tr>
-<td>Baseline</td>
-<td>Pinned tools, command, full-output comparison and tested revision</td>
+<td>Tools</td>
+<td>Approved versions/hashes, supported hosts and reproducible setup</td>
 </tr>
 <tr>
-<td>Source build</td>
-<td>Accepted ranges/profiles and complete-target validation</td>
+<td>Baseline and build</td>
+<td>Applicable complete-target checks and accepted-source result</td>
 </tr>
 <tr>
 <td>Comparisons</td>
-<td>Registered partial/exact functions, method, extent and receipt checks</td>
+<td>Full extents, profiles, dependencies and exact/fuzzy measurements</td>
 </tr>
 <tr>
-<td>Reviews</td>
-<td>Independent coverage, final revision, resolved findings</td>
+<td>Review</td>
+<td>Scope-appropriate independent coverage, actual revision and resolved findings</td>
 </tr>
 <tr>
 <td>CI</td>
-<td>Real successful and intentionally failing runs; required check configuration</td>
+<td>Documented command mapping; real passing/failing/stale cases; appropriately scoped permissions</td>
 </tr>
 <tr>
-<td>Optional credits</td>
-<td>Declared policy, provenance coverage, exact-inventory reconciliation</td>
+<td>Credits</td>
+<td>Explicit policy, with evidence reconciliation when enabled</td>
 </tr>
 <tr>
 <td>Reports</td>
-<td>Supported fields/modules, semantic validation and decomp.dev parity</td>
+<td>Validated shared manifest, raw parity, supported modules and execution proof</td>
 </tr>
 <tr>
-<td>Site</td>
-<td>Verified package, no fixtures, direct routes, freshness and rollback</td>
+<td>History</td>
+<td>Durable continuity, idempotence, ordering and recovery</td>
+</tr>
+<tr>
+<td>Website</td>
+<td>Shared presentation, configured modules, direct route, deployment and subsequent refresh</td>
 </tr>
 </tbody>
 </table></div>
-<p>Do not prefill results or sign off another person's review. A missing stage remains pending with an owner and next action. Establish the first valid baseline before taking on broad reconstruction.</p>
-<h2 id="reference-implementation">Reference implementation</h2>
-<p>Start from the <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/README.md">NFL README</a>, <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md">contribution policy</a>, <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/AGENTS.md">agent instructions</a>, <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md">evidence specification</a>, <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md">target mechanics</a>, <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/baseline.yml">build workflow</a> and <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml">review workflow</a>. These are pinned examples of a working project's architecture, not permission to copy its assumptions into another game.</p>
-<p>The website-side NFL adapter is documented in <a href="/wiki/website-integration/">Website</a> and the <a href="/docs/reporting/nflstreet2.md">NFL integration reference</a>. The integration handoff turns this into an explicit two-repository implementation assignment, including the common website work required before a second project can register.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/operations/"><small>Previous</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#download-and-read">Download and read</a><a href="#prompt-for-a-fresh-agent">Prompt for a fresh agent</a><a href="#integrating-an-existing-game">Integrating an existing game</a><a href="#new-project-acceptance-record">New-project acceptance record</a><a href="#reference-implementation">Reference implementation</a></nav></aside></main>
+<p>The <a href="/docs/reporting/onboarding.md">integration checklist</a> repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/operations/"><small>Previous</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#files">Files</a><a href="#prompt-for-an-agent">Prompt for an agent</a><a href="#acceptance-checklist">Acceptance checklist</a></nav></aside></main>

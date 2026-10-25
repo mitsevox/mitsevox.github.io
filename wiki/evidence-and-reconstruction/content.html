@@ -36,7 +36,7 @@
 </tr>
 <tr>
 <td>Different instruction selection or scheduling</td>
-<td>Controlled compiler experiments and relevant ProDG RTL dumps</td>
+<td>Controlled compiler experiments and relevant compiler intermediate output</td>
 </tr>
 <tr>
 <td>Competing behavioral interpretations</td>
@@ -51,9 +51,9 @@
 <p>Record tested revision, tool version/settings, inputs, conclusion and remaining uncertainty. Check decompiler output against instructions. Runtime observations establish what happened under those conditions, not the original source text. Keep bulk experiments private; retain concise reproducible evidence publicly.</p>
 <h2 id="matching-integrity">Matching integrity</h2>
 <p>Do not force a match through patched output, embedded instruction bytes, unsupported inline assembly, per-function flag changes, altered comparison boundaries or excluded mismatches. Do not invent helpers, padding, casts, volatile qualifiers or control flow solely for code generation.</p>
-<p>Compiler exceptions require original-scope evidence and explicit owner approval under NFL's policy. Originally handwritten assembly needs provenance. Labeling a workaround “fake match” does not make it acceptable.</p>
+<p>Compiler exceptions require original-scope evidence and explicit owner approval under the project's documented policy. Originally handwritten assembly needs provenance. Labeling a workaround “fake match” does not make it acceptable.</p>
 <p>When evidence runs out, preserve the useful partial reconstruction and document the gap. Keep original bytes in the verified linked build until replacement is validated. Partial similarity is useful progress; unsupported certainty is not.</p>
 <h2 id="sdk-and-imported-work">SDK and imported work</h2>
 <p>Retain origin, source revision, license/provenance and local modifications. A fingerprint is a candidate, especially for short functions. Inspect target-specific calls, data ownership and compilation boundaries before import. Imported code receives the same relevant fidelity and hostile reviews as new reconstruction.</p>
-<p><a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md">NFL investigation, matching integrity and source standards</a> are the reference for this chapter.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/layout-and-naming/"><small>Previous</small><span>Layout &amp; naming</span></a><a href="/wiki/build-and-validation/"><small>Next</small><span>Build &amp; validation</span></a></nav></div>
+<p>Record these matching-integrity and investigation rules in CONTRIBUTING.md. Keep evidence-format details and reproducible locators in target configuration.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/layout-and-naming/"><small>Previous</small><span>Layout &amp; naming</span></a><a href="/wiki/build-and-validation/"><small>Next</small><span>Build &amp; validation</span></a></nav></div>
 <aside class="wiki-on-page"><nav aria-label="On this page"><a href="#inventory-before-interpretation">Inventory before interpretation</a><a href="#define-a-bounded-task">Define a bounded task</a><a href="#the-reconstruction-loop">The reconstruction loop</a><a href="#escalate-the-question-not-the-guesswork">Escalate the question, not the guesswork</a><a href="#matching-integrity">Matching integrity</a><a href="#sdk-and-imported-work">SDK and imported work</a></nav></aside></main>

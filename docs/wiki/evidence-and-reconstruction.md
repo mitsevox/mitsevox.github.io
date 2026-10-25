@@ -29,7 +29,7 @@ A byte match establishes compiler equivalence for the measured scope. It does no
 | Uncertainty | Useful investigation |
 | --- | --- |
 | Behavior, references or ownership | Target disassembly and bounded Ghidra/static analysis |
-| Different instruction selection or scheduling | Controlled compiler experiments and relevant ProDG RTL dumps |
+| Different instruction selection or scheduling | Controlled compiler experiments and relevant compiler intermediate output |
 | Competing behavioral interpretations | Bounded debugger/runtime trace with known inputs and conditions |
 | Candidate SDK reuse | Fingerprints followed by calls, globals, types and boundary checks |
 
@@ -39,7 +39,7 @@ Record tested revision, tool version/settings, inputs, conclusion and remaining 
 
 Do not force a match through patched output, embedded instruction bytes, unsupported inline assembly, per-function flag changes, altered comparison boundaries or excluded mismatches. Do not invent helpers, padding, casts, volatile qualifiers or control flow solely for code generation.
 
-Compiler exceptions require original-scope evidence and explicit owner approval under NFL's policy. Originally handwritten assembly needs provenance. Labeling a workaround “fake match” does not make it acceptable.
+Compiler exceptions require original-scope evidence and explicit owner approval under the project's documented policy. Originally handwritten assembly needs provenance. Labeling a workaround “fake match” does not make it acceptable.
 
 When evidence runs out, preserve the useful partial reconstruction and document the gap. Keep original bytes in the verified linked build until replacement is validated. Partial similarity is useful progress; unsupported certainty is not.
 
@@ -47,4 +47,4 @@ When evidence runs out, preserve the useful partial reconstruction and document 
 
 Retain origin, source revision, license/provenance and local modifications. A fingerprint is a candidate, especially for short functions. Inspect target-specific calls, data ownership and compilation boundaries before import. Imported code receives the same relevant fidelity and hostile reviews as new reconstruction.
 
-[NFL investigation, matching integrity and source standards](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md) are the reference for this chapter.
+Record these matching-integrity and investigation rules in CONTRIBUTING.md. Keep evidence-format details and reproducible locators in target configuration.

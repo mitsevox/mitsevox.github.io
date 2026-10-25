@@ -50,7 +50,7 @@
   {
     "slug": "website-integration",
     "title": "Website",
-    "summary": "One shared renderer, game-owned measurements and modules selected per project.",
+    "summary": "Export a versioned public report and register it with the shared renderer.",
     "group": "Integration"
   },
   {
@@ -62,7 +62,7 @@
   {
     "slug": "starter-kit",
     "title": "Starter kit",
-    "summary": "A clean handoff for a new project, without pretending the game-specific build already exists.",
+    "summary": "Repository scaffolding and an agent prompt for applying the project template.",
     "group": "Integration"
   }
 ]

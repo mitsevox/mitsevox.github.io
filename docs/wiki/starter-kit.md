@@ -1,60 +1,54 @@
 # Starter kit
 
-A clean handoff for a new project, without pretending the game-specific build already exists.
+Repository scaffolding and an agent prompt for applying this handbook.
 
-## Download and read
+## Files
 
-- [Repository starter files](/wiki/downloads/repository-starter.zip) — README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, integration prompt and complete integration handoff.
-- [Report schema](/docs/reporting/schema/report-v1.schema.json) and [project configuration schema](/docs/reporting/schema/project-v1.schema.json).
+Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It contains README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, an integration checklist and an agent prompt.
 
-The starter files contain visible placeholders. Fill them and review them with the owner before adoption. They do not contain a compiler, original game data, a functioning generic CI pipeline, or working multi-game reporting adapters. Do not claim setup is complete because the files were copied.
+Fill visible placeholders from verified project facts. The files define responsibilities and conventions; the project supplies its own compiler, build system, evidence formats, CI commands and report adapter. Existing repositories keep their established paths where those responsibilities are already implemented.
 
-## Prompt for a fresh agent
+## Prompt for an agent
 
 ```text
-Read this handbook and this project's README, CONTRIBUTING and AGENTS files.
-Inspect the existing repository before editing; preserve unrelated work.
+Read this wiki and the project's current README, CONTRIBUTING and AGENTS.
+Use its structure as the template for repository layout, naming, evidence,
+validation, review, CI, public reporting and shared-site integration.
+Inspect the existing project before editing and preserve unrelated work.
 Use a dedicated branch and checkout/worktree.
 
-First establish:
-- Owner, repository slug, target platform/region/revision and executable hash.
-- Authorized reference inventory and missing evidence/tool access.
-- Approved build environment, compiler/linker profiles and baseline status.
-- Existing CI, review rules, attribution policy and public reporting capability.
+Record the actual target/hash, approved toolchain, build commands, source
+objective, current validation and supported report capabilities. Adapt the
+handbook's responsibilities to this project's established structure.
 
-Adapt the starter files to verified project facts. Keep placeholders explicit.
-Build a bounded implementation plan with acceptance evidence for each stage.
-Do not assume NFL's compiler flags, layout, source boundaries or target IDs apply.
-Retain useful partial source and measure it honestly.
-Keep original binaries, bulk debug exports and experiments out of public Git.
-Do not change private dependency access, push, open PRs, publish, or merge without
-appropriate authorization. Only the documented project owner merges main.
-Distinguish implemented behavior, verified results, proposed work and blockers.
+Implement missing pieces needed for a reproducible build, honest exact/fuzzy
+measurements, versioned public reports, preserved history and site integration.
+Keep contribution acceptance, attribution tracking and rankings independent.
+Use the shared report contract and renderer rather than a separate game UI.
+
+Validate real inputs and both success/failure paths. Retain useful partial
+source. Do not invent metrics, evidence, authorship, approval or test results.
+Follow the project's task authorization for pushes, PRs, publication and merge.
+
+Deliver the changes with commands, tested revisions, artifacts, capability
+settings and remaining limitations. Verify the public route and next refresh
+before declaring the site integration complete.
 ```
 
-## Integrating an existing game
+## Acceptance checklist
 
-Use [Website](/wiki/website-integration/) and the [complete technical handoff](/docs/reporting/onboarding.md). The archive includes `INTEGRATION-PROMPT.md` and `INTEGRATION.md`; give the agent both game and website checkouts. The handoff identifies current NFL-specific code, required common extensions, optional-data behavior, producer requirements, exact commands and the acceptance evidence. Implementing an adapter is part of the assignment; a generic multi-game importer is not already supplied.
-
-## New-project acceptance record
-
-| Stage | Evidence to record |
+| Stage | Evidence |
 | --- | --- |
-| Identity | Owner, platform/region/revision, original executable hash |
-| References | Parsed input inventory, reference hashes, missing evidence |
-| Baseline | Pinned tools, command, full-output comparison and tested revision |
-| Source build | Accepted ranges/profiles and complete-target validation |
-| Comparisons | Registered partial/exact functions, method, extent and receipt checks |
-| Reviews | Independent coverage, final revision, resolved findings |
-| CI | Real successful and intentionally failing runs; required check configuration |
-| Optional credits | Declared policy, provenance coverage, exact-inventory reconciliation |
-| Reports | Supported fields/modules, semantic validation and decomp.dev parity |
-| Site | Verified package, no fixtures, direct routes, freshness and rollback |
+| Identity | Owner, source objective, platform/region/revision and executable hash |
+| Structure | Source, declarations, configuration, evidence, tools and generated output are discoverable |
+| Tools | Approved versions/hashes, supported hosts and reproducible setup |
+| Baseline and build | Applicable complete-target checks and accepted-source result |
+| Comparisons | Full extents, profiles, dependencies and exact/fuzzy measurements |
+| Review | Scope-appropriate independent coverage, actual revision and resolved findings |
+| CI | Documented command mapping; real passing/failing/stale cases; appropriately scoped permissions |
+| Credits | Explicit policy, with evidence reconciliation when enabled |
+| Reports | Validated shared manifest, raw parity, supported modules and execution proof |
+| History | Durable continuity, idempotence, ordering and recovery |
+| Website | Shared presentation, configured modules, direct route, deployment and subsequent refresh |
 
-Do not prefill results or sign off another person's review. A missing stage remains pending with an owner and next action. Establish the first valid baseline before taking on broad reconstruction.
-
-## Reference implementation
-
-Start from the [NFL README](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/README.md), [contribution policy](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md), [agent instructions](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/AGENTS.md), [evidence specification](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md), [target mechanics](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md), [build workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/baseline.yml) and [review workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml). These are pinned examples of a working project's architecture, not permission to copy its assumptions into another game.
-
-The website-side NFL adapter is documented in [Website](/wiki/website-integration/) and the [NFL integration reference](/docs/reporting/nflstreet2.md). The integration handoff turns this into an explicit two-repository implementation assignment, including the common website work required before a second project can register.
+The [integration checklist](/docs/reporting/onboarding.md) repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.
