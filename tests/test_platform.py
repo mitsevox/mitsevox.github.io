@@ -26,15 +26,15 @@ class PlatformTests(unittest.TestCase):
                     'description':'Isolated test data','date':'2026-10-25T10:00:00Z','url':'https://github.com/mitsevox/contract-test/commit/'+REVISION})
         return manifest,payloads,destination
 
-    def test_second_project_summary_only_has_no_invented_optional_data(self):
-        old=read_lock(self.root)['projects']['nflstreet2']
+    def test_additional_project_summary_only_has_no_invented_optional_data(self):
+        old=read_lock(self.root)['projects']
         manifest,_,directory=self.install(fuzzy=False)
         checked,p,a=validate_package(directory,self.root)
         self.assertEqual(manifest,checked)
         self.assertNotIn('files',p);self.assertNotIn('contributors',a);self.assertNotIn('snapshots',a)
         self.assertNotIn('fuzzy',p['measures']['code'])
-        self.assertEqual(read_lock(self.root)['projects']['nflstreet2'],old)
-        self.assertEqual(set(read_lock(self.root)['projects']),{'nflstreet2','tw2004',SLUG})
+        self.assertEqual({k:v for k,v in read_lock(self.root)['projects'].items() if k!=SLUG},old)
+        self.assertEqual(set(read_lock(self.root)['projects']),set(old)|{SLUG})
 
     def test_timeline_without_credit_feed_and_rankings_without_timeline(self):
         _,_,directory=self.install(timeline=True)
@@ -82,7 +82,7 @@ class PlatformTests(unittest.TestCase):
         output=self.base/'public';build(self.root,output)
         self.assertTrue((output/'games'/SLUG/'index.html').exists())
         manifest=decode((output/'site-manifest.json').read_bytes())
-        self.assertEqual(set(manifest['projects']),{'nflstreet2','tw2004',SLUG})
+        self.assertEqual(set(manifest['projects']),{c['slug'] for c in decode((self.root/'config/projects.json').read_bytes())})
         release=manifest['release'];text=(output/'releases'/release/'assets/report-projects.js').read_text()
         self.assertIn('Contract test project',text);self.assertIn('"contributors":false',text)
         for chapter in (output/'wiki').rglob('content.html'):
@@ -107,6 +107,20 @@ class PlatformTests(unittest.TestCase):
             with self.assertRaises(ValueError):authenticate(POLICY,{**run,**change},[job],'c'*40)
         with self.assertRaises(ValueError):authenticate(POLICY,run,[{**job,'steps':[]}],'c'*40)
         with self.assertRaises(ValueError):authenticate(POLICY,run,[job],'f'*40)
+
+    def test_matrix_job_and_step_names_are_exact_api_display_names(self):
+        policy={**POLICY,'job':'Build (TARGET_ID)'}
+        run={'repository':{'full_name':POLICY['repository']},'head_repository':{'full_name':POLICY['repository']},
+             'path':POLICY['workflow'],'head_branch':'main','event':'push','status':'completed','conclusion':'success',
+             'head_sha':REVISION,'run_attempt':1}
+        job={'name':policy['job'],'conclusion':'success','head_sha':REVISION,'run_attempt':1,
+             'steps':[{'name':'Validate measurements','conclusion':'success'}]}
+        authenticate(policy,run,[job],'c'*40)
+        for name in ('Build', 'build (TARGET_ID)', 'Build (TARGET_ID) '):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError,'producer job'):
+                authenticate(policy,run,[{**job,'name':name}],'c'*40)
+        with self.assertRaisesRegex(ValueError,'validation step'):
+            authenticate(policy,run,[{**job,'steps':[{'name':'validate measurements','conclusion':'success'}]}],'c'*40)
 
 
     def test_approved_historical_policy_survives_producer_format_cutover(self):

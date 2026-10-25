@@ -31,6 +31,12 @@ All byte metrics use the same denominator within a code/data summary. Percentage
 
 Missing or unsupported measurements use null or an explicit unsupported module. Valid zero remains zero. Apply only defaults explicitly defined by the pinned upstream format. Malformed numbers and missing entire reports are errors. Comparison algorithms and weighting rules belong to the methodology version; do not compare historical percentages blindly across changes.
 
+## Map coverage contract
+
+When map support is enabled, section and file views must cover exactly the same leaf address union for each of code and data. Each view independently sums to the summary's total/linked/matched/supported-fuzzy values. Leaves cannot overlap within a view; children sum to parent metrics, and explicit parent geometry equals the child union. Unassigned measured bytes remain represented. Equal totals at different addresses fail.
+
+Use end-exclusive intervals, explicit disjoint extents, full function identity/coverage and declared inventory parity. See the [complete map rules and paired examples](platform.md#map-semantics); JSON Schema alone does not establish these relationships.
+
 ## Three independent controls
 
 1. **Producer capabilities:** a module is `supported` with a validated asset, or `unsupported` with a reason. A supported module that failed to generate is a failed report, not a newly unsupported feature.
@@ -42,6 +48,8 @@ Enabled UI requires the corresponding supported/valid data. During initial migra
 ## History and contributors
 
 History entries retain full revision, target, methodology, denominator, commit/measurement timestamps and evidence quality. Preserve measured, inherited legacy and reconstructed entries distinctly; do not turn interpolated/repeated values into verified builds. Timeline transitions across a changed basis need explicit handling.
+
+For optional adoption of legacy data, rows with short SHAs or missing totals need evidence-backed normalization before initial acceptance. Resolve identity unambiguously, recover actual raw values and record `reconstructed` provenance where appropriate; the label does not excuse invented values. Preserve unresolved raw records in a project archive rather than presenting them as measured points. See the [legacy migration procedure](../../wiki/existing-projects/#import-legacy-history).
 
 Credits use stable function IDs and evidence-backed author identities. Preserve original contribution provenance through aggregate PRs, squash merges and deleted branches. PR author and merger are supporting clues, not sole attribution. When attribution tracking is enabled by project policy, store provenance in the game repository so disabling its display cannot erase it. Tracking may be disabled independently; rankings then remain unavailable, while measurement and history can still publish. The project's recorded attribution policy remains authoritative until its owner changes it.
 

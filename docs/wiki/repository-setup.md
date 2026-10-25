@@ -44,7 +44,7 @@ Initialize an empty local repository without publishing it:
 mkdir game-slug
 cd game-slug
 git init -b main
-git switch -c codex/bootstrap
+git switch -c work/bootstrap
 ```
 
 Inspect staged files before the first commit. Generated objects, originals and research dumps should never enter the commit. Create the hosted repository and configure access only when the owner authorizes those actions.
@@ -55,12 +55,12 @@ Once the repository has an established main branch and origin:
 
 ```sh
 git fetch origin
-git worktree add ../game-slug-task -b codex/task-name origin/main
+git worktree add ../game-slug-task -b work/task-name origin/main
 cd ../game-slug-task
 git status --short --branch
 ```
 
-Use `codex/<task>` for agent branches by default; a project's own convention takes precedence. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.
+Choose one branch convention at setup; the example uses `work/<task>`. Branch names identify tasks, not approval or author identity. Use isolated checkouts, bounded reservations and explicit push/PR authority. The starter validates contribution PRs without an agent-prefix restriction and runs push validation on its adopted main branch. Existing branch/trigger adaptation is optional appendix material.
 
 ## Active work reservations
 

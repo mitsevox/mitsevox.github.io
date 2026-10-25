@@ -31,11 +31,9 @@ class ReportStoreTests(unittest.TestCase):
             'GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'push','GITHUB_SHA':self.sha})
         self.env.start();self.addCleanup(self.env.stop)
         self.site=self.base/'built';self.site.mkdir()
-        # The real compatibility package alone; each scenario adds the projects it needs.
         self.lock=decode((ROOT/'data/reports.lock.json').read_bytes())
-        self.lock['projects']={'nflstreet2':self.lock['projects']['nflstreet2']}
-        entry=self.lock['projects']['nflstreet2']
-        shutil.copytree(ROOT/entry['path'],self.site/entry['path'])
+        for entry in self.lock['projects'].values():
+            shutil.copytree(ROOT/entry['path'],self.site/entry['path'])
         (self.site/report_store.LOCK).write_bytes(encoded(self.lock))
 
     def git(self,*args):return subprocess.check_output(['git',*args],cwd=self.repo,stderr=subprocess.DEVNULL)
@@ -44,7 +42,10 @@ class ReportStoreTests(unittest.TestCase):
         first=report_store.publish(self.repo,self.site)
         self.assertEqual(first,report_store.publish(self.repo,self.site))
         names=self.git('ls-tree','-r','--name-only',first).decode().splitlines()
-        self.assertEqual(len(names),6)
+        expected={report_store.LOCK}
+        for entry in self.lock['projects'].values():
+            expected.update(p.relative_to(self.site).as_posix() for p in (self.site/entry['path']).iterdir())
+        self.assertEqual(set(names),expected)
         self.assertTrue(all(n.startswith('data/') for n in names))
         report_store.restore(self.repo)
         self.assertEqual(decode((self.repo/report_store.LOCK).read_bytes()),self.lock)
@@ -83,9 +84,12 @@ class ReportStoreTests(unittest.TestCase):
         self.assertEqual(report_store.remote_head(self.repo),first)
 
     def test_newer_local_report_is_retained_only_with_history_continuity(self):
+        # This mocked history boundary targets the compatibility timeline only.
+        self.lock['projects']={'nflstreet2':self.lock['projects']['nflstreet2']}
+        (self.site/report_store.LOCK).write_bytes(encoded(self.lock))
         report_store.publish(self.repo,self.site)
         report_store.restore(self.repo)
-        entry, stored, activity, payloads=report_store.stored_package(self.repo,report_store.remote_head(self.repo))
+        entry, stored, activity, payloads=report_store.stored_package(self.repo,report_store.remote_head(self.repo),'nflstreet2')
         newer=copy.deepcopy(stored);newer['revision']='a'*40
         local_lock=copy.deepcopy(self.lock)
         local_lock['projects']['nflstreet2']['revision']=newer['revision']
@@ -106,7 +110,7 @@ class MultiProjectStoreTests(unittest.TestCase):
     setUp=ReportStoreTests.setUp
     git=ReportStoreTests.git
     # These scenarios exercise the same bare-remote writer, with an independent
-    # contract producer alongside the real compatibility package.
+    # contract producer alongside all real registered packages.
     def add_contract(self):
         from platform_fixtures import registered_root,report,SLUG
         from reporting.state import install
@@ -115,12 +119,12 @@ class MultiProjectStoreTests(unittest.TestCase):
         install(self.site,None,manifest,payloads,{'title':'Contract fixture'})
         return SLUG
 
-    def test_two_projects_restore_and_rerun_without_erasing_either(self):
+    def test_all_projects_restore_and_rerun_without_erasing_any(self):
         slug=self.add_contract()
         first=report_store.publish(self.repo,self.site)
         report_store.restore(self.repo)
         selected=decode((self.repo/report_store.LOCK).read_bytes())
-        self.assertEqual(set(selected['projects']),{'nflstreet2',slug})
+        self.assertEqual(set(selected['projects']),set(self.lock['projects'])|{slug})
         self.assertEqual(selected,decode((self.site/report_store.LOCK).read_bytes()))
         self.assertEqual(report_store.publish(self.repo,self.site),first)
         for key in selected['projects']:report_store.stored_package(self.repo,first,key)

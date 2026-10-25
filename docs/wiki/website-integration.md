@@ -21,6 +21,8 @@ The shared site renders each project using the same header, gutters, code/data b
 
 Store cover artwork as `assets/covers/<slug>.webp` with the original aspect ratio. Use authorized artwork and retain required license/provenance notes. The latest commit title/time is independent of measured build progress.
 
+Configure the stable source path `/assets/covers/<slug>.webp`. A `/releases/<hash>/...` URL belongs to a built site artifact and must never be copied into project registration; the builder versions real asset references itself.
+
 ## Required public contract
 
 Use the [manifest schema](/docs/reporting/schema/report-v1.schema.json), [project configuration schema](/docs/reporting/schema/project-v1.schema.json) and [metric definitions](/docs/reporting/contract-v1.md). A producer and its site adapter must agree on schema and methodology versions before registration.
@@ -51,6 +53,14 @@ Receipts bind the public files to the producing execution. The consumer verifies
 Derive percentages from raw totals. Keep code and data denominators stable and account for all declared ranges. Linked, matched and fuzzy overlap; never add them. Preserve the actual relationship between linked and matched under the project's promotion policy.
 
 A function fragment cannot earn full-function exactness. A compiled unit marked complete does not establish an original file boundary. Address labels do not count as descriptive names. Support code and data fuzzy independently; never copy one into the other or label a fallback as measured fuzzy progress.
+
+## Map parity and geometry
+
+A supported map includes both `sections` and `files`. For each of code and data separately, their leaf address unions must be identical and each view's top-level metrics must sum to the summary. The views can group bytes differently; matching numeric totals at different addresses still fail.
+
+Use positive, end-exclusive intervals without overlaps inside a view. Preserve disjoint ranges through `mapped_extents`, aggregate child metrics into parents, and represent measured bytes without known file ownership as gap/unmapped nodes. Do not invent ownership or drop unassigned bytes. Function fragments must collectively cover the declared complete extent and reconcile any reported function inventory; fragments alone cannot earn full-function exact credit.
+
+The [map specification and paired examples](/docs/reporting/platform.md#map-semantics) list the exact field/aggregation rules. Validate with the shared packager locally; a schema-valid JSON tree can still fail coverage checks.
 
 ## Choose modules independently
 
@@ -118,6 +128,8 @@ Consumers may reuse an identical previously authenticated package after temporar
 ## Register and use the platform
 
 The site owner registers a producer in `config/producers.json` and its presentation in `config/projects.json`. Producer policy and artifact data follow the shared versioned schemas. A conforming producer uses the common importer and renderer; adding a project does not require a separate site implementation. Artwork stays in the website repository.
+
+Producer `job`, `requiredSteps`, selected-lane steps and artifact names match GitHub's actual run API **exactly**, including case, spaces and matrix suffixes. For a matrix job displayed as `Build (TARGET_ID)`, register that resolved name, not merely `Build` or the YAML job key. Inspect the actual successful run/attempt; there must be one matching producer job and exactly one successful occurrence of every required step. See [policy inspection commands](/docs/reporting/platform.md#execution-policy-and-reuse).
 
 The [platform contract and commands](/docs/reporting/platform.md) specify the public input files, packager metadata, producer policy, full/reused execution lanes, import CLI and preserved historical policies. These are shared interfaces; the project supplies its own measured inputs and approved execution facts.
 

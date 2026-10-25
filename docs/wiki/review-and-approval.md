@@ -8,7 +8,11 @@ This chapter specifies the starter default: independent blind accuracy review, a
 
 The public report contract does not impose this review model. It authenticates the producing build/report execution; project policy governs source acceptance. Attribution and contributor rankings are separate choices.
 
+Choose and document merge authority when establishing the project. The selected policy and explicit task authorization govern actual permission; a template does not itself grant authority. Existing-workflow compatibility belongs to the [optional appendix](/wiki/existing-projects/).
+
 ## Contribution sequence
+
+The default sequence is:
 
 Claim scope → establish evidence → reconstruct and measure → self-check → blind accuracy review → hostile review → resolve findings → final-revision CI → owner clearance → owner merge → verified publication.
 
@@ -43,6 +47,8 @@ Coverage: earlier records carried forward and delta checked
 ```
 
 Hostile verdicts are SHIP, FIX, REDO or BLOCKED. SHIP means that review passed; it does not authorize a merge. Missing essential evidence is a blocked check, not permission to infer success.
+
+Use this vocabulary consistently in new project instructions, review records and the selected verifier. Only the declared passing verdict can clear its check; missing essential evidence remains nonpassing. Adapting an older verdict system is covered in the optional appendix.
 
 ## Rechecks and integration
 

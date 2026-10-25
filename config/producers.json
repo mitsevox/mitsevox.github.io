@@ -3,6 +3,10 @@
     "format": "nfl-legacy-v1",
     "policy": "nflstreet2-producer.json"
   },
+  "mvp2005": {
+    "format": "report-v1",
+    "policy": "mvp2005-producer.json"
+  },
   "tw2004": {
     "format": "report-v1",
     "policy": "tw2004-producer.json"

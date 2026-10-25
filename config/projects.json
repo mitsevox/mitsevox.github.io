@@ -28,6 +28,31 @@
   },
   {
     "schemaVersion": 1,
+    "slug": "mvp2005",
+    "title": "MVP Baseball 2005",
+    "repository": "mitsevox/mvp2005",
+    "target": "GV4E69",
+    "modules": {
+      "map": false,
+      "functionCounts": true,
+      "fileCounts": false,
+      "timeline": false,
+      "contributors": false
+    },
+    "contributions": {
+      "accepting": false
+    },
+    "shortTitle": "MVP Baseball 2005",
+    "console": "GameCube",
+    "year": "2005",
+    "artwork": {
+      "cover": "/assets/covers/mvp2005.webp",
+      "width": 640,
+      "height": 905
+    }
+  },
+  {
+    "schemaVersion": 1,
     "slug": "tw2004",
     "title": "Tiger Woods PGA Tour 2004",
     "repository": "mitsevox/tw2004",

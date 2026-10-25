@@ -215,7 +215,12 @@ class ExecutionTests(unittest.TestCase):
         manifest,p,a=validate_package(self.directory)
         self.assertEqual(manifest['summary']['code']['fuzzyEquivalentBytes'],p['measures']['code']['fuzzy'])
         self.assertEqual(manifest['summary']['functions']['exact'],a['credited_functions'])
-        self.assertEqual([c['slug'] for c,_,_ in locked_projects(ROOT)],['nflstreet2','tw2004'])
+        self.assertEqual({c['slug'] for c,_,_ in locked_projects(ROOT)},
+                         {c['slug'] for c in decode((ROOT/'config/projects.json').read_bytes())})
+        for config,_,report in locked_projects(ROOT):
+            self.assertEqual(report['origin'],'measured')
+            self.assertEqual(report['project'],config['slug'])
+            self.assertEqual(report['repository'],config['repository'])
 
     def test_corrupt_package_cannot_replace_last_good(self):
         payloads={p.name:p.read_bytes() for p in self.directory.iterdir()}
