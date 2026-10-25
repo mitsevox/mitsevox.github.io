@@ -32,7 +32,7 @@ jobs:
         run: |
           uv run --locked python -m unittest discover -s tests -v
           for file in assets/*.js; do node --check "$file"; done
-      - name: Refresh authenticated NFL reports
+      - name: Refresh registered project reports
         id: refresh
         if: github.event_name != 'pull_request'
         continue-on-error: true
@@ -40,7 +40,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           uv run --locked python tools/report_store.py restore
-          uv run --locked python tools/import_nfl.py
+          uv run --locked python tools/import_reports.py --all
       - name: Assemble verified static output
         run: uv run --locked python tools/build_site.py
       - name: Preserve validated site candidate

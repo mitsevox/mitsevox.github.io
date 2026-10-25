@@ -1,0 +1,6 @@
+{
+  "nflstreet2": {
+    "format": "nfl-legacy-v1",
+    "policy": "nflstreet2-producer.json"
+  }
+}

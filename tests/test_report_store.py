@@ -21,6 +21,7 @@ class ReportStoreTests(unittest.TestCase):
         self.remote=self.base/'remote.git'
         subprocess.run(['git','init','--bare','--initial-branch=main',str(self.remote)],check=True,capture_output=True)
         self.repo=self.base/'site';self.repo.mkdir()
+        shutil.copytree(ROOT/'config',self.repo/'config')
         self.git('init','--initial-branch=main')
         self.git('-c','user.name=Test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','Site source')
         self.git('remote','add','origin',str(self.remote))
@@ -97,6 +98,65 @@ class ReportStoreTests(unittest.TestCase):
             missing=copy.deepcopy(activity);missing['snapshots']=[]
             with patch.object(report_store,'validate_package',return_value=(newer,{},missing)), self.assertRaisesRegex(ValueError,'history'):
                 report_store.restore(self.repo)
+
+
+class MultiProjectStoreTests(unittest.TestCase):
+    setUp=ReportStoreTests.setUp
+    git=ReportStoreTests.git
+    # These scenarios exercise the same bare-remote writer, with an independent
+    # contract producer alongside the real compatibility package.
+    def add_contract(self):
+        from platform_fixtures import registered_root,report,SLUG
+        from reporting.state import install
+        registered_root(self.repo);registered_root(self.site)
+        manifest,payloads=report(self.base/'contract',timeline=True)
+        install(self.site,None,manifest,payloads,{'title':'Contract fixture'})
+        return SLUG
+
+    def test_two_projects_restore_and_rerun_without_erasing_either(self):
+        slug=self.add_contract()
+        first=report_store.publish(self.repo,self.site)
+        report_store.restore(self.repo)
+        selected=decode((self.repo/report_store.LOCK).read_bytes())
+        self.assertEqual(set(selected['projects']),{'nflstreet2',slug})
+        self.assertEqual(selected,decode((self.site/report_store.LOCK).read_bytes()))
+        self.assertEqual(report_store.publish(self.repo,self.site),first)
+        for key in selected['projects']:report_store.stored_package(self.repo,first,key)
+
+    def test_old_candidate_cannot_remove_a_stored_project(self):
+        self.add_contract();first=report_store.publish(self.repo,self.site)
+        (self.site/report_store.LOCK).write_bytes(encoded(self.lock))
+        with self.assertRaisesRegex(ValueError,'erase a stored project'):
+            report_store.publish(self.repo,self.site)
+        self.assertEqual(report_store.remote_head(self.repo),first)
+
+    def test_old_registration_cannot_overwrite_or_restore_unknown_project(self):
+        self.add_contract();first=report_store.publish(self.repo,self.site)
+        registry=decode((self.repo/'config/producers.json').read_bytes())
+        registry.pop('contract-test')
+        (self.repo/'config/producers.json').write_bytes(encoded(registry))
+        with self.assertRaisesRegex(ValueError,'Unregistered project'):
+            report_store.restore(self.repo)
+        self.assertEqual(report_store.remote_head(self.repo),first)
+
+
+    def test_concurrent_writer_is_never_force_overwritten(self):
+        self.add_contract();first=report_store.publish(self.repo,self.site)
+        changed=decode((self.site/report_store.LOCK).read_bytes())
+        changed['projects']['contract-test']['latestCommit']['title']='New metadata'
+        (self.site/report_store.LOCK).write_bytes(encoded(changed))
+        original=report_store.git;competing=[]
+        def race(root,*args,**kwargs):
+            if args[:2]==('push','origin') and not competing:
+                tree=original(root,'rev-parse',first+'^{tree}').decode().strip()
+                other=original(root,'-c','user.name=Other','-c','user.email=other@example.invalid',
+                               'commit-tree',tree,'-p',first,data=b'Concurrent accepted publication\n').decode().strip()
+                original(root,'push','origin',other+':refs/heads/report-data')
+                competing.append(other)
+            return original(root,*args,**kwargs)
+        with patch.object(report_store,'git',side_effect=race),self.assertRaises(subprocess.CalledProcessError):
+            report_store.publish(self.repo,self.site)
+        self.assertEqual(report_store.remote_head(self.repo),competing[0])
 
 
 if __name__=='__main__':unittest.main()

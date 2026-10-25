@@ -1,4 +1,5 @@
 import {pageScope} from './lifecycle.js';
+import {fetchProgress} from './reports.js';
 export function mountProgress(root, project, buildLink) {
 const scope = pageScope();
 const {signal, listen, frame, cancelFrame, animate} = scope;
@@ -46,7 +47,7 @@ function countUp(element, value, decimals = 0, suffix = '') {
   }
   const start = performance.now();
   const step = now => {
-    const t = motionPreference.matches ? 1 : Math.min((now - start) / 780, 1);
+    const t = motionPreference.matches ? 1 : Math.max(0, Math.min((now - start) / 780, 1));
     element.textContent = format(value * (1 - Math.pow(1 - t, 3)));
     if (t < 1) countAnimations.set(element, frame(step));
     else countAnimations.delete(element);
@@ -596,7 +597,7 @@ mapListen(window, 'scroll', () => {
 }, {passive: true});
 function validMap(items, kind = null) {
   return Array.isArray(items) && items.length > 0 && items.every(item => {
-    if (!['code', 'data'].includes(item.kind) || (kind && item.kind !== kind) ||
+    if (!(item.size>0) || !['code', 'data'].includes(item.kind) || (kind && item.kind !== kind) ||
         typeof item.name !== 'string' || !validMeasure({total: item.size, linked: item.linked, matched: item.matched, fuzzy: item.fuzzy})) return false;
     if (item.children) {
       if (!validMap(item.children, item.kind)) return false;
@@ -610,7 +611,7 @@ function validMap(items, kind = null) {
 function renderCounts(functions, type, basis) {
   if (!root.querySelector('[data-stats="' + type + '"]')) return;
   const available = functions && functions.basis !== 'unavailable' && functions.total > 0;
-  if (functions && functions.basis !== 'unavailable' && (functions.basis !== basis || !Number.isSafeInteger(functions.total) || functions.total < 0 || (type === 'function' && functions.total === 0) ||
+  if (functions && functions.basis !== 'unavailable' && (typeof functions.basis !== 'string' || !functions.basis.length || !Number.isSafeInteger(functions.total) || functions.total < 0 ||
       !['exact', 'named'].every(field => Number.isSafeInteger(functions[field]) && functions[field] >= 0 && functions[field] <= functions.total))) {
     throw new Error('Invalid function progress');
   }
@@ -632,31 +633,39 @@ function renderCounts(functions, type, basis) {
   }
 }
 
-function validMeasure(m){return m&&Number.isSafeInteger(m.total)&&m.total>0&&Number.isSafeInteger(m.linked)&&m.linked>=0&&m.linked<=m.total&&Number.isSafeInteger(m.matched)&&m.matched>=0&&m.linked<=m.matched&&m.matched<=m.total&&(m.fuzzy===undefined||(Number.isFinite(m.fuzzy)&&m.matched<=m.fuzzy&&m.fuzzy<=m.total));}
-async function loadProgress(){try{const response=await fetch(project.progressUrl,{cache:'no-cache',signal});if(!response.ok)throw new Error('Progress unavailable');const data=await response.json();if(signal.aborted)return;if(data.schema!==1||data.target!==project.target||data.basis!=='executable-sections'||data.baseline!==(project.preview?'preview':'verified')||!(/^[a-f0-9]{40}$/).test(data.revision)||!validMeasure(data.measures?.code)||!validMeasure(data.measures?.data)||!Array.isArray(data.sections)||!data.sections.length)throw new Error('Invalid progress');for(const item of data.sections){if(!['code','data'].includes(item.kind)||typeof item.name!=='string'||!/^0x[0-9A-F]{8}$/.test(item.address)||!validMeasure({total:item.size,linked:item.linked,matched:item.matched,fuzzy:item.fuzzy}))throw new Error('Invalid section');}for(const kind of ['code','data']){for(const field of ['total','linked','matched',...(data.measures[kind].fuzzy===undefined?[]:['fuzzy'])]){const sum=data.sections.filter(s=>s.kind===kind).reduce((n,s)=>n+s[field==='total'?'size':field],0);if(Math.abs(sum-data.measures[kind][field])>1e-6)throw new Error('Inconsistent progress');}}
-const files=data.files || data.sections;
-if(!validMap(data.sections)||!validMap(files))throw new Error('Invalid map');
-for(const kind of ['code','data']){for(const field of ['total','linked','matched',...(data.measures[kind].fuzzy===undefined?[]:['fuzzy'])]){
-  if(Math.abs(files.filter(item=>item.kind===kind).reduce((sum,item)=>sum+item[field==='total'?'size':field],0)-data.measures[kind][field])>1e-6)throw new Error('Inconsistent file map');
-}}
+function validMeasure(m){return m&&Number.isSafeInteger(m.total)&&m.total>=0&&Number.isSafeInteger(m.linked)&&m.linked>=0&&m.linked<=m.total&&Number.isSafeInteger(m.matched)&&m.matched>=0&&m.matched<=m.total&&(m.fuzzy===undefined||(Number.isFinite(m.fuzzy)&&m.matched<=m.fuzzy&&m.fuzzy<=m.total));}
+async function loadProgress(){try{
+const data=await fetchProgress(project,signal);if(signal.aborted)return;
+if(data.schema!==1||data.target!==project.target||data.target_sha1!==project.targetSha1||data.baseline!=='verified'||!(/^[a-f0-9]{40}$/).test(data.revision)||!validMeasure(data.measures?.code)||!validMeasure(data.measures?.data))throw new Error('Invalid progress');
+const files=data.files||data.sections||[];
+if(mapEnabled){
+  if(data.basis!=='executable-sections'||!validMap(data.sections)||!validMap(files))throw new Error('Invalid map');
+  for(const key of ['sections','files'])for(const kind of ['code','data'])for(const field of ['total','linked','matched',...(data.measures[kind].fuzzy===undefined?[]:['fuzzy'])]){
+    if(Math.abs(data[key].filter(item=>item.kind===kind).reduce((sum,item)=>sum+item[field==='total'?'size':field],0)-data.measures[kind][field])>1e-6)throw new Error('Inconsistent map');
+  }
+}
+root.querySelector('.fuzzy-key').parentElement.hidden=!['code','data'].some(kind=>data.measures[kind].fuzzy!==undefined);
 renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(data.file_counts, 'file', 'mapped-file-inventory');sections=files;root.querySelectorAll('.progress-element').forEach(element => {
   const kind = element.dataset.progress;
   const measures = data.measures[kind];
-  const linked = measures.linked / measures.total * 100;
-  const matched = measures.matched / measures.total * 100;
-  const fuzzy = (measures.fuzzy ?? measures.matched) / measures.total * 100;
+  const available=measures.total>0;
+  const linked = available ? measures.linked / measures.total * 100 : 0;
+  const matched = available ? measures.matched / measures.total * 100 : 0;
+  const fuzzy = measures.fuzzy===undefined ? null : available ? measures.fuzzy/measures.total*100 : 0;
   const track = element.querySelector('.track');
-  const description = `${kind === 'code' ? 'Code' : 'Data'} · Linked ${linked.toFixed(2)}% · Matched ${matched.toFixed(2)}% · Fuzzy ${fuzzy.toFixed(2)}%`;
-  countUp(element.querySelector('.progress-value'), matched, 2, '%');
-  track.setAttribute('aria-valuenow', matched);
-  track.setAttribute('aria-valuetext', `Linked ${linked.toFixed(2)}%, matched ${matched.toFixed(2)}%, fuzzy ${fuzzy.toFixed(2)}%`);
+  const description = !available?`${kind === 'code' ? 'Code' : 'Data'} unavailable`:`${kind === 'code' ? 'Code' : 'Data'} · Linked ${linked.toFixed(2)}% · Matched ${matched.toFixed(2)}%${fuzzy===null?'':' · Fuzzy '+fuzzy.toFixed(2)+'%'}`;
+  if(available)countUp(element.querySelector('.progress-value'), matched, 2, '%');
+  else element.querySelector('.progress-value').textContent='Unavailable';
+  if(available)track.setAttribute('aria-valuenow', matched);else track.removeAttribute('aria-valuenow');
+  track.setAttribute('aria-valuetext', available?`Linked ${linked.toFixed(2)}%, matched ${matched.toFixed(2)}%${fuzzy===null?'':', fuzzy '+fuzzy.toFixed(2)+'%'}`:'Unavailable');
   fillTo(track.querySelector('.progress-linked'), linked);
   fillTo(track.querySelector('.progress-matched'), matched);
-  fillTo(track.querySelector('.progress-fuzzy'), fuzzy);
+  track.querySelector('.progress-fuzzy').hidden=fuzzy===null;
+  if(fuzzy!==null)fillTo(track.querySelector('.progress-fuzzy'), fuzzy);
   const strips = [
     {field: 'linked', label: 'Linked', value: linked},
     {field: 'matched', label: 'Matched', value: matched},
-    {field: 'fuzzy', label: 'Fuzzy', value: fuzzy}
+    ...(fuzzy===null?[]:[{field: 'fuzzy', label: 'Fuzzy', value: fuzzy}])
   ];
   const lift = document.createElement('div');
   lift.className = 'progress-hover';
@@ -671,6 +680,7 @@ renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(da
     hideTooltip();
   }
   function hoverStrip(event) {
+    if(!available)return;
     const rect = track.getBoundingClientRect();
     const x = event.clientX - rect.left;
     let start = 0;
@@ -692,7 +702,7 @@ renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(da
         showTooltipText(track, `${strip.label} ${strip.value.toFixed(2)}%`, event.clientX, event.clientY);
         return;
       }
-      start = end;
+      start = Math.max(start,end);
     }
     clearHover();
   }
@@ -713,7 +723,7 @@ renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(da
   });
   listen(track, 'blur', clearHover);
   listen(track, 'click', hoverStrip);
-});const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Baseline verified · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Built '+data.built_at;render();}catch(error){if(signal.aborted)return;renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');buildLink.textContent='Progress unavailable';canvas.textContent='Progress unavailable';root.querySelectorAll('.track').forEach(track=>track.setAttribute('aria-valuetext','Unavailable'));}}
+});const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Verified report · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Measured '+(project.report?.measuredAt||data.built_at)+'; published '+data.built_at;render();}catch(error){if(signal.aborted)return;renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');buildLink.textContent='Progress unavailable';canvas.textContent='Progress unavailable';root.querySelectorAll('.track').forEach(track=>track.setAttribute('aria-valuetext','Unavailable'));}}
 const observer = mapEnabled ? new ResizeObserver(() => { if (!signal.aborted) render(); }) : null;
 observer?.observe(canvas);
 const ready = loadProgress();

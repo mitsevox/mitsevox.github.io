@@ -1,8 +1,6 @@
 # Common validation and publication workflow
 
-Target multi-game requirements. The implemented NFL consumer and its current rollout limits are documented in [NFL integration](nflstreet2.md). Each game retains its build adapter and existing owner/review policy. Shared code standardizes guarantees and public output; it does not authorize merges or change private dependencies.
-
-The [integration handoff](onboarding.md) assigns the concrete two-repository work and acceptance evidence. Multi-game failure isolation and artifact interfaces below are target behavior; the current workflow refreshes NFL only and blocks deployment on any refresh failure. Implement shared dispatch/storage before enabling a second game.
+The shared platform implements registered producer authentication, package validation, per-project installation, multi-project storage and static rendering. See [the platform interface](platform.md) for the implemented schemas and commands. Each game retains its own build tools and contribution policy. The current site blocks deployment on any refresh failure while preserving every last-good package.
 
 ## Pull request
 
@@ -38,7 +36,7 @@ Start ingestion on manual runs and a schedule with best-effort latency. An optio
 ## CI improvements to carry across games
 
 - Pin shared validators and Actions to reviewed commits; pin the approved build image by digest and record separately downloaded tool versions/digests. Do not rebuild or change private environments during this documentation pass.
-- Split cheap schema/evidence checks from expensive build/comparison jobs. Use input-aware caching and NFL's authenticated report reuse.
+- Split cheap schema/evidence checks from expensive build/comparison jobs. Use input-aware caching and authenticated complete-tree report reuse.
 - Scope cache keys to target, compiler/linker, configuration and relevant source/evidence inputs. Retain TW stale-object pruning.
 - Validate missing reports, corrupted history, duplicate reruns, stale runs, wrong targets, changed denominators and partial/exact-unlinked examples explicitly.
 - Keep independent reviews, owner clearance, CI evidence, merge and publication separate. Carry forward adequate review of unchanged code.
