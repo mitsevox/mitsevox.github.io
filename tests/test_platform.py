@@ -34,7 +34,7 @@ class PlatformTests(unittest.TestCase):
         self.assertNotIn('files',p);self.assertNotIn('contributors',a);self.assertNotIn('snapshots',a)
         self.assertNotIn('fuzzy',p['measures']['code'])
         self.assertEqual(read_lock(self.root)['projects']['nflstreet2'],old)
-        self.assertEqual(set(read_lock(self.root)['projects']),{'nflstreet2',SLUG})
+        self.assertEqual(set(read_lock(self.root)['projects']),{'nflstreet2','tw2004',SLUG})
 
     def test_timeline_without_credit_feed_and_rankings_without_timeline(self):
         _,_,directory=self.install(timeline=True)
@@ -82,7 +82,7 @@ class PlatformTests(unittest.TestCase):
         output=self.base/'public';build(self.root,output)
         self.assertTrue((output/'games'/SLUG/'index.html').exists())
         manifest=decode((output/'site-manifest.json').read_bytes())
-        self.assertEqual(set(manifest['projects']),{'nflstreet2',SLUG})
+        self.assertEqual(set(manifest['projects']),{'nflstreet2','tw2004',SLUG})
         release=manifest['release'];text=(output/'releases'/release/'assets/report-projects.js').read_text()
         self.assertIn('Contract test project',text);self.assertIn('"contributors":false',text)
         for chapter in (output/'wiki').rglob('content.html'):

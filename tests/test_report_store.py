@@ -31,7 +31,9 @@ class ReportStoreTests(unittest.TestCase):
             'GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'push','GITHUB_SHA':self.sha})
         self.env.start();self.addCleanup(self.env.stop)
         self.site=self.base/'built';self.site.mkdir()
+        # The real compatibility package alone; each scenario adds the projects it needs.
         self.lock=decode((ROOT/'data/reports.lock.json').read_bytes())
+        self.lock['projects']={'nflstreet2':self.lock['projects']['nflstreet2']}
         entry=self.lock['projects']['nflstreet2']
         shutil.copytree(ROOT/entry['path'],self.site/entry['path'])
         (self.site/report_store.LOCK).write_bytes(encoded(self.lock))

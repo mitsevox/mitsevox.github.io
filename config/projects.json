@@ -25,5 +25,30 @@
       "height": 908
     },
     "contributionHeading": "Want to join the blitz?"
+  },
+  {
+    "schemaVersion": 1,
+    "slug": "tw2004",
+    "title": "Tiger Woods PGA Tour 2004",
+    "repository": "mitsevox/tw2004",
+    "target": "GW4E69",
+    "modules": {
+      "map": true,
+      "functionCounts": true,
+      "fileCounts": true,
+      "timeline": true,
+      "contributors": false
+    },
+    "contributions": {
+      "accepting": false
+    },
+    "shortTitle": "Tiger Woods 2004",
+    "console": "GameCube",
+    "year": "2003",
+    "artwork": {
+      "cover": "/assets/covers/tw2004.webp",
+      "width": 640,
+      "height": 908
+    }
   }
 ]
