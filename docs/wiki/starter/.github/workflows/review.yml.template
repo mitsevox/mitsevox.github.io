@@ -1,0 +1,104 @@
+# Optional default-policy verifier; adopt only when this review model is selected.
+# Set REVIEW_OWNER to the adopted owner login in repository variables.
+name: Review clearance
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+  issue_comment:
+    types: [created, edited, deleted]
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: Pull request number
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+  statuses: write
+
+concurrency:
+  group: review-${{ github.event.pull_request.number || github.event.issue.number || inputs.pull_request }}
+  cancel-in-progress: true
+
+jobs:
+  clearance:
+    if: github.event_name != 'issue_comment' || github.event.issue.pull_request
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      REVIEW_OWNER: ${{ vars.REVIEW_OWNER }}
+    steps:
+      - uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
+        with:
+          script: |
+            if (!process.env.REVIEW_OWNER) throw new Error('Configure REVIEW_OWNER before adopting clearance');
+            const repo = context.repo;
+            const number = Number(context.payload.pull_request?.number ||
+              context.payload.issue?.number || context.payload.inputs?.pull_request);
+            const {data: pr} = await github.rest.pulls.get({...repo, pull_number: number});
+            if (pr.state !== 'open' || pr.head.repo?.full_name !== pr.base.repo.full_name) return;
+            const sha = pr.head.sha;
+            await github.rest.repos.createCommitStatus({...repo, sha,
+              context: 'Owner review clearance', state: 'pending',
+              description: 'Checking owner clearance of current revision', target_url: pr.html_url});
+            const comments = await github.paginate(github.rest.issues.listComments,
+              {...repo, issue_number: number, per_page: 100});
+            const marker = '<!-- owner-review-clearance -->';
+            const records = comments.filter(c =>
+              c.user?.login === process.env.REVIEW_OWNER && c.body.startsWith(marker));
+            records.sort((a, b) => Date.parse(a.updated_at) - Date.parse(b.updated_at) || a.id - b.id);
+            const latest = records.at(-1);
+            const fields = (text, names) => {
+              const lines = text.replace(/\r\n/g, '\n').trim().split('\n');
+              const result = {};
+              for (const [index, name] of names.entries()) {
+                const prefix = `${name}: `;
+                if (!lines[index]?.startsWith(prefix) ||
+                    lines.filter(line => line.startsWith(`${name}:`)).length !== 1) return null;
+                result[name] = lines[index].slice(prefix.length);
+              }
+              return result;
+            };
+            let valid = false;
+            if (latest) {
+              const body = latest.body.slice(marker.length).trim();
+              const clearance = fields(body, ['Revision', 'Accuracy', 'Hostile']);
+              const revision = clearance?.Revision;
+              const accuracy = clearance?.Accuracy;
+              const hostile = clearance?.Hostile;
+              const prefix = `https://github.com/${repo.owner}/${repo.repo}/pull/${number}#`;
+              const evidenceLink = value => value?.startsWith(prefix) &&
+                /^issuecomment-[0-9]+$/.test(value.slice(prefix.length));
+              valid = revision === sha && evidenceLink(accuracy) && evidenceLink(hostile) && accuracy !== hostile;
+              if (valid) {
+                for (const [url, lane] of [[accuracy, 'accuracy'], [hostile, 'hostile']]) {
+                  const anchor = url.slice(prefix.length);
+                  let record;
+                  try {
+                    ({data: record} = await github.rest.issues.getComment({...repo,
+                      comment_id: Number(anchor.slice('issuecomment-'.length))}));
+                  } catch (error) {
+                    if (error.status !== 404) throw error;
+                    valid = false;
+                    break;
+                  }
+                  valid &&= record.issue_url.endsWith(`/issues/${number}`);
+                  const label = lane === 'accuracy' ? 'Accuracy' : 'Hostile';
+                  const review = fields(record.body, ['Revision', label]);
+                  valid &&= review?.Revision === sha;
+                  valid &&= lane === 'accuracy'
+                    ? review?.Accuracy === 'PASS' || /^N\/A - \S.*$/.test(review?.Accuracy || '')
+                    : review?.Hostile === 'SHIP';
+                }
+              }
+            }
+            valid &&= !pr.draft;
+            await github.rest.repos.createCommitStatus({...repo, sha,
+              context: 'Owner review clearance', state: valid ? 'success' : 'pending',
+              description: valid ? 'Owner cleared review records for this revision' :
+                'Waiting for owner clearance of current revision',
+              target_url: valid ? latest.html_url : pr.html_url});

@@ -74,7 +74,7 @@ def pages_reports(raw):
 
 
 COMMON_STEPS = (
-    'Verify publication handoff rules', 'Select verified final-integration reports',
+    'Verify publication handoff rules',
     'Decide required validation lanes', 'Upload decomp.dev report',
     'Prepare verified publication history', 'Preserve verified publication history',
     'Run actions/upload-pages-artifact@98ef48e41587a300b82de4cf298aa98b57b2faae',
@@ -88,6 +88,7 @@ FULL_STEPS = (
     'Verify activity and live receipts on the host',
 )
 REUSE_STEP = 'Publish authenticated final-integration reports'
+SELECTION_STEP = 'Select verified final-integration reports'
 
 
 def authenticate_run(policy, run, jobs, workflow_blob):
@@ -109,6 +110,14 @@ def authenticate_run(policy, run, jobs, workflow_blob):
     reused = succeeded(REUSE_STEP)
     full = all(succeeded(n) for n in FULL_STEPS)
     require(reused != full, 'Ambiguous or incomplete validation lane')
+    # Approved workflow code skips selection only for explicit main audit dispatches.
+    # The run/job API provides the actual event and step outcome; report JSON cannot
+    # substitute a missing/failed selection or a partial full-validation lane.
+    audit = (run['event'] == 'workflow_dispatch' and full
+             and sum(s['name'] == SELECTION_STEP and s['conclusion'] == 'skipped'
+                     for s in steps) == 1
+             and sum(s['name'] == SELECTION_STEP for s in steps) == 1)
+    require(succeeded(SELECTION_STEP) or audit, 'Missing publication selection or full audit')
     return ('reused' if reused else 'full'), job
 
 

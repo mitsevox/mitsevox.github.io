@@ -1,26 +1,34 @@
 # Agent assignment
 
-Read the wiki, this repository's current README, CONTRIBUTING and AGENTS, and
-INTEGRATION.md from this archive. Apply their structure to this project.
+Read the wiki and this repository's current README, CONTRIBUTING and AGENTS, plus CI.md and
+INTEGRATION.md from this kit. Inspect the actual checkout, current main, open work, authorized
+references, target inputs, existing build/comparison tools and CI before editing.
 
-Use a dedicated branch and checkout/worktree. Inspect the existing repository
-before editing, preserve unrelated work, and retain established paths/tools
-where they already fulfill the template's responsibilities.
+Use an isolated branch/worktree and preserve unrelated work. Map this template's responsibilities
+onto established project paths rather than reorganizing working source for cosmetic conformity.
+Record actual target/hash, tools/runtime pins, source objective, commands and supported features.
+Confirm project review/merge policy; the default is independent blind accuracy and hostile review
+and owner-only merges, but an explicitly adopted alternative takes precedence. Make attribution
+tracking an explicit independent decision. Keep rankings and accepting contributions separate.
 
-Record the actual target/hash, source objective, approved tools, build commands,
-validation stages, review/merge policy and public reporting capabilities.
-Implement missing configuration/evidence checks, reproducible build/comparison
-stages, honest exact/fuzzy exports, durable history and shared-site integration.
+First implement fresh full validation using CI.md's exact operation/input/output/failure contracts
+and the editable workflow/config examples. Build the declared complete target objective, measure
+full comparison extents, validate evidence/dependencies, reconcile enabled credits after measurement,
+and export the canonical report-v1 inputs. Use the shared pinned packager and execution policy.
+Do not leave successful placeholders or claim an unimplemented engine passed.
 
-Use the versioned public report contract and shared renderer. Keep contribution
-acceptance, attribution tracking and displayed rankings independent. Unsupported
-modules remain unavailable; never invent metrics, maps, authorship or history.
+Only after fresh correctness is proved, implement optional requested acceleration: inventory reuse,
+input-keyed compile/measurement caches with fresh main disagreement audits, and authenticated
+PR-to-main complete-tree proof reuse. Test all guards, invalidations and bootstrap; never let PRs
+write shared caches or cached PR results masquerade as a fresh reusable proof. Keep source/merge/
+landed revisions, measurement/publication time and original source authorship distinct.
 
-Validate raw metric parity and both success/failure paths. Preserve useful
-partial reconstruction and keep private inputs out of public reports. Review
-changed dependencies, retain adequate earlier coverage, and follow the task's
-authorization for pushes, PRs, publication and merges.
+Use the common site importer/validator/store/renderer. Supply producer registration, project display
+settings and owner-supplied artwork, not a copied game-specific website. Keep unsupported modules
+unavailable and preserve existing accepted history/policies and every other project's reports.
 
-Deliver the implementation with exact commands, tested revisions, execution
-and artifact evidence, capability settings and limitations. Complete the
-integration checklist, including the public route and subsequent refresh.
+Complete the setup/integration checklists with real passing/failing/stale cases and exact revision,
+commands, run/attempt, artifact hashes and limitations. Preserve useful partial source. Do not invent
+metrics, evidence, names, authorship, reviews, clearance or success. Follow task authorization for
+pushes, PRs, publication, settings and merge. Public integration is complete only after its real
+route/manifest agree and a subsequent refresh retains the accepted state.

@@ -10,11 +10,13 @@ Use this handbook to establish a new project or align an existing one. It define
 2. [Layout & naming](/wiki/layout-and-naming/): organize source, declarations, evidence, configuration and generated output.
 3. [Evidence](/wiki/evidence-and-reconstruction/): reconstruct from reproducible observations and preserve uncertainty.
 4. [Build & validation](/wiki/build-and-validation/): distinguish baseline, accepted-source build and partial comparisons.
-5. [Review & approval](/wiki/review-and-approval/): bind review and clearance to the actual revision.
-6. [CI & publication](/wiki/ci-and-publication/): validate candidates, authenticate main results and publish coherent reports.
-7. [Credits & history](/wiki/credits-and-history/): select attribution policy and preserve measured history.
-8. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
-9. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
+5. [Agent workflow](/wiki/agent-workflow/): scope, isolate, investigate, reconstruct and deliver without losing evidence or authorship.
+6. [Review & approval](/wiki/review-and-approval/): adopt the project policy and bind review and clearance to the actual revision.
+7. [CI & publication](/wiki/ci-and-publication/): implement fresh validation and the editable workflow's stage contracts.
+8. [Cache & proof](/wiki/cache-and-proof/): optionally add inventory reuse, audited build caches and PR-to-main proof reuse.
+9. [Credits & history](/wiki/credits-and-history/): select attribution policy and preserve measured history.
+10. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
+11. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
 
 An existing project can keep its working structure and commands. Map these responsibilities onto it instead of reorganizing source just to match a diagram.
 
@@ -36,6 +38,14 @@ Record the platform, region/revision, executable hash, source objective, approve
 A faithful matching reconstruction and a nonmatching port have different validation objectives. Declare which one the project promises and label its reports accordingly. Compiler equivalence alone does not establish original names, intent or source-file boundaries.
 
 Attribution tracking, contributor rankings and accepting contributions are three independent choices. Progress reporting can operate without a contributor feed.
+
+## Fixed contracts and project decisions
+
+The fixed reporting boundary is the versioned public contract, authenticated execution, honest metric meanings, optional-capability declarations and history preservation. The site owner curates registrations and artwork. A new project uses the common importer and renderer rather than a copied game-specific website pipeline.
+
+The project chooses its console/executable format, tools, supported hosts, source layout, evidence vocabulary, build commands, promotion objective and review/merge policy. Owner-only merging with independent accuracy and hostile reviews is the starter default; the owner can adopt a different documented model. Attribution is optional. Caching and publication reuse start disabled until fresh validation works.
+
+The starter supplies an editable GitHub Actions workflow, configuration example and exact adapter interface. It cannot supply a target's extraction, compiler profile, linker geometry or disassembly interpretation. An implementing agent maps those contracts to the project's real tools, tests them and records unresolved gaps. It must not replace missing implementation with successful no-ops.
 
 ## Use the handbook with an agent
 

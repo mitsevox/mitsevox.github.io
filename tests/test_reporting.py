@@ -183,6 +183,27 @@ class ExecutionTests(unittest.TestCase):
         self.setUp()
         with self.assertRaises(ValueError):authenticate_run(self.policy,self.run,self.jobs,'f'*40)
 
+    def test_explicit_main_audit_may_skip_selection_only_with_full_validation(self):
+        selection = 'Select verified final-integration reports'
+        self.jobs[0]['steps'] = [s for s in self.jobs[0]['steps']
+                                if s['name'] not in FULL_STEPS and s['name'] not in (REUSE_STEP, selection)]
+        self.jobs[0]['steps'] += [{'name':n,'conclusion':'success'} for n in FULL_STEPS]
+        self.jobs[0]['steps'].append({'name':selection,'conclusion':'skipped'})
+        self.run['event'] = 'workflow_dispatch'
+        self.assertEqual(self.auth()[0], 'full')
+        valid_steps = copy.deepcopy(self.jobs[0]['steps'])
+        self.run['event'] = 'push'
+        with self.assertRaises(ValueError): self.auth()
+        self.run['event'] = 'workflow_dispatch'
+        for outcome in ('failure', 'cancelled'):
+            self.jobs[0]['steps'][-1]['conclusion'] = outcome
+            with self.subTest(outcome=outcome), self.assertRaises(ValueError): self.auth()
+        for bad in ([s for s in valid_steps if s['name'] != selection],
+                    valid_steps + [valid_steps[-1]],
+                    [s for s in valid_steps if s['name'] != FULL_STEPS[0]]):
+            self.jobs[0]['steps'] = bad
+            with self.assertRaises(ValueError): self.auth()
+
     def test_artifact_ambiguity_and_foreign_execution_rejected(self):
         a={**self.receipt['artifacts'][0],'expired':False,'workflow_run':{'id':self.run['id'],'head_sha':self.run['head_sha']}}
         self.assertEqual(select_artifact([a],a['name'],self.run,self.jobs[0]),a)

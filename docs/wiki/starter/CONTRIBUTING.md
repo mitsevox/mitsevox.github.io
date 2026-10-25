@@ -4,8 +4,11 @@ DRAFT STARTER: fill owner, commands, evidence formats and check names before ado
 
 ## Authority
 
-Only OWNER_LOGIN authorizes and performs main merges. SHIP, passing CI and owner clearance
-are distinct states. Agents do not alter branch protection or dependency access to fix a patch.
+Default for owner adoption: only OWNER_LOGIN authorizes and performs main merges, with
+independent blind accuracy and hostile review. The owner may adopt another explicit policy;
+record the selected model here and in config/ci.json before requiring its checks.
+SHIP, passing CI and owner clearance are distinct states. Agents do not alter branch
+protection or dependency access to fix a patch.
 
 ## Work
 
@@ -36,6 +39,15 @@ Review records identify full revision, reviewer, scope, evidence, findings and r
 - Required checks and owner-clearance logic: TO_IMPLEMENT
 - Attribution tracking and joint-credit policy: TO_DECIDE
 - Reporting capabilities, history and artifact retention: TO_IMPLEMENT
+
+## CI setup and acceleration
+
+Implement CI.md's adapter contract and adopt the editable validation workflow. Map each
+stage to actual documented engine commands, required inputs, outputs and failure cases.
+First demonstrate fresh full PR/main validation, measured report-v1 export and site ingestion.
+All caches/proof reuse start disabled; enable independently only after their invalidation,
+main-audit, zero-reuse proof and bootstrap cases pass. Never let PRs save trusted main caches.
+Exact coverage reconciliation occurs after measurement, even when an early ledger preflight passed.
 
 Adopt the review-record and clearance format documented in the wiki, then implement and test its verifier.
 Do not claim these starter documents enforce repository settings or authenticate reviews.

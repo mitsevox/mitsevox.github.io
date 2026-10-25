@@ -85,6 +85,9 @@ class PlatformTests(unittest.TestCase):
         self.assertEqual(set(manifest['projects']),{'nflstreet2',SLUG})
         release=manifest['release'];text=(output/'releases'/release/'assets/report-projects.js').read_text()
         self.assertIn('Contract test project',text);self.assertIn('"contributors":false',text)
+        for chapter in (output/'wiki').rglob('content.html'):
+            frozen=output/'releases'/release/'wiki'/chapter.relative_to(output/'wiki')
+            self.assertEqual(frozen.read_bytes(),chapter.read_bytes())
         self.assertFalse((output/'fixtures').exists())
 
     def test_one_failed_refresh_does_not_skip_other_registered_sources(self):

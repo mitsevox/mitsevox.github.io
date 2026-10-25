@@ -98,6 +98,8 @@ Unsupported data remains unavailable. Valid zero stays zero. If a supported expo
 
 Do not upload original binaries, object code, complete debug exports, credentials or private experiment files. Retain the existing decomp.dev feed where used; compare fields supported by that format against the same raw measurements.
 
+The downloadable workflow maps its operations onto the canonical report-v1 inputs, not a particular game's old export format. Implement the mapping to `summary.json` and supported `map.json`, `timeline.json`, `contributors.json`; then use the shared packager from an approved pinned tools revision. The starter's `CI.md` lists metadata fields, step policy and full/reused artifact requirements. No separate website importer is needed for a conforming report-v1 producer.
+
 ## Consumer template
 
 1. Register a trusted producer policy and an adapter for the export format.
@@ -125,6 +127,8 @@ uv run --locked python tools/build_site.py --output build/new-candidate
 ```
 
 ## Integration acceptance
+
+A workflow change is also a consumer trust change. Approve its actual Git blob after reviewing the code, update full/reused step requirements together, and test deliberate audit-step skips. Preserve archived policies and immutable history. A green upstream run must not automatically expand the receiver's trust.
 
 | Area | Required evidence |
 | --- | --- |

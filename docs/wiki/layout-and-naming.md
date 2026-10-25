@@ -23,15 +23,42 @@ game-slug/
       units.json           # accepted source placement / compiler profiles
       comparisons.json     # independent partial/exact comparisons
       evidence.tsv         # curated claims and reproducible locators
-  tools/                   # reproducible build, comparison and export tools
+      contributors.json    # optional original-source attribution
+      history.json         # optional reviewed history checkpoint
+    ci.json                # adopted CI policy and stage mapping
+    producer.json          # approved public-report execution policy
+  tools/
+    project_ci.py          # thin adapter to existing tools; see starter CI.md
+    ...                    # actual build, comparison and export implementations
   tests/                   # meaningful checks for those tools and contracts
   docs/                    # durable design and setup documentation
   .github/
     workflows/
+      validate.yml         # fresh build first; optional audited acceleration
+      review.yml           # trusted metadata-only clearance, if selected
     pull_request_template.md
   build/                   # ignored generated outputs
   scratch/                 # ignored experiments
 ```
+
+## Generated output boundaries
+
+Use stable role-based paths so stages cannot accidentally consume yesterday's successful output:
+
+| Path | Contents and lifetime |
+| --- | --- |
+| `build/baseline/` | Original-byte baseline output/receipt; private and disposable |
+| `build/source/` | Accepted-source executable, objects and complete-output receipt; private |
+| `build/comparisons/` | Partial/exact comparison objects, linked slices and measurements; private |
+| `build/inventory/` | Bounded reusable inventory metadata plus its input/digest receipt |
+| `build/cache/` | Optional compile/measurement entries; approved cache storage only |
+| `build/ci/` | Run context, lane selection and cache statistics; generated metadata |
+| `build/public-input/` | Only canonical `summary.json` and supported public module JSON |
+| `build/public-report/` | Validated manifest, execution receipt and allowlisted public payloads |
+
+These are template names, not required engine paths. Document the actual mapping once. Every producer stage clears its owned stale output before work and writes success output only after verification. Upload the explicit public directory, never `build/**`. Public packages cannot contain original binaries, objects, compiler caches or complete debug exports.
+
+Document each JSON/TSV schema next to its validator: required keys, address format, end-exclusive intervals, stable identities, enum meanings and version behavior. A path listed here does not invent a universal source-unit or evidence schema. The shared public schemas are the fixed boundary; target-internal schemas are project-owned.
 
 Use this layout for a new repository. In an existing repository, retain established paths and map these responsibilities onto them. Define and validate the formats of target configuration, accepted placements, comparisons and evidence. Optional contributor ledgers and history checkpoints belong alongside target configuration.
 

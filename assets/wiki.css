@@ -43,6 +43,7 @@
 .wiki-code:hover .wiki-code-actions,.wiki-code:focus-within .wiki-code-actions { opacity:1;pointer-events:auto; }
 @media(hover:none) { .wiki-code-actions { opacity:1;pointer-events:auto; } }
 .wiki-article pre code { display:block;padding:0;border:0;background:none;font-size:inherit;line-height:inherit;white-space:pre; }
+.wiki-article pre code.language-prose { white-space:pre-wrap;overflow-wrap:anywhere; }
 .wiki-copy { padding:4px 10px;background:#252c35;color:#bfc8d5;font:inherit;font-size:11px;line-height:1.5;border:1px solid #394351;border-radius:4px;transition:background .16s,color .16s,transform .16s; }
 .wiki-copy:active { transform:scale(.96); }
 .wiki-copy:hover { color:var(--ink);background:#303a47; }

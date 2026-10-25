@@ -5,6 +5,7 @@ import {mountProgress} from './progress.js';
 import {mountActivity} from './activity.js';
 import {mountIdentity} from './identity.js';
 import {mountWiki} from './wiki.js?v=4';
+import {wikiChapters} from './wiki-chapters.js';
 
 const shell=document.querySelector('.shell');
 const header=createHeader(),footer=createFooter();
@@ -17,12 +18,14 @@ function route(url){
   if(path==='/')return {project:null};
   if(path==='/wiki')return {project:null,wiki:'start-here'};
   const wiki=path.match(/^\/wiki\/([a-z0-9-]+)$/);
-  if(wiki&&['repository-setup','layout-and-naming','evidence-and-reconstruction','build-and-validation','review-and-approval','ci-and-publication','credits-and-history','website-integration','operations','starter-kit'].includes(wiki[1]))return {project:null,wiki:wiki[1]};
+  if(wiki&&wikiChapters.includes(wiki[1]))return {project:null,wiki:wiki[1]};
   const project=projects.find(p=>p.href.replace(/\/$/,'')===path);
   return project?{project}:null;
 }
 function template(name){
-  if(!templates.has(name))templates.set(name,fetch(name.startsWith('/')?name:'/assets/'+name+'.html').then(response=>{
+  // Keep chapter HTML in the same immutable release as its scripts and styles.
+  const url=name.startsWith('/wiki/')?new URL('../'+name.slice(1),import.meta.url).href:name.startsWith('/')?name:'/assets/'+name+'.html';
+  if(!templates.has(name))templates.set(name,fetch(url).then(response=>{
     if(!response.ok)throw Error('Layout unavailable');return response.text();
   }).catch(error=>{templates.delete(name);throw error;}));
   return templates.get(name);

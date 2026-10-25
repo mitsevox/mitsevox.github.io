@@ -4,6 +4,8 @@ Use this structure for a new decompilation project or adapt it to an existing re
 
 Read the [handbook](../../wiki/), [repository layout](../../wiki/layout-and-naming/), [CI structure](../../wiki/ci-and-publication/), [website contract](../../wiki/website-integration/) and [metric definitions](contract-v1.md). The [starter archive](../../wiki/downloads/repository-starter.zip) contains repository templates and an agent prompt.
 
+The starter includes editable validation/clearance workflows, CI configuration and `CI.md`'s exact adapter interface. Follow the [agent workflow](../../wiki/agent-workflow/) for scoped implementation and final-revision handoff. Start with fresh validation; [cache/proof acceleration](../../wiki/cache-and-proof/) is optional after its failure tests pass. Review/merge policy is project-configurable, with independent accuracy/hostile and owner-only merging as the starter default.
+
 ## Project facts
 
 Fill these from verified information:
@@ -57,7 +59,7 @@ Test failures as well as success: wrong target, stale dependency/report, missing
 
 ## Public report contract
 
-The game exports source-derived measurements and evidence. A site adapter authenticates and normalizes them. The shared site owns registration, presentation, accepted report storage and deployment.
+The game exports source-derived measurements and evidence. A conforming report-v1 export uses the shared importer, validator, store and renderer without a new project-specific importer. The shared site owns registration, presentation, accepted report storage and deployment.
 
 Use [manifest v1](schema/report-v1.schema.json) and [project configuration v1](schema/project-v1.schema.json). Record full target/revision/tree, methodology/generation, tools, separate measurement/publication times and run/attempt. Every supported module has a typed checksummed asset; unsupported modules have a reason. Validate the raw measurements against the manifest and renderer view model.
 
