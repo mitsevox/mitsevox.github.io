@@ -35,7 +35,7 @@
     "modules": {
       "map": true,
       "functionCounts": true,
-      "fileCounts": false,
+      "fileCounts": true,
       "timeline": true,
       "contributors": false
     },
