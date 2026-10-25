@@ -21,35 +21,18 @@ Adopt project review/merge policy explicitly; independent accuracy/hostile revie
 
 ## Prompt for an agent
 
-```text
-Read this wiki and the project's current README, CONTRIBUTING and AGENTS.
-Use its structure as the template for repository layout, naming, evidence,
-validation, review, CI, public reporting and shared-site integration.
-Inspect the existing project before editing and preserve unrelated work.
-Use a dedicated branch and checkout/worktree.
+```prose
+Read this wiki and the project's current README, CONTRIBUTING and AGENTS. Use its structure as the template for repository layout, naming, evidence, validation, review, CI, public reporting and shared-site integration. Inspect the existing project before editing and preserve unrelated work. Use a dedicated branch and checkout/worktree.
 
-Record the actual target/hash, approved toolchain, build commands, source
-objective, current validation and supported report capabilities. Adapt the
-handbook's responsibilities to this project's established structure.
+Record the actual target/hash, approved toolchain, build commands, source objective, current validation and supported report capabilities. Adapt the handbook's responsibilities to this project's established structure.
 
-Read the starter's CI.md and map its exact operations to real project tools.
-Adopt review/merge policy explicitly, using independent accuracy/hostile and
-owner-only merges as the default. Implement fresh validation first. Caches
-and publication reuse are optional later optimizations, with their own
-invalidation, main-audit, zero-reuse proof and bootstrap acceptance tests.
+Read the starter's CI.md and map its exact operations to real project tools. Adopt review/merge policy explicitly, using independent accuracy/hostile and owner-only merges as the default. Implement fresh validation first. Caches and publication reuse are optional later optimizations, with their own invalidation, main-audit, zero-reuse proof and bootstrap acceptance tests.
 
-Implement missing pieces needed for a reproducible build, honest exact/fuzzy
-measurements, versioned public reports, preserved history and site integration.
-Keep contribution acceptance, attribution tracking and rankings independent.
-Use the shared report contract and renderer rather than a separate game UI.
+Implement missing pieces needed for a reproducible build, honest exact/fuzzy measurements, versioned public reports, preserved history and site integration. Keep contribution acceptance, attribution tracking and rankings independent. Use the shared report contract and renderer rather than a separate game UI.
 
-Validate real inputs and both success/failure paths. Retain useful partial
-source. Do not invent metrics, evidence, authorship, approval or test results.
-Follow the project's task authorization for pushes, PRs, publication and merge.
+Validate real inputs and both success/failure paths. Retain useful partial source. Do not invent metrics, evidence, authorship, approval or test results. Follow the project's task authorization for pushes, PRs, publication and merge.
 
-Deliver the changes with commands, tested revisions, artifacts, capability
-settings and remaining limitations. Verify the public route and next refresh
-before declaring the site integration complete.
+Deliver the changes with commands, tested revisions, artifacts, capability settings and remaining limitations. Verify the public route and next refresh before declaring the site integration complete.
 ```
 
 ## Acceptance checklist
