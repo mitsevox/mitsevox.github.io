@@ -7,12 +7,12 @@ import re
 import subprocess
 import tempfile
 
-from reporting.validation import ROOT, PACKAGE_FILES, decode, digest, encoded, require, validate_package
+from reporting.validation import ROOT, decode, digest, encoded, require, validate_package
 from reporting.github import GitHub
-from import_nfl import check_update, install
+from reporting.registry import producer, registrations, site_config, snapshot_path, snapshot_directory
+from reporting.state import LOCK, read_lock, check_update, install
 
 BRANCH = 'report-data'
-LOCK = 'data/reports.lock.json'
 SHA = re.compile(r'[a-f0-9]{40}')
 
 
@@ -31,59 +31,68 @@ def remote_head(root):
     return head
 
 
-def stored_package(root, head):
-    lock = decode(git(root, 'show', head+':'+LOCK))
-    require(lock.get('schemaVersion') == 1 and set(lock['projects']) == {'nflstreet2'}, 'Unknown store contract')
-    entry = lock['projects']['nflstreet2']
-    path = entry['path']
-    require(re.fullmatch(r'data/nflstreet2/snapshots/[a-f0-9]{40}-v1-\d+-\d+', path), 'Unsafe stored path')
-    # Read a bounded, exact set of blobs. Never check out or execute branch contents.
-    rows = git(root, 'ls-tree', '-r', head, '--', path).decode().splitlines()
-    require(len(rows) == len(PACKAGE_FILES), 'Unexpected stored payloads')
-    payloads = {}
+def stored_lock(root, head):
+    lock=decode(git(root,'show',head+':'+LOCK))
+    require(set(lock)=={'schemaVersion','projects'} and lock['schemaVersion']==1
+            and isinstance(lock['projects'],dict), 'Invalid store contract')
+    for slug,entry in lock['projects'].items():
+        producer(root,slug)  # Older source cannot erase a newly registered project.
+        snapshot_path(slug,entry)
+    return lock
+
+
+def stored_package(root, head, slug=None):
+    lock=stored_lock(root,head)
+    if slug is None:
+        require(len(lock['projects'])==1,'Select a project in a multi-project store')
+        slug=next(iter(lock['projects']))
+    entry=lock['projects'][slug];path=snapshot_path(slug,entry)
+    rows=git(root,'ls-tree','-r',head,'--',path).decode().splitlines()
+    require(3<=len(rows)<=20,'Unexpected stored payload count')
+    payloads={};total=0
     for row in rows:
-        mode, kind, oid, name = row.split(maxsplit=3)
-        require(mode == '100644' and kind == 'blob' and name.rsplit('/',1)[0] == path
-                and name.rsplit('/',1)[1] in PACKAGE_FILES, 'Unsafe stored entry')
-        require(int(git(root, 'cat-file', '-s', oid)) <= 32*1024*1024, 'Stored payload too large')
-        payloads[name.rsplit('/',1)[1]] = git(root, 'cat-file', 'blob', oid)
-    require(digest(payloads['manifest.json']) == entry['manifestSha256'], 'Stored manifest checksum differs')
+        mode,kind,oid,name=row.split(maxsplit=3)
+        require(mode=='100644' and kind=='blob' and name.rsplit('/',1)[0]==path
+                and re.fullmatch(r'[A-Za-z0-9_-]+\.json',name.rsplit('/',1)[1]),'Unsafe stored entry')
+        size=int(git(root,'cat-file','-s',oid));total+=size
+        require(size<=32*1024*1024 and total<=80*1024*1024,'Stored payload too large')
+        payloads[name.rsplit('/',1)[1]]=git(root,'cat-file','blob',oid)
+    require(digest(payloads['manifest.json'])==entry['manifestSha256'],'Stored manifest checksum differs')
     with tempfile.TemporaryDirectory() as temp:
-        for name, raw in payloads.items():
-            (Path(temp)/name).write_bytes(raw)
-        manifest, _, activity = validate_package(temp)
-    require(manifest['revision'] == entry['revision'], 'Stored revision differs')
-    return entry, manifest, activity, payloads
+        for name,raw in payloads.items():(Path(temp)/name).write_bytes(raw)
+        manifest,_,activity=validate_package(temp,root)
+    require(manifest['project']==slug and manifest['revision']==entry['revision'],'Stored identity differs')
+    return entry,manifest,activity,payloads
 
 
 def restore(root):
-    head = remote_head(root)
+    root=Path(root);head=remote_head(root)
     if head is None:
-        print('No report store yet; using the reviewed bootstrap package.')
+        print('No report store yet; using the reviewed bootstrap packages.')
         return
-    entry, manifest, activity, payloads = stored_package(root, head)
-    api = GitHub('mitsevox/nflstreet2')
-    local_lock = root/LOCK
-    if local_lock.exists():
-        local_entry = decode(local_lock.read_bytes())['projects']['nflstreet2']
-        directory = root/local_entry['path']
-        require(directory.resolve().is_relative_to((root/'data/nflstreet2/snapshots').resolve()), 'Unsafe local path')
-        require(digest((directory/'manifest.json').read_bytes()) == local_entry['manifestSha256'], 'Local manifest differs')
-        local, _, local_activity = validate_package(directory)
-        require(local['revision'] == local_entry['revision'], 'Local revision differs')
-        if local['revision'] != manifest['revision']:
-            relation = api.get(f"compare/{manifest['revision']}...{local['revision']}")['status']
-            if relation == 'ahead':
-                check_update(manifest, local, activity, local_activity, relation)
-                print('Retaining newer reviewed local package.')
-                return
-            require(relation == 'behind', 'Local and stored reports diverge')
-    install(root, api, manifest, payloads, entry['latestCommit'])
-    print('Restored durable report store at', head)
+    stored=stored_lock(root,head)
+    for slug in stored['projects']:
+        entry,manifest,activity,payloads=stored_package(root,head,slug)
+        api=GitHub(producer(root,slug)['repository'])
+        local_entry=read_lock(root)['projects'].get(slug)
+        if local_entry:
+            directory=snapshot_directory(root,slug,local_entry)
+            require(digest((directory/'manifest.json').read_bytes())==local_entry['manifestSha256'],'Local manifest differs')
+            local,_,local_activity=validate_package(directory,root)
+            require(local['revision']==local_entry['revision'],'Local revision differs')
+            if local['revision']!=manifest['revision']:
+                relation=api.get(f"compare/{manifest['revision']}...{local['revision']}")['status']
+                if relation=='ahead':
+                    check_update(manifest,local,activity,local_activity,relation)
+                    print('Retaining newer reviewed local package:',slug)
+                    continue
+                require(relation=='behind','Local and stored reports diverge')
+        install(root,api,manifest,payloads,entry['latestCommit'])
+    print('Restored durable report store at',head)
 
 
 def require_current_main(root):
-    require(os.environ.get('GITHUB_REPOSITORY') == 'mitsevox/mitsevox.github.io'
+    require(os.environ.get('GITHUB_REPOSITORY') == site_config(root)['repository']
             and os.environ.get('GITHUB_REF') == 'refs/heads/main'
             and os.environ.get('GITHUB_EVENT_NAME') in ('push','schedule','workflow_dispatch'),
             'Report publication is restricted to trusted main workflows')
@@ -96,22 +105,23 @@ def require_current_main(root):
 
 def publish(root, site):
     source_revision = require_current_main(root)
-    lock = decode((site/LOCK).read_bytes())
-    require(lock.get('schemaVersion') == 1 and set(lock['projects']) == {'nflstreet2'}, 'Unknown publication contract')
-    entry = lock['projects']['nflstreet2']
-    require(re.fullmatch(r'data/nflstreet2/snapshots/[a-f0-9]{40}-v1-\d+-\d+', entry['path']), 'Unsafe publication path')
-    directory = site/entry['path']
-    manifest, _, activity = validate_package(directory)
-    require(digest((directory/'manifest.json').read_bytes()) == entry['manifestSha256']
-            and manifest['revision'] == entry['revision'], 'Publication lock differs')
-    parent = remote_head(root)
-    if parent:
-        old_entry, old, old_activity, _ = stored_package(root, parent)
-        relation = 'identical' if old['revision'] == manifest['revision'] else GitHub('mitsevox/nflstreet2').get(
-            f"compare/{old['revision']}...{manifest['revision']}")['status']
-        check_update(old, manifest, old_activity, activity, relation)
-    files = {entry['path']+'/'+name:(directory/name).read_bytes() for name in PACKAGE_FILES}
-    files[LOCK] = encoded(lock)
+    lock=read_lock(site)
+    require(lock['projects'],'No reports to publish')
+    parent=remote_head(root)
+    old_lock=stored_lock(root,parent) if parent else {'projects':{}}
+    require(set(old_lock['projects'])<=set(lock['projects']),'Publication would erase a stored project')
+    files={LOCK:encoded(lock)}
+    for slug,entry in lock['projects'].items():
+        policy=producer(root,slug);directory=snapshot_directory(site,slug,entry)
+        manifest,_,activity=validate_package(directory,root)
+        require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256']
+                and manifest['project']==slug and manifest['revision']==entry['revision'],'Publication lock differs')
+        if slug in old_lock['projects']:
+            _,old,old_activity,_=stored_package(root,parent,slug)
+            relation='identical' if old['revision']==manifest['revision'] else GitHub(policy['repository']).get(
+                f"compare/{old['revision']}...{manifest['revision']}")['status']
+            check_update(old,manifest,old_activity,activity,relation)
+        files.update({entry['path']+'/'+p.name:p.read_bytes() for p in directory.iterdir()})
     with tempfile.TemporaryDirectory() as temp:
         env = {**os.environ, 'GIT_INDEX_FILE':str(Path(temp)/'index'),
                'GIT_AUTHOR_NAME':'github-actions[bot]', 'GIT_COMMITTER_NAME':'github-actions[bot]',

@@ -1,18 +1,23 @@
 {
   "schemaVersion": 1,
-  "slug": "nflstreet2",
-  "title": "NFL Street 2",
-  "repository": "mitsevox/nflstreet2",
-  "target": "GN7E69",
+  "slug": "example-game",
+  "title": "Example game",
+  "repository": "OWNER/example-game",
+  "target": "EXAMPLE",
+  "console": "Console name",
+  "artwork": {
+    "cover": "/assets/covers/example-game.webp",
+    "width": 640,
+    "height": 900
+  },
   "modules": {
-    "map": true,
+    "map": false,
     "functionCounts": true,
-    "fileCounts": true,
-    "timeline": true,
-    "contributors": true
+    "fileCounts": false,
+    "timeline": false,
+    "contributors": false
   },
   "contributions": {
-    "accepting": true,
-    "guideUrl": "https://github.com/mitsevox/nflstreet2/blob/main/CONTRIBUTING.md"
+    "accepting": false
   }
 }

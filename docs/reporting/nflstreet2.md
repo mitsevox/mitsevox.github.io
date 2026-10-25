@@ -1,4 +1,6 @@
-# NFL Street 2 integration
+# Legacy producer compatibility
+
+This document describes the preserved legacy-format adapter. Shared registration, installation, storage and rendering are documented in the [platform interface](platform.md). New producers export report-v1 through the common path; they do not copy this adapter.
 
 The first adapter consumes NFL's existing verified publication artifacts. It does not change NFL's build workflow, compiler, comparison rules, contributor policy, decomp.dev feed or existing Pages site. The extra validation runs in the website repository.
 
@@ -68,6 +70,6 @@ Already-authenticated snapshots can outlive upstream Actions artifacts because t
 
 Pages is configured for Actions publication. The owner merges the reviewed source PR; its main workflow performs launch. Verify the live hub, NFL route, wiki deep links and report manifest after deployment. MVP and Tiger Woods stay unpublished until their adapters are verified. Existing game sites and decomp.dev feeds remain unchanged. For a UI rollback, merge a reviewed source revert and rebuild with current verified data; do not rerun an obsolete source workflow or reset measurement history.
 
-## Adapting another game
+## New producers
 
-Do not rename this importer and change its repository string. Define a producer policy and adapter for the game's actual reports, including supported fuzzy fields, inventories and attribution policy. Add schema/semantic and trusted-run tests, compare raw totals with the existing producer at one revision, then add its verified package and project registration. Unknown measurements stay unavailable; they are not filled from layout fixtures. NFL's schemas describe NFL's legacy payload, not a universal game format.
+Use the common report-v1 packager, producer policy and importer described in [the platform interface](platform.md). Register metadata and artwork through configuration. Keep this compatibility reader and its approved policy in the registry archives when the existing source moves to the standard format, so accepted reports and history remain readable.

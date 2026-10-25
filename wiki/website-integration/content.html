@@ -115,6 +115,12 @@
   &quot;schemaVersion&quot;: 1,
   &quot;slug&quot;: &quot;game-slug&quot;,
   &quot;title&quot;: &quot;Game title&quot;,
+  &quot;console&quot;: &quot;Console name&quot;,
+  &quot;artwork&quot;: {
+    &quot;cover&quot;: &quot;/assets/covers/game-slug.webp&quot;,
+    &quot;width&quot;: 640,
+    &quot;height&quot;: 900
+  },
   &quot;repository&quot;: &quot;OWNER/REPO&quot;,
   &quot;target&quot;: &quot;TARGET_ID&quot;,
   &quot;modules&quot;: {
@@ -154,6 +160,12 @@
 </ol>
 <p>Keep project-specific field translation inside the adapter. The website owns shared contract validation, storage and rendering. An import must preserve every other project's lock and snapshots. A report's strings must not select arbitrary executable code.</p>
 <p>Consumers may reuse an identical previously authenticated package after temporary upstream artifacts expire. A changed or previously unaccepted package still needs original execution proof. Latest commit metadata never changes the selected measurement identity.</p>
+<h2 id="register-and-use-the-platform">Register and use the platform</h2>
+<p>The site owner registers a producer in <code>config/producers.json</code> and its presentation in <code>config/projects.json</code>. Producer policy and artifact data follow the shared versioned schemas. A conforming producer uses the common importer and renderer; adding a project does not require a separate site implementation. Artwork stays in the website repository.</p>
+<p>The <a href="/docs/reporting/platform.md">platform contract and commands</a> specify the public input files, packager metadata, producer policy, full/reused execution lanes, import CLI and preserved historical policies. These are shared interfaces; the project supplies its own measured inputs and approved execution facts.</p>
+<pre><code class="language-sh">uv run --locked python tools/import_reports.py --project game-slug --run RUN_ID
+uv run --locked python tools/build_site.py --output build/new-candidate
+</code></pre>
 <h2 id="integration-acceptance">Integration acceptance</h2>
 <div class="wiki-table"><table>
 <thead>
@@ -198,4 +210,4 @@
 </tbody>
 </table></div>
 <p>Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The <a href="/docs/reporting/onboarding.md">integration checklist</a> and <a href="/wiki/starter-kit/">starter files</a> provide a reusable handoff. Each repository supplies its own implementation details.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#integration-acceptance">Integration acceptance</a></nav></aside></main>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#register-and-use-the-platform">Register and use the platform</a><a href="#integration-acceptance">Integration acceptance</a></nav></aside></main>

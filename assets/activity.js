@@ -1,4 +1,5 @@
 import {pageScope} from './lifecycle.js';
+import {fetchActivity} from './reports.js';
 export function mountActivity(root, project) {
   const scope=pageScope();
   const {signal,listen}=scope;
@@ -66,16 +67,16 @@ export function mountActivity(root, project) {
     });
   }
   function validate(data){
-    if(data.schema!==1||data.target!==project.target||data.target_sha1!==project.targetSha1||!Array.isArray(data.snapshots)||!data.snapshots.length||!Array.isArray(data.contributors))throw Error('Invalid project activity');
+    if(data.schema!==1||data.target!==project.target||data.target_sha1!==project.targetSha1||(timeline&&(!Array.isArray(data.snapshots)||!data.snapshots.length))||(contributors&&!Array.isArray(data.contributors)))throw Error('Invalid project activity');
     const seen=new Set();let previous=-Infinity;
-    for(const row of data.snapshots){
+    for(const row of timeline?data.snapshots:[]){
       const time=Date.parse(row.built_at);
       if(!/^[a-f0-9]{40}$/.test(row.revision)||seen.has(row.revision)||!Number.isFinite(time)||time<previous)throw Error('Invalid progress history');
       seen.add(row.revision);previous=time;
       for(const kind of fields){const m=row[kind];if(!m||!Number.isSafeInteger(m.total)||m.total<=0||!Number.isSafeInteger(m.linked)||m.linked<0||m.linked>m.total)throw Error('Invalid linked measurement');}
     }
     let count=Infinity;const users=new Set();
-    for(const p of data.contributors){if(!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(p.login)||users.has(p.login)||!Number.isSafeInteger(p.id)||p.id<=0||!Number.isSafeInteger(p.functions)||p.functions<=0||p.functions>count)throw Error('Invalid contributor credit');users.add(p.login);count=p.functions;}
+    for(const p of contributors?data.contributors:[]){if(!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(p.login)||users.has(p.login)||!Number.isSafeInteger(p.id)||p.id<=0||!Number.isSafeInteger(p.functions)||p.functions<=0||p.functions>count)throw Error('Invalid contributor credit');users.add(p.login);count=p.functions;}
   }
   if (timeline) listen(scrub, 'input',()=>{if(rows.length){index=Number(scrub.value);draw();}});
   function point(event){
@@ -85,13 +86,14 @@ export function mountActivity(root, project) {
   if (timeline) listen(chart, 'pointermove',point);
   if (timeline) listen(chart, 'pointerdown',event=>{point(event);scrub.focus({preventScroll:true});});
   if (timeline) listen(chart, 'pointerleave',()=>{if(rows.length){index=rows.length-1;draw();}});
-  const ready = fetch(project.activityUrl,{cache:'no-cache',signal}).then(response=>{if(!response.ok)throw Error('Activity unavailable');return response.json();}).then(data=>{
+  const ready = fetchActivity(project,signal).then(data=>{
     if(signal.aborted)return;
-    validate(data);rows=data.snapshots;index=rows.length-1;first=Date.parse(rows[0].built_at);last=Date.parse(rows[index].built_at);if(last===first)last=first+1;
+    validate(data);if(timeline){rows=data.snapshots;index=rows.length-1;first=Date.parse(rows[0].built_at);last=Date.parse(rows[index].built_at);if(last===first)last=first+1;
     ceiling=Math.min(100,Math.max(5,Math.ceil(Math.max(...rows.flatMap(row=>fields.map(kind=>percent(row,kind))))/5)*5));
     if (timeline) { scrub.max=rows.length-1;root.querySelector('.history-ceiling').textContent=ceiling+'%';
     const ticks=[first,(first+last)/2,last],format=last-first<3*86400000?fullDate:shortDate;
     root.querySelectorAll('.history-axis span').forEach((tick,i)=>tick.textContent=format.format(new Date(ticks[i])));
+    }
     }
     renderPeople(data.contributors);draw();
   }).catch(()=>{if(signal.aborted)return;if(timeline){root.querySelector('#history-date').textContent='Progress history unavailable';scrub.disabled=true;}if(contributors)list.textContent='Contributor credits unavailable';});

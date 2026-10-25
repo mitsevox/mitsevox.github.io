@@ -61,6 +61,12 @@ Presentation settings belong in the site's project registration, such as `config
   "schemaVersion": 1,
   "slug": "game-slug",
   "title": "Game title",
+  "console": "Console name",
+  "artwork": {
+    "cover": "/assets/covers/game-slug.webp",
+    "width": 640,
+    "height": 900
+  },
   "repository": "OWNER/REPO",
   "target": "TARGET_ID",
   "modules": {
@@ -106,6 +112,17 @@ Do not upload original binaries, object code, complete debug exports, credential
 Keep project-specific field translation inside the adapter. The website owns shared contract validation, storage and rendering. An import must preserve every other project's lock and snapshots. A report's strings must not select arbitrary executable code.
 
 Consumers may reuse an identical previously authenticated package after temporary upstream artifacts expire. A changed or previously unaccepted package still needs original execution proof. Latest commit metadata never changes the selected measurement identity.
+
+## Register and use the platform
+
+The site owner registers a producer in `config/producers.json` and its presentation in `config/projects.json`. Producer policy and artifact data follow the shared versioned schemas. A conforming producer uses the common importer and renderer; adding a project does not require a separate site implementation. Artwork stays in the website repository.
+
+The [platform contract and commands](/docs/reporting/platform.md) specify the public input files, packager metadata, producer policy, full/reused execution lanes, import CLI and preserved historical policies. These are shared interfaces; the project supplies its own measured inputs and approved execution facts.
+
+```sh
+uv run --locked python tools/import_reports.py --project game-slug --run RUN_ID
+uv run --locked python tools/build_site.py --output build/new-candidate
+```
 
 ## Integration acceptance
 

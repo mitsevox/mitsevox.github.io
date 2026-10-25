@@ -15,6 +15,15 @@
     "contributions": {
       "accepting": true,
       "guideUrl": "https://github.com/mitsevox/nflstreet2/blob/main/CONTRIBUTING.md"
-    }
+    },
+    "shortTitle": "NFL Street 2",
+    "console": "GameCube",
+    "year": "2004",
+    "artwork": {
+      "cover": "/assets/covers/nflstreet2.webp",
+      "width": 630,
+      "height": 908
+    },
+    "contributionHeading": "Want to join the blitz?"
   }
 ]

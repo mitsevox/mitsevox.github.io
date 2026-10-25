@@ -1,41 +1,24 @@
-# Shared reporting architecture
+# Shared reporting platform
 
-Status: the NFL consumer adapter, durable site report store and main-only Pages workflow are implemented. NFL’s existing producer workflow is unchanged. MVP/TW adapters and any producer-side data branches remain planned. Live deployment is verified separately after owner merge.
+A curated platform for the owner's repositories. Game projects supply validated public reports; one shared website authenticates, stores and renders them.
 
-The approved UI lives in this repository. Each game remains responsible for its build, measurements, source evidence and attribution. NFL Street 2 is the validation archetype; its compiler commands and evidence layout are not a universal template.
+## Implemented interfaces
 
-## Documents
+- [Platform](platform.md): registration, typed payloads, packaging, execution proof, import, history and storage.
+- [Contract](contract-v1.md): measurement semantics and independent feature controls.
+- [Project template](onboarding.md): repository/CI structure and acceptance checklist.
+- [Workflow](workflow.md): candidate validation, main publication, proof reuse and recovery.
+- [Manifest schema](schema/report-v1.schema.json), [producer policy](schema/producer-v1.schema.json), and [presentation configuration](schema/project-v1.schema.json).
+- [Map](schema/map-v1.schema.json), [timeline](schema/timeline-v1.schema.json), [contributors](schema/contributors-v1.schema.json), and [execution](schema/execution-v1.schema.json) payloads.
 
-- [New-game integration handoff](onboarding.md): reusable repository/CI structure, public contract, optional modules and acceptance checks.
+## Ownership
 
-- [NFL integration](nflstreet2.md): implemented commands, trust boundary, package format, module controls and rollout limits.
-
-- [Pipeline audit](pipeline-audit.md): pinned source inspection of all three games.
-- [Workflow](workflow.md): PR validation, main publication, recovery and site consumption.
-- [Report contract](contract-v1.md): measurement semantics and modular features.
-- [Migration plan](migration.md): rollout order and acceptance criteria.
-- [Draft manifest schema](schema/report-v1.schema.json) and [project configuration schema](schema/project-v1.schema.json).
-- [Synthetic manifest](examples/report.json) and [NFL configuration example](examples/project.json): documentation fixtures, not deployable data.
-
-## Repository ownership
-
-| Repository | Owns |
+| Game repositories | Shared website |
 | --- | --- |
-| `nflstreet2`, `mvp2005`, `tw2004` | Source, target/toolchain identity, build and comparisons, inventory, attribution evidence, durable measurement history, public report packages, decomp.dev compatibility exports |
-| `mitsevox.github.io` | Shared UI and routes, project artwork/configuration, report schemas and shared validators, static site assembly and deployment |
+| Target and tool identities, source/evidence, builds/comparisons, public measurements, supported history and attribution | Owner registrations, artwork, producer authentication, shared validation/storage, routes and UI, site deployment |
 
-Keep shared reporting tools in this site repository initially, version them, and have game adapters pin a reviewed commit. A fifth tooling repository is unnecessary now. Game-specific build logic stays in its game repository. Extract reusable validation/publication steps only after NFL works through the contract; do not copy three drifting implementations or replace proven validation with a generic workflow.
+The website accepts only checked-in registrations for its configured owner. It has no visitor registration or public submission API. New report-v1 producers require configuration/artwork and a conforming artifact; project-specific importer or page code is unnecessary.
 
-```mermaid
-flowchart LR
-  A[Game source and evidence] --> B[Game CI: build or authenticate prior proof]
-  B --> C[Measure and validate]
-  C --> D[Immutable public report package]
-  C --> E[decomp.dev report]
-  D --> F[Site ingestion and validation]
-  F --> G[One static site: hub and game routes]
-```
+A legacy format reader preserves the existing feed while its CI transitions. It is isolated at the input boundary and uses the common state/store/rendering path. Its [compatibility reference](nflstreet2.md) describes that older source format. New producers follow the common interface above.
 
-Future producer-store option: a data-only `progress-data` branch in each game repository, containing immutable snapshot packages and a latest-good pointer. Preserve existing archives during migration. The site fetches pinned packages during its build; visitors use the site's static files, not authenticated GitHub APIs. Start with manual/scheduled ingestion. Cross-repository dispatch is optional later and needs an explicitly scoped credential decision.
-
-The frontend and wiki live in `mitsevox/mitsevox.github.io`. Its `report-data` branch preserves authenticated packages independently of expiring Actions artifacts. Current-main workflows publish the verified NFL portfolio to Pages. The [project integration template](onboarding.md) defines the reusable structure. Each producer supplies its own implementation and verifies parity, failure behavior and live refresh.
+The generic [wiki](../../wiki/) defines reusable project conventions. Keep actual targets, approved policies, tools and validation evidence in the repositories that own them.

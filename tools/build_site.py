@@ -7,10 +7,12 @@ import tempfile
 from pathlib import Path
 
 from reporting.validation import ROOT, decode, digest, encoded, require, schema, validate_package
+from reporting.state import read_lock
+from reporting.registry import producer, snapshot_path, snapshot_directory
 
 
 def locked_projects(root):
-    lock = decode((root/'data/reports.lock.json').read_bytes())
+    lock = read_lock(root)
     require(lock.get('schemaVersion') == 1, 'Unknown report lock version')
     configurations = decode((root/'config/projects.json').read_bytes())
     require(len({c['slug'] for c in configurations}) == len(configurations), 'Duplicate project configuration')
@@ -19,21 +21,23 @@ def locked_projects(root):
         schema(config, 'project-v1.schema.json')
         entry = lock['projects'].get(config['slug'])
         require(entry is not None, 'Enabled project lacks verified data: '+config['slug'])
-        directory = root / entry['path']
+        directory = snapshot_directory(root,config['slug'],entry)
         require(directory.resolve().is_relative_to((root/'data'/config['slug']/'snapshots').resolve()),
                 'Report lock escapes snapshot store')
         require(digest((directory/'manifest.json').read_bytes()) == entry['manifestSha256'], 'Locked manifest changed')
-        manifest, p, a = validate_package(directory)
+        manifest, p, a = validate_package(directory,root)
         require(manifest['revision'] == entry['revision'] and manifest['repository'] == config['repository']
                 and manifest['project'] == config['slug'] and manifest['target']['id'] == config['target'],
                 'Project configuration differs from report')
-        require(decode((directory/'summary.json').read_bytes()) == {k:p[k] for k in ('measures','built_at','revision')},
-                'UI summary differs from measured report')
+        require(config['console']==manifest['target']['console'],'Console identity differs')
+        cover=root/config['artwork']['cover'].lstrip('/')
+        require(cover.is_file() and not cover.is_symlink(),'Project cover is missing or unsafe')
         for key, value in config['modules'].items():
             if not value:
                 continue
             if key in ('functionCounts','fileCounts'):
-                require(manifest['summary']['functions' if key == 'functionCounts' else 'files'] is not None,
+                counts=manifest['summary']['functions' if key == 'functionCounts' else 'files']
+                require(counts is not None and counts['exact'] is not None and counts['named'] is not None,
                         'Enabled inventory is unsupported')
             else:
                 require(manifest['modules'][key]['status'] == 'supported', 'Enabled module is unsupported: '+key)
@@ -46,11 +50,9 @@ def project_bindings(root, output, production=False):
     for config, entry, manifest in locked_projects(root):
         base = '/' + entry['path']
         projects[config['slug']] = {
-            'preview':False, 'targetSha1':manifest['target']['sha1'],
-            'progressUrl':base+'/progress.json', 'activityUrl':base+'/activity.json',
-            'summaryUrl':base+'/summary.json',
-            'latestCommit':entry['latestCommit'],
-            'modules':config['modules'], 'contributionsEnabled':config['contributions']['accepting'],
+            **config, 'preview':False, 'targetSha1':manifest['target']['sha1'],
+            'reportBase':base, 'report':manifest, 'latestCommit':entry['latestCommit'],
+            'contributionsEnabled':config['contributions']['accepting'],
             'contributeUrl':config['contributions'].get('guideUrl'),
         }
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -62,6 +64,8 @@ def project_bindings(root, output, production=False):
 
 def build(root, output):
     root = Path(root).resolve()
+    read_lock(root)
+    require(not (root/'data/.report-refresh.lock').is_symlink(),'Unsafe report lock')
     with (root/'data/.report-refresh.lock').open('a') as guard:
         fcntl.flock(guard, fcntl.LOCK_SH)
         return _build_locked(root, output)
@@ -76,11 +80,20 @@ def _build_locked(root, output):
         stage = Path(temp)
         shutil.copytree(root/'assets', stage/'assets')
         projects = project_bindings(root, stage/'assets/report-projects.js', production=True)
-        lock = decode((root/'data/reports.lock.json').read_bytes())
+        lock = read_lock(root)
+        # Archive every locked producer, including one hidden from presentation.
+        for slug,entry in lock['projects'].items():
+            producer(root,slug)
+            directory=snapshot_directory(root,slug,entry)
+            manifest,_,_=validate_package(directory,root)
+            require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256']
+                    and manifest['project']==slug and manifest['revision']==entry['revision'],'Archive lock differs')
+            shutil.copytree(directory, stage/entry['path'])
         for slug in projects:
-            entry = lock['projects'][slug]
-            shutil.copytree(root/entry['path'], stage/entry['path'])
-            shutil.copytree(root/'games'/slug, stage/'games'/slug)
+            # Routes do not require a hand-authored entry file per game.
+            destination=stage/'games'/slug
+            destination.mkdir(parents=True)
+            shutil.copyfile(root/'index.html',destination/'index.html')
         shutil.copyfile(root/'data/reports.lock.json', stage/'data/reports.lock.json')
         shutil.copytree(root/'wiki', stage/'wiki')
         # Keep per-chapter Markdown and starter links available in the public wiki.
@@ -100,7 +113,7 @@ def _build_locked(root, output):
         shutil.move(stage/'assets', target/'assets')
         (stage/'.nojekyll').touch()
         (stage/'site-manifest.json').write_bytes(encoded({'schemaVersion':1,'release':release,
-            'projects':lock['projects']}))
+            'projects':{slug:lock['projects'][slug] for slug in projects}}))
         shutil.copytree(stage, output)
     print('Validated static site:', output)
     return release

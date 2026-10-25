@@ -53,7 +53,7 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
     if(project){
       document.body.dataset.project=project.slug;
       main.querySelector('h1').textContent=project.title+' decompilation progress';
-      main.querySelector('.lower h3').textContent=project.slug==='nflstreet2'?'Want to join the blitz?':'Contribute to '+project.shortTitle;
+      main.querySelector('.lower h3').textContent=project.contributionHeading||'Contribute to '+project.shortTitle;
       main.querySelector('.lower a').href=project.contributeUrl;
       if(!project.contributionsEnabled)main.querySelector('.lower').remove();
       const optional = {functionCounts:'[data-stats="function"]',fileCounts:'[data-stats="file"]',timeline:'.history-section',contributors:'.people-section'};

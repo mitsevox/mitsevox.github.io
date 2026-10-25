@@ -2,9 +2,9 @@
 
 Shared portfolio frontend and project wiki for mitsevox’s decompilation projects.
 
-This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2 data; the other games remain local previews until their adapters are verified. Game CI and reporting workflows are unchanged.
+This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2 data; other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
 
-Run `python3 -m http.server 54872 --bind 127.0.0.1` from this directory, then open http://127.0.0.1:54872/.
+Build with `uv run --locked python tools/build_site.py --output build/site`, then serve that directory with `python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site`. Use a fresh output path for each retained candidate.
 
 ## Structure
 
@@ -19,17 +19,21 @@ Run `python3 -m http.server 54872 --bind 127.0.0.1` from this directory, then op
 - `assets/progress.js` and `assets/activity.js`: shared progress map, bars, timeline, and contributor rendering.
 - `assets/style.css` and `assets/portfolio.css`: shared visual styling.
 
-## Data boundary
+## Registered projects and reports
 
-NFL Street 2 uses an authenticated, immutable package selected by `data/reports.lock.json`. Run `uv run --locked python tools/import_nfl.py` to refresh from its existing verified main artifacts. The browser reads packaged files, not a live GitHub feed. The original NFL fixture is retained only for design reference.
+This is a personal shared platform for owner-registered repositories. `config/site.json` declares the owner/site identity; `config/producers.json` registers approved report sources; `config/projects.json` supplies identity, artwork and enabled modules. Conforming `report-v1` producers use one importer, validator, installer, store and renderer. See [the platform interface](docs/reporting/platform.md) for schemas, packaging metadata, execution policy and commands.
 
-MVP Baseball 2005 and Tiger Woods PGA Tour 2004 use synthetic layout fixtures. Their counts, file/function maps, timelines, contributor rankings, and revision strings are illustrative, not project measurements. Visual sample badges were removed during design iteration; these fixtures remain synthetic and must not be published as measured progress. Sample contributors do not link to real accounts or request avatars.
+The existing production source remains on its isolated compatibility adapter until its producer exports the standard format. Its current CI, measurements and history are preserved. Other games' old layout fixtures remain unregistered and never enter production output.
 
-For a new game, give its agent the [integration handoff](docs/reporting/onboarding.md) and both repository checkouts. It provides a reusable repository/CI structure, producer/consumer contract, module policy and completion checklist. The starter archive includes a standalone copy and prompt.
+```sh
+uv sync --locked
+uv run --locked python tools/import_reports.py --all
+uv run --locked python tools/build_site.py --output build/site
+```
 
-The UI is approved. The [NFL adapter](docs/reporting/nflstreet2.md) implements authenticated ingestion, package validation, modular configuration and static assembly. The [shared architecture](docs/reporting/README.md) distinguishes this implementation from the remaining multi-game work.
+Each immutable package is selected by `data/reports.lock.json`. The builder validates all archived reports, generates routes for displayed projects, and fingerprints the shared release. Optional map/count/history/credit sections and contribution links are configured independently. Artwork is maintained centrally in the website repository.
 
-Build the production candidate with `uv run --locked python tools/build_site.py --output build/site`, then serve that directory. It includes only verified, configured projects (currently NFL), and never copies synthetic fixtures. The source preview above retains all three layouts.
+The [generic handbook](docs/wiki/start-here.md) and [integration template](docs/reporting/onboarding.md) describe repository/CI responsibilities. The [legacy integration reference](docs/reporting/nflstreet2.md) records the existing compatibility path.
 
 ## Artwork
 
@@ -53,4 +57,4 @@ Latest commit titles and descriptions in the summary fixtures are public GitHub 
 
 ## Checks and automation
 
-Run `uv sync --locked` and `uv run --locked python -m unittest discover -s tests -v`. Site CI validates and assembles candidates. Push/manual/scheduled refreshes restore the durable last-good package and read NFL artifacts. Successful current-main runs preserve snapshots on this repository’s data-only `report-data` branch before deploying Pages. PRs and work branches cannot publish. A failed refresh keeps the live site unchanged. Game repositories are never written. See [operations and rollout boundaries](docs/reporting/nflstreet2.md#automation-and-rollout-boundary).
+Run `uv sync --locked` and `uv run --locked python -m unittest discover -s tests -v`. Site CI validates and assembles candidates. Push/manual/scheduled refreshes restore all durable last-good packages and refresh registered producers. Successful current-main runs preserve snapshots on this repository’s data-only `report-data` branch before deploying Pages. PRs and work branches cannot publish. A failed refresh keeps the live site unchanged. Game repositories are never written. See [operations and rollout boundaries](docs/reporting/nflstreet2.md#automation-and-rollout-boundary).

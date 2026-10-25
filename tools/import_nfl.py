@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
 """Import one authenticated NFL main publication; never build or modify the game."""
 import argparse
-import base64
-import fcntl
-import json
 import math
-import os
 from pathlib import Path
 import re
-import shutil
-import subprocess
-import tempfile
 
 from reporting.github import GitHub, artifact_bytes, authenticate_run, pages_reports, select_artifact, zip_members
-from reporting.validation import ROOT, decode, digest, encoded, require, schema, summary, validate_package
+from reporting.validation import ROOT, decode, digest, encoded, require, summary, validate_package
 
 
 def asset(path, raw, name):
@@ -132,95 +125,13 @@ def import_run(api, policy, run_id):
     return manifest, payloads
 
 
-def check_update(previous, manifest, old_activity, new_activity, relation):
-    if previous['revision'] == manifest['revision']:
-        require(previous['summary'] == manifest['summary'], 'Same revision has conflicting measurements')
-    else:
-        require(relation == 'ahead', 'Refresh would roll back or diverge from last good revision')
-    rows = {r['revision']:r for r in new_activity['snapshots']}
-    for old in old_activity['snapshots']:
-        require(old['revision'] in rows and old == rows[old['revision']], 'Refresh loses or changes recorded history')
+# Compatibility entry points; state and publication rules are shared by all producers.
+from reporting.state import check_update, atomic_write, install, latest_commit
+from reporting.state import accepted_package as accepted_registered_package
 
 
-def atomic_write(path, raw):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as f:
-        f.write(raw)
-        name = f.name
-    os.replace(name, path)
-
-
-def install(root, api, manifest, payloads, latest):
-    (root/'data').mkdir(parents=True, exist_ok=True)
-    with (root/'data/.report-refresh.lock').open('a') as guard:
-        fcntl.flock(guard, fcntl.LOCK_EX)
-        return _install_locked(root, api, manifest, payloads, latest)
-
-
-def _install_locked(root, api, manifest, payloads, latest):
-    lock_path = root/'data/reports.lock.json'
-    lock = decode(lock_path.read_bytes()) if lock_path.exists() else {'schemaVersion':1,'projects':{}}
-    old = lock['projects'].get('nflstreet2')
-    # Validate in a private staging directory before exposing any pointer.
-    staging_parent = root/'data/nflstreet2/snapshots'
-    staging_parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='.incoming-', dir=staging_parent) as temp:
-        stage = Path(temp)
-        for name, raw in payloads.items():
-            (stage/name).write_bytes(raw)
-        _, _, new_activity = validate_package(stage)
-        if old:
-            previous_dir = root / old['path']
-            require(previous_dir.resolve().is_relative_to((root/'data/nflstreet2/snapshots').resolve())
-                    and digest((previous_dir/'manifest.json').read_bytes()) == old['manifestSha256'],
-                    'Previous lock path or digest differs')
-            previous, _, old_activity = validate_package(previous_dir)
-            relation = 'identical' if previous['revision'] == manifest['revision'] else api.get(
-                f"compare/{previous['revision']}...{manifest['revision']}")['status']
-            check_update(previous, manifest, old_activity, new_activity, relation)
-        identity = f"{manifest['revision']}-v1-{manifest['validation']['runId']}-{manifest['validation']['attempt']}"
-        destination = staging_parent/identity
-        if destination.exists():
-            require({p.name:p.read_bytes() for p in destination.iterdir()} == payloads,
-                    'Immutable snapshot already exists with different content')
-        else:
-            shutil.copytree(stage, destination)
-        lock['projects']['nflstreet2'] = {
-            'path':destination.relative_to(root).as_posix(),
-            'manifestSha256':digest(payloads['manifest.json']), 'revision':manifest['revision'],
-            'latestCommit':latest,
-        }
-        atomic_write(lock_path, encoded(lock))
-    return destination
-
-
-def latest_commit(api):
-    commit = api.get('commits/main')
-    message = commit['commit']['message'].split('\n', 1)
-    return {'revision':commit['sha'], 'title':message[0],
-            'description':message[1].strip() if len(message)>1 else '',
-            'date':commit['commit']['committer']['date'],
-            'url':f'https://github.com/{api.repository}/commit/{commit["sha"]}'}
-
-
-def accepted_package(entry):
-    """Cache trust comes from owner-controlled main/report-data locks, not local claims.
-
-    A candidate branch may edit payloads and all of their checksums. Merely
-    matching a real upstream run ID cannot authenticate that edited content.
-    Before first acceptance, or after a changed checksum, fetch original proof.
-    """
-    for branch in ('main', 'report-data'):
-        try:
-            file = GitHub('mitsevox/mitsevox.github.io').get('contents/data/reports.lock.json?ref='+branch)
-        except subprocess.CalledProcessError:
-            continue
-        require(file.get('encoding') == 'base64', 'Unexpected accepted lock encoding')
-        accepted = decode(base64.b64decode(file['content']))
-        trusted = accepted['projects'].get('nflstreet2', {})
-        if all(trusted.get(key) == entry.get(key) for key in ('path','manifestSha256','revision')):
-            return True
-    return False
+def accepted_package(entry,root=ROOT):
+    return accepted_registered_package(root, 'nflstreet2', entry)
 
 
 def refresh(root, run_id=None):
@@ -240,10 +151,14 @@ def refresh(root, run_id=None):
         path = root/entry['path']
         require(path.resolve().is_relative_to((root/'data/nflstreet2/snapshots').resolve()), 'Unsafe cached package path')
         require(digest((path/'manifest.json').read_bytes()) == entry['manifestSha256'], 'Cached manifest changed')
-        manifest, _, _ = validate_package(path)
-        cached = (manifest['validation']['runId'] == run_id
+        manifest, _, _ = validate_package(path,root)
+        receipt_blob=decode((path/'receipt.json').read_bytes())['workflowBlob']
+        cached = (manifest['target']==policy['target'] and manifest['tools']==[
+                    {'name':'build-environment','identity':policy['environment']},
+                    {'name':'producer-workflow','identity':receipt_blob}]
+                  and manifest['validation']['runId'] == run_id
                   and manifest['validation']['attempt'] == current_run['run_attempt']
-                  and manifest['revision'] == current_run['head_sha'] and accepted_package(entry))
+                  and manifest['revision'] == current_run['head_sha'] and accepted_package(entry,root))
         if cached:
             receipt = decode((path/'receipt.json').read_bytes())
             jobs = api.pages(f"actions/runs/{run_id}/attempts/{current_run['run_attempt']}/jobs", 'jobs')

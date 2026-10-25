@@ -220,3 +220,5 @@ footer a:hover { color: var(--ink); text-decoration: underline; text-underline-o
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+.stats-grid > .function-stats:only-child { grid-column: 1 / -1; }

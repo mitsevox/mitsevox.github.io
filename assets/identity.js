@@ -1,11 +1,11 @@
 import {fetchSummary} from './reports.js';
-import {gamecubeLogo} from './console-icon.js';
+import {consoleIcon} from './console-icon.js';
 import {pageScope} from './lifecycle.js';
 export function mountIdentity(root,project){
   const scope=pageScope();
   const identity=document.createElement('div');identity.className='game-identity';
   const heading=root.querySelector('h1');heading.className='game-identity-title';heading.textContent=project.title;
-  heading.insertAdjacentHTML('afterbegin',gamecubeLogo);
+  heading.insertAdjacentHTML('afterbegin',consoleIcon(project.console));
   root.prepend(identity);identity.append(heading);
   const commit=document.createElement('a');commit.className='identity-commit';commit.href=project.repo;
   commit.innerHTML='<svg class="commit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg><span class="commit-title">Loading latest commit…</span><time class="commit-time" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><span></span></time>';

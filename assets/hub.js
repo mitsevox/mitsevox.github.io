@@ -1,6 +1,6 @@
 import {fetchSummary} from './reports.js';
 import {projects} from './projects.js';
-import {gamecubeLogo} from './console-icon.js';
+import {consoleIcon} from './console-icon.js';
 import {pageScope} from './lifecycle.js';
 export function mountHub(root) {
 const scope=pageScope();
@@ -53,7 +53,7 @@ for(const control of controls){
   for(const [value,label] of control.choices){
     const option=document.createElement('button');option.type='button';option.className='popover-option';option.dataset.value=value;option.setAttribute('role','menuitemradio');
     const text=document.createElement('span');text.className='popover-option-label';
-    if(control.trigger===filter&&value==='GameCube')text.insertAdjacentHTML('beforeend',gamecubeLogo);
+    if(control.trigger===filter&&value!=='all')text.insertAdjacentHTML('beforeend',consoleIcon(value));
     text.append(document.createTextNode(label));option.append(text);option.insertAdjacentHTML('beforeend',check);
     control.menu.querySelector('.popover-options').append(option);
     listen(option,'click',()=>{control.setValue(value);syncControls();updateEntries();closeMenu(control,true);});
@@ -99,8 +99,8 @@ let clearLift=null;
 function hideTooltip(){tooltip.hidden=true;clearLift?.();clearLift=null;}
 for(const project of projects){
   const card=document.createElement('a');card.className='project-card';card.href=project.href;card.setAttribute('aria-label','Explore '+project.title);
-  const cover=`<img class="project-cover" src="${project.cover}" alt="" width="${project.coverWidth}" height="${project.coverHeight}" ${project.slug==='nflstreet2'?'fetchpriority="high"':'loading="lazy"'}>`;
-  card.innerHTML=`${cover}<div class="entry-details"><h2 class="entry-title">${gamecubeLogo}<span>${project.title}</span></h2><div class="card-progress">${['code','data'].map(kind=>`<div class="card-measure progress-element" data-progress="${kind}"><div class="card-measure-label"><span>${kindLabel(kind)}</span><strong>—</strong></div><div class="card-track" role="progressbar" aria-label="${project.title} ${kind} matched progress" aria-valuemin="0" aria-valuemax="100"><i class="progress-fuzzy"></i><i class="progress-matched"></i><i class="progress-linked"></i></div></div>`).join('')}</div></div><div class="entry-commit" aria-label="Latest commit"><svg class="commit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg><span class="commit-title">Loading latest commit…</span><time class="commit-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><span></span></time></div>`;
+  const cover=`<img class="project-cover" src="${project.cover}" alt="" width="${project.coverWidth}" height="${project.coverHeight}" ${entries.length===0?'fetchpriority="high"':'loading="lazy"'}>`;
+  card.innerHTML=`${cover}<div class="entry-details"><h2 class="entry-title">${consoleIcon(project.console)}<span>${project.title}</span></h2><div class="card-progress">${['code','data'].map(kind=>`<div class="card-measure progress-element" data-progress="${kind}"><div class="card-measure-label"><span>${kindLabel(kind)}</span><strong>—</strong></div><div class="card-track" role="progressbar" aria-label="${project.title} ${kind} matched progress" aria-valuemin="0" aria-valuemax="100"><i class="progress-fuzzy"></i><i class="progress-matched"></i><i class="progress-linked"></i></div></div>`).join('')}</div></div><div class="entry-commit" aria-label="Latest commit"><svg class="commit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg><span class="commit-title">Loading latest commit…</span><time class="commit-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><span></span></time></div>`;
   grid.append(card);
   const entry={project,card,index:entries.length,progress:{}};entries.push(entry);
   pending.push(fetchSummary(project, signal).then(data=>{
@@ -115,11 +115,15 @@ for(const project of projects){
     }
     for(const kind of ['code','data']){
       const measure=data.measures[kind],element=card.querySelector(`[data-progress="${kind}"]`),track=element.querySelector('.card-track');
-      const values={linked:measure.linked/measure.total*100,matched:measure.matched/measure.total*100,fuzzy:(measure.fuzzy??measure.matched)/measure.total*100};
-      entry.progress[kind]=values.matched;
-      element.querySelector('strong').textContent=values.matched.toFixed(2)+'%';
-      track.setAttribute('aria-valuenow',values.matched);track.setAttribute('aria-valuetext',Object.entries(values).map(([key,value])=>`${key} ${value.toFixed(2)}%`).join(', '));
-      frame(()=>frame(()=>{for(const field of ['fuzzy','matched','linked'])track.querySelector('.progress-'+field).style.width=values[field]+'%';}));
+      const available=measure.total>0;
+      const values={linked:available?measure.linked/measure.total*100:0,matched:available?measure.matched/measure.total*100:0,
+        ...(measure.fuzzy===undefined?{}:{fuzzy:available?measure.fuzzy/measure.total*100:0})};
+      track.querySelector('.progress-fuzzy').hidden=measure.fuzzy===undefined;
+      entry.progress[kind]=available?values.matched:null;
+      element.querySelector('strong').textContent=available?values.matched.toFixed(2)+'%':'Unavailable';
+      if(available)track.setAttribute('aria-valuenow',values.matched);else track.removeAttribute('aria-valuenow');
+      track.setAttribute('aria-valuetext',available?Object.entries(values).map(([key,value])=>`${key} ${value.toFixed(2)}%`).join(', '):'Unavailable');
+      frame(()=>frame(()=>{for(const field of Object.keys(values))track.querySelector('.progress-'+field).style.width=values[field]+'%';}));
       const lift=document.createElement('div');lift.className='progress-hover';lift.hidden=true;lift.setAttribute('aria-hidden','true');track.append(lift);
       let liftedStrip=null,stripAnimation=null;
       function clearHover(){stripAnimation?.cancel();liftedStrip=null;lift.hidden=true;}
@@ -127,7 +131,7 @@ for(const project of projects){
         if(event.pointerType==='touch')return;
         const rect=track.getBoundingClientRect(),x=event.clientX-rect.left;
         let start=0;
-        for(const field of ['linked','matched','fuzzy']){
+        for(const field of ['linked','matched',...(values.fuzzy===undefined?[]:['fuzzy'])]){
           const end=track.querySelector('i.progress-'+field).getBoundingClientRect().width;
           if(x>=start&&x<end){
             if(clearLift&&clearLift!==clearHover)hideTooltip();
@@ -145,7 +149,7 @@ for(const project of projects){
             tooltip.style.top=Math.max(12,event.clientY-tooltip.offsetHeight-12)+'px';
             return;
           }
-          start=end;
+          start=Math.max(start,end);
         }
         hideTooltip();
       }

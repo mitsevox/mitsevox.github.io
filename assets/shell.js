@@ -54,7 +54,7 @@ export function createFooter(){
   function update(project){
     buildLink.hidden=!project;
     if(project){buildLink.href=project.repo;buildLink.textContent='Loading progress…';buildLink.removeAttribute('title');}
-    target.textContent=project?' · '+project.target:'GameCube decompilations';
+    target.textContent=project?' · '+project.target:'Decompilation projects';
   }
   update(null);return {node,update,buildLink};
 }

@@ -1,4 +1,6 @@
-# Migration and adapter plan
+# Historical migration plan
+
+The shared registration, contract importer, validation, storage and rendering described below are now implemented. New integration follows [the generic project template](onboarding.md) and [platform interface](platform.md). The original planning notes below are retained as context, not instructions to copy a game-specific pipeline.
 
 The NFL consumer adapter, semantic validation, package locking and static assembly are implemented; see [the operational reference](nflstreet2.md). The remaining phases below are acceptance targets, not a claim of deployment. Existing production pages and decomp.dev feeds continue until parity is demonstrated. No source repository CI/settings changes are authorized merely by this design document.
 

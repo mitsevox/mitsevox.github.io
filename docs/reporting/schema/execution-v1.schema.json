@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "console": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha1": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        }
+      },
+      "required": [
+        "id",
+        "console",
+        "sha1"
+      ]
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "tree": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "methodology": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "measuredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "mode": {
+      "enum": [
+        "full",
+        "reused"
+      ]
+    },
+    "runId": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "workflowBlob": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      },
+      "propertyNames": {
+        "pattern": "^[A-Za-z0-9_-]+\\.json$"
+      }
+    },
+    "source": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "runId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "attempt": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "artifactId": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "artifactSha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "revision": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "tree": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "measuredAt": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "runId",
+            "attempt",
+            "artifactId",
+            "artifactSha256",
+            "revision",
+            "tree",
+            "measuredAt"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "repository",
+    "target",
+    "revision",
+    "tree",
+    "methodology",
+    "generation",
+    "measuredAt",
+    "publishedAt",
+    "mode",
+    "runId",
+    "attempt",
+    "workflowBlob",
+    "files",
+    "source"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "full"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "source": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "source": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ]
+}

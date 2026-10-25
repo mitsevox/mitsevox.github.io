@@ -201,6 +201,8 @@ class ExecutionTests(unittest.TestCase):
         manifest=decode(payloads['manifest.json'])
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
+            import shutil
+            shutil.copytree(ROOT/'config',root/'config')
             install(root,None,manifest,payloads,{})
             before=(root/'data/reports.lock.json').read_bytes()
             payloads['progress.json']=b'{}'
@@ -210,7 +212,7 @@ class ExecutionTests(unittest.TestCase):
     def test_cache_requires_accepted_main_digest_not_a_real_run_id(self):
         import base64
         entry=decode((ROOT/'data/reports.lock.json').read_bytes())['projects']['nflstreet2']
-        response={'encoding':'base64','content':base64.b64encode(encoded({'projects':{'nflstreet2':entry}})).decode()}
+        response={'encoding':'base64','content':base64.b64encode(encoded({'schemaVersion':1,'projects':{'nflstreet2':entry}})).decode()}
         with patch('import_nfl.GitHub.get',return_value=response):
             self.assertTrue(accepted_package(entry))
             mutated={**entry,'manifestSha256':'0'*64}
