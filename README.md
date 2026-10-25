@@ -2,7 +2,7 @@
 
 Shared portfolio frontend and project wiki for mitsevox’s decompilation projects.
 
-This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2 data (legacy adapter) and Tiger Woods PGA Tour 2004 data (the first standard report-v1 producer); other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
+This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2 data (legacy adapter), MVP Baseball 2005 data and Tiger Woods PGA Tour 2004 data (standard report-v1 producers); other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
 
 Build with `uv run --locked python tools/build_site.py --output build/site`, then serve that directory with `python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site`. Use a fresh output path for each retained candidate.
 
