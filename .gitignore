@@ -1,2 +1,9 @@
 .DS_Store
 __pycache__/
+build/
+.venv/
+.env
+.env.*
+*.pyc
+
+data/.report-refresh.lock

@@ -1,6 +1,6 @@
 # Migration and adapter plan
 
-All phases below are pending implementation. Existing production pages and decomp.dev feeds continue until parity is demonstrated. No source repository CI/settings changes are authorized merely by this design document.
+The NFL consumer adapter, semantic validation, package locking and static assembly are implemented; see [the operational reference](nflstreet2.md). The remaining phases below are acceptance targets, not a claim of deployment. Existing production pages and decomp.dev feeds continue until parity is demonstrated. No source repository CI/settings changes are authorized merely by this design document.
 
 ## 1. Establish the shared contract locally
 
@@ -11,6 +11,8 @@ Define project configuration independently of report capabilities. Complete modu
 Acceptance: all agreed metric definitions round-trip; malformed or incompatible reports fail with an actionable error; toggles preserve the approved UI without empty placeholders.
 
 ## 2. Adapt NFL Street 2 first
+
+The current implementation consumes NFL’s existing authenticated artifacts and adds no game CI steps. Permanent automatic snapshot promotion and the proposed data-only branch remain pending.
 
 Wrap the existing verified exporter and publication receipts. Preserve matching, map, credit, history and trusted integrated-report reuse checks. Map existing names into the common fields; keep existing decomp.dev generation. Inventory exactness and named-file semantics must retain their evidence requirements.
 
@@ -30,7 +32,7 @@ Acceptance per game: compare the same revision against its current build report,
 
 ## 4. Connect the central site
 
-Create/configure the hosted site repository when separately authorized. Build static pages from locked report snapshots; replace fixture locations with packaged data. Keep the persistent header/router and individual `/games/<slug>/` routes. Verify direct navigation and refresh on the actual Pages base URL.
+The hosted site repository now exists publicly. Keep Pages disabled until cutover is authorized. Build static pages from locked report snapshots; replace fixture locations with packaged data. Keep the persistent header/router and individual `/games/<slug>/` routes. Verify direct navigation and refresh on the actual Pages base URL.
 
 Keep shared reporting definitions in the site repo and pin reviewed versions from game repos. Add manual/scheduled refresh before considering dispatch credentials. Verify cache fingerprinting, stale-data behavior, rollback and per-project isolation when one producer fails.
 

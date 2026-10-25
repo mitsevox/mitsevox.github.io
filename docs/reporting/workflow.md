@@ -1,6 +1,6 @@
 # Common validation and publication workflow
 
-Proposed requirements. Each game retains its build adapter and existing owner/review policy. Shared code standardizes guarantees and public output; it does not authorize merges or change private dependencies.
+Target multi-game requirements. The implemented NFL consumer and its current rollout limits are documented in [NFL integration](nflstreet2.md). Each game retains its build adapter and existing owner/review policy. Shared code standardizes guarantees and public output; it does not authorize merges or change private dependencies.
 
 ## Pull request
 

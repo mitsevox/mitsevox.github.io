@@ -1,0 +1,59 @@
+name: Portfolio
+
+on:
+  push:
+    branches: [main, 'codex/**']
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: '19 */6 * * *'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: portfolio-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate reports and assemble site
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: '0.12.9'
+      - name: Validate locked packages and failure handling
+        run: |
+          uv run --locked python -m unittest discover -s tests -v
+          for file in assets/*.js; do node --check "$file"; done
+      - name: Refresh authenticated NFL reports
+        id: refresh
+        if: github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --locked python tools/import_nfl.py
+      - name: Assemble verified static output
+        run: uv run --locked python tools/build_site.py
+      - name: Preserve validated site candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: portfolio-site-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/site
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 90
+      - name: Report refresh failure without discarding last good data
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo 'Refresh failed. The assembled candidate retains the committed last-good snapshot.'
+          exit 1
+
+# This workflow intentionally has no Pages deployment or repository-write job.
+# Publication/cutover remains a separate owner decision.

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "repository": "mitsevox/nflstreet2",
+  "workflow": ".github/workflows/baseline.yml",
+  "workflowBlobs": [
+    "35d1c4cf00baeb80d7893b15d50b3927f0d59e0e"
+  ],
+  "environment": "ghcr.io/mitsevox/nflstreet2-build@sha256:2b4967b77a5d74fb4575ec522ca0a60d8769605e7f5c9c162fb4e55959250aae",
+  "target": {
+    "id": "GN7E69",
+    "console": "GameCube",
+    "sha1": "3561e946e9ff785b68692f87d2ba85d81fd2dcf4"
+  }
+}

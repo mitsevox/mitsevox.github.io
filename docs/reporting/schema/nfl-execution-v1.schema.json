@@ -1,0 +1,314 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "repository": {
+      "const": "mitsevox/nflstreet2"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "tree": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "workflowBlob": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "mode": {
+      "enum": [
+        "full",
+        "reused"
+      ]
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "run_attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "head_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event": {
+          "enum": [
+            "push",
+            "workflow_dispatch"
+          ]
+        },
+        "status": {
+          "const": "completed"
+        },
+        "conclusion": {
+          "const": "success"
+        },
+        "run_started_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "run_attempt",
+        "path",
+        "head_sha",
+        "head_branch",
+        "event",
+        "status",
+        "conclusion",
+        "run_started_at"
+      ]
+    },
+    "job": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "run_attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "conclusion": {
+          "const": "success"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "conclusion": {
+                "enum": [
+                  "success",
+                  "skipped"
+                ]
+              },
+              "status": {
+                "const": "completed"
+              },
+              "started_at": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "completed_at": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "name",
+              "number",
+              "conclusion",
+              "status",
+              "started_at",
+              "completed_at"
+            ]
+          }
+        }
+      },
+      "required": [
+        "id",
+        "run_attempt",
+        "head_sha",
+        "name",
+        "conclusion",
+        "completed_at",
+        "steps"
+      ]
+    },
+    "artifacts": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+          },
+          "size_in_bytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "digest",
+          "size_in_bytes",
+          "created_at"
+        ]
+      }
+    },
+    "sourceVerification": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "workflow-artifact"
+            },
+            "run": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "artifact": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "report_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "tested_revision": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "tree": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$"
+            },
+            "environment": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind",
+            "run",
+            "artifact",
+            "report_sha256",
+            "tested_revision",
+            "tree",
+            "environment"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "measuredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sourceArtifact": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$"
+            },
+            "size_in_bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "digest",
+            "size_in_bytes",
+            "created_at"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "repository",
+    "revision",
+    "tree",
+    "workflowBlob",
+    "mode",
+    "run",
+    "job",
+    "artifacts",
+    "sourceVerification",
+    "measuredAt",
+    "publishedAt",
+    "sourceArtifact"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

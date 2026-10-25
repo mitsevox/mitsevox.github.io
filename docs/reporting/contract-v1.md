@@ -1,14 +1,14 @@
 # Public report contract v1
 
-Draft. The JSON schemas cover the manifest/summary and presentation configuration. They do **not** yet implement semantic validation, run authentication, or schemas for map/history/credit payloads. Those are mandatory implementation gates before production, not work implied complete by schema validation.
+The manifest/configuration schemas and NFL legacy payload schemas are implemented with semantic checks and authenticated ingestion. See [NFL integration](nflstreet2.md) for the exact trust boundary and commands. This first adapter is not a generic producer implementation for other games.
 
 ## Package and identity
 
-A manifest declares repository/project, console and target hash, measured source commit/tree, methodology and generation, measurement time, tool provenance and run identity. `origin` is `measured` or `fixture`; production rejects `fixture`. The schema's run fields are claims until verified against trusted execution and receipts.
+A manifest declares repository/project, console and target hash, measured source commit/tree, methodology and generation, `measuredAt` and `publishedAt`, tool provenance and run identity. `origin` is `measured` or `fixture`; production rejects `fixture`. The schema's run fields are claims until verified against trusted execution and receipts.
 
 Code/data summaries are small and inline. Larger optional modules are separate JSON assets referenced by safe package-relative path, schema identifier and SHA-256. Fetch them only when needed. Restrict path resolution to the package root and allowlisted formats; verify checksum and size limits before parsing. A checksum binds content, not authorship.
 
-Payload schemas will normalize the existing NFL map and activity representations without losing evidence. Stable function identity is target + address + measured extent, not display name; a boundary correction needs an explicit identity migration. File grouping carries provisional/exact-boundary evidence and preserves address ordering. Unassigned ranges stay represented.
+The NFL payload schemas preserve its existing map and activity representations without losing evidence. Stable function identity is target + address + measured extent, not display name; a boundary correction needs an explicit identity migration. File grouping carries provisional/exact-boundary evidence and preserves address ordering. Unassigned ranges stay represented.
 
 ## Measurement semantics
 
@@ -49,6 +49,6 @@ Latest repository commit metadata is a separate site input. Its timestamp/title 
 
 ## Versioning and validation boundary
 
-Schema v1 rejects unknown fields to catch spelling mistakes. Evolve with an explicit version and consumer compatibility check; pin a shared validator revision. Before release, semantic validation must check range bounds/overlaps, aggregation, identities, source naming policy, credits, history consistency, target/tool hashes and provenance. Reused build proof requires the authenticated tree/environment checks in the workflow specification. Production must reject fixtures even when structurally valid.
+Schema v1 rejects unknown fields to catch spelling mistakes. Evolve with an explicit version and consumer compatibility check; pin a shared validator revision. Adapter acceptance requires semantic validation of range bounds/overlaps, aggregation, identities, source naming policy, credits, history consistency, target/tool hashes and provenance. Reused build proof requires the authenticated tree/environment checks in the workflow specification. Production must reject fixtures even when structurally valid.
 
 For Python JSON Schema tooling, install `jsonschema[format]` and enable `FormatChecker`; a bare installation may not enforce the date-time format. Structural checks performed for this draft accepted both examples and rejected negative byte counts, malformed target hashes, invalid module shapes, path traversal, unknown fields, invalid timestamps and an enabled contribution button without a guide. Local documentation links were also checked. These checks do not establish measured-data correctness or trusted CI execution.

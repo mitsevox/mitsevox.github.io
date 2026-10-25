@@ -48,4 +48,6 @@ Use a separate build artifact and deployment job. GitHub Pages deployment needs 
 
 Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. Roll back by selecting a verified older site artifact, not by rewriting measurement history.
 
-The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) details migration; it is not installed CI.
+The [NFL consumer implementation](/docs/reporting/nflstreet2.md) verifies existing artifacts and builds a locked static candidate without adding game CI work. The site workflow has no deployment or source-write permissions.
+
+The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) describes the remaining cross-game migration; distinguish it from the implemented site-only workflow.

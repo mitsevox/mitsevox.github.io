@@ -1,0 +1,385 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "baseline": {
+      "const": "verified"
+    },
+    "basis": {
+      "const": "executable-sections"
+    },
+    "built_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_sha1": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "measures": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "linked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "matched": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fuzzy": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "total",
+            "linked",
+            "matched"
+          ]
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "linked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "matched": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "fuzzy": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "required": [
+            "total",
+            "linked",
+            "matched"
+          ]
+        }
+      },
+      "required": [
+        "code",
+        "data"
+      ]
+    },
+    "functions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exact": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "named": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "total",
+        "exact",
+        "named",
+        "basis"
+      ]
+    },
+    "file_counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "exact": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "named": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "total",
+        "exact",
+        "named",
+        "basis"
+      ]
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      },
+      "minItems": 1
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/node"
+      },
+      "minItems": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "report": {
+          "const": "measured"
+        },
+        "units": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "report",
+        "units"
+      ]
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tool": {
+          "type": "string",
+          "minLength": 1
+        },
+        "additional_exact_functions": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "basis",
+        "tool",
+        "additional_exact_functions"
+      ]
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "const": "workflow-artifact"
+        },
+        "run": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "artifact": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "report_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "tested_revision": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "tree": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        },
+        "environment": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "run",
+        "artifact",
+        "report_sha256",
+        "tested_revision",
+        "tree",
+        "environment"
+      ]
+    }
+  },
+  "required": [
+    "schema",
+    "baseline",
+    "basis",
+    "built_at",
+    "revision",
+    "target",
+    "target_sha1",
+    "measures",
+    "functions",
+    "file_counts",
+    "sections",
+    "files",
+    "source"
+  ],
+  "$defs": {
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "enum": [
+            "code",
+            "data"
+          ]
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "linked": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "matched": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fuzzy": {
+          "type": "number",
+          "minimum": 0
+        },
+        "address": {
+          "type": "string",
+          "pattern": "^0x[A-F0-9]{8}$"
+        },
+        "mapped_extents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "type": "string",
+                "pattern": "^0x[A-F0-9]{8}$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^0x[A-F0-9]{8}$"
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "minItems": 1
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          },
+          "minItems": 1
+        },
+        "function_address": {
+          "type": "string",
+          "pattern": "^0x[A-F0-9]{8}$"
+        },
+        "original_size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "comparison_source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "auto_generated": {
+          "type": "boolean"
+        },
+        "boundary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "const": "function"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "size",
+        "linked",
+        "matched"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "function_address",
+              "original_size"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

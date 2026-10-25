@@ -1,10 +1,12 @@
 # Shared reporting architecture
 
-Status: proposed v1, 2026-10-25. Documentation and draft schemas only; no game workflow, publication, repository setting, or frontend behavior is changed by this proposal.
+Status: first NFL consumer adapter implemented. NFL’s existing producer workflow is unchanged. The broader data-store and multi-game migration below remain planned; portfolio Pages deployment is disabled.
 
 The approved UI lives in this repository. Each game remains responsible for its build, measurements, source evidence and attribution. NFL Street 2 is the validation archetype; its compiler commands and evidence layout are not a universal template.
 
 ## Documents
+
+- [NFL integration](nflstreet2.md): implemented commands, trust boundary, package format, module controls and rollout limits.
 
 - [Pipeline audit](pipeline-audit.md): pinned source inspection of all three games.
 - [Workflow](workflow.md): PR validation, main publication, recovery and site consumption.
@@ -32,6 +34,6 @@ flowchart LR
   F --> G[One static site: hub and game routes]
 ```
 
-Proposed delivery: a data-only `progress-data` branch in each game repository, containing immutable snapshot packages and a latest-good pointer. Preserve existing archives during migration. The site fetches pinned packages during its build; visitors use the site's static files, not authenticated GitHub APIs. Start with manual/scheduled ingestion. Cross-repository dispatch is optional later and needs an explicitly scoped credential decision.
+Future producer-store option: a data-only `progress-data` branch in each game repository, containing immutable snapshot packages and a latest-good pointer. Preserve existing archives during migration. The site fetches pinned packages during its build; visitors use the site's static files, not authenticated GitHub APIs. Start with manual/scheduled ingestion. Cross-repository dispatch is optional later and needs an explicitly scoped credential decision.
 
 The frontend and wiki are published in `mitsevox/mitsevox.github.io`. GitHub Pages remains disabled until production report ingestion is verified. NFL Street 2 is the first integration; the other games follow once its implementation and onboarding documentation are validated.

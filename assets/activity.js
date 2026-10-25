@@ -5,6 +5,8 @@ export function mountActivity(root, project) {
 
   const chart=root.querySelector('.history-chart'),scrub=root.querySelector('#history-scrub');
   const list=root.querySelector('.contributor-rankings');
+  const timeline = !!chart, contributors = !!list;
+  if (!timeline && !contributors) return {ready:Promise.resolve(), destroy:scope.destroy};
   const fields=['code','data'];
   const shortDate=new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric'});
   const fullDate=new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
@@ -14,6 +16,7 @@ export function mountActivity(root, project) {
   const x=i=>10+(rows.length===1?1:(Date.parse(rows[i].built_at)-first)/(last-first))*980;
   const y=value=>200-value/ceiling*180;
   function draw(){
+    if (!timeline) return;
     for(const kind of fields){
       const values=rows.map(row=>percent(row,kind));
       root.querySelector(`[data-line="${kind}"]`).setAttribute('d',values.map((v,i)=>(i?'L':'M')+x(i)+','+y(v)).join(' '));
@@ -25,6 +28,7 @@ export function mountActivity(root, project) {
     scrub.value=index;scrub.setAttribute('aria-valuetext',fullDate.format(new Date(rows[index].built_at))+': code '+percent(rows[index],'code').toFixed(2)+'% linked, data '+percent(rows[index],'data').toFixed(2)+'% linked');
   }
   function renderPeople(people){
+    if (!contributors) return;
     list.replaceChildren();
     people.forEach((person,i)=>{
       const row=document.createElement('li'),place=document.createElement('span');place.className='contributor-place';place.textContent=String(i+1).padStart(2,'0');
@@ -73,23 +77,24 @@ export function mountActivity(root, project) {
     let count=Infinity;const users=new Set();
     for(const p of data.contributors){if(!/^[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$/.test(p.login)||users.has(p.login)||!Number.isSafeInteger(p.id)||p.id<=0||!Number.isSafeInteger(p.functions)||p.functions<=0||p.functions>count)throw Error('Invalid contributor credit');users.add(p.login);count=p.functions;}
   }
-  listen(scrub, 'input',()=>{if(rows.length){index=Number(scrub.value);draw();}});
+  if (timeline) listen(scrub, 'input',()=>{if(rows.length){index=Number(scrub.value);draw();}});
   function point(event){
     if(!rows.length)return;const rect=chart.getBoundingClientRect(),fraction=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
     const time=first+fraction*(last-first);index=rows.reduce((best,row,i)=>Math.abs(Date.parse(row.built_at)-time)<Math.abs(Date.parse(rows[best].built_at)-time)?i:best,0);draw();
   }
-  listen(chart, 'pointermove',point);
-  listen(chart, 'pointerdown',event=>{point(event);scrub.focus({preventScroll:true});});
-  listen(chart, 'pointerleave',()=>{if(rows.length){index=rows.length-1;draw();}});
+  if (timeline) listen(chart, 'pointermove',point);
+  if (timeline) listen(chart, 'pointerdown',event=>{point(event);scrub.focus({preventScroll:true});});
+  if (timeline) listen(chart, 'pointerleave',()=>{if(rows.length){index=rows.length-1;draw();}});
   const ready = fetch(project.activityUrl,{cache:'no-cache',signal}).then(response=>{if(!response.ok)throw Error('Activity unavailable');return response.json();}).then(data=>{
     if(signal.aborted)return;
     validate(data);rows=data.snapshots;index=rows.length-1;first=Date.parse(rows[0].built_at);last=Date.parse(rows[index].built_at);if(last===first)last=first+1;
     ceiling=Math.min(100,Math.max(5,Math.ceil(Math.max(...rows.flatMap(row=>fields.map(kind=>percent(row,kind))))/5)*5));
-    scrub.max=rows.length-1;root.querySelector('.history-ceiling').textContent=ceiling+'%';
+    if (timeline) { scrub.max=rows.length-1;root.querySelector('.history-ceiling').textContent=ceiling+'%';
     const ticks=[first,(first+last)/2,last],format=last-first<3*86400000?fullDate:shortDate;
     root.querySelectorAll('.history-axis span').forEach((tick,i)=>tick.textContent=format.format(new Date(ticks[i])));
+    }
     renderPeople(data.contributors);draw();
-  }).catch(()=>{if(signal.aborted)return;root.querySelector('#history-date').textContent='Progress history unavailable';scrub.disabled=true;list.textContent='Contributor credits unavailable';});
+  }).catch(()=>{if(signal.aborted)return;if(timeline){root.querySelector('#history-date').textContent='Progress history unavailable';scrub.disabled=true;}if(contributors)list.textContent='Contributor credits unavailable';});
 
   return {ready, destroy:scope.destroy};
 }

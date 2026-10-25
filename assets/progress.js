@@ -2,6 +2,8 @@ import {pageScope} from './lifecycle.js';
 export function mountProgress(root, project, buildLink) {
 const scope = pageScope();
 const {signal, listen, frame, cancelFrame, animate} = scope;
+const mapEnabled = project.modules?.map !== false;
+const mapListen = mapEnabled ? listen : () => {};
 let sections=[];
 const canvas=root.querySelector('#canvas');
 const projectMap = root.querySelector('#project-map');
@@ -9,7 +11,7 @@ const mapLift = document.createElement('div');
 mapLift.className = 'map-lift';
 mapLift.setAttribute('aria-hidden', 'true');
 mapLift.hidden = true;
-canvas.parentElement.append(mapLift);
+if (mapEnabled) canvas.parentElement.append(mapLift);
 const similarity = item => (item.fuzzy ?? item.matched) / item.size;
 const partialColorStrength = .65;
 function color(item) {
@@ -24,6 +26,7 @@ const tooltip = root.querySelector('#map-tooltip');
 const back = root.querySelector('#map-back');
 const search = root.querySelector('#map-search');
 const kindPicker = root.querySelector('#map-kind');
+if (!mapEnabled) { root.append(tooltip); projectMap.remove(); }
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const countAnimations = new WeakMap();
 let mapFrame = null;
@@ -65,7 +68,7 @@ function clearMapMotion() {
     context.clearRect(0, 0, rippleSurface.width, rippleSurface.height);
   }
 }
-listen(motionPreference, 'change', () => {
+mapListen(motionPreference, 'change', () => {
   if (motionPreference.matches) { clearMapMotion(); liftAnimation?.cancel(); }
 });
 function clickOrigin(event, block) {
@@ -287,12 +290,12 @@ function mapItems() {
     ? [item] : leaves([item]).filter(leaf => leaf.name.toLocaleLowerCase().includes(query)));
   return path.at(-1)?.children || roots;
 }
-listen(search, 'input', () => {
+mapListen(search, 'input', () => {
   path.length = 0;
   render('search');
 });
 kindPicker.querySelectorAll('button').forEach(button => {
-  listen(button, 'click', event => {
+  mapListen(button, 'click', event => {
     mapKind = button.dataset.kind;
     kindPicker.dataset.selected = mapKind;
     projectMap.dataset.kind = mapKind;
@@ -467,8 +470,8 @@ function targetItem(item) {
     hoverTarget = document.createElement('button');
     hoverTarget.type = 'button';
     hoverTarget.className = 'tile map-hit';
-    listen(hoverTarget, 'blur', () => { if (activeTile === hoverTarget) hideTooltip(); });
-    listen(hoverTarget, 'focus', () => {
+    mapListen(hoverTarget, 'blur', () => { if (activeTile === hoverTarget) hideTooltip(); });
+    mapListen(hoverTarget, 'focus', () => {
       if (!hoverTarget.matches(':focus-visible')) return;
       const rect = hoverTarget.getBoundingClientRect();
       showTooltip(hoverTarget, hoverItem, rect.left, rect.top);
@@ -481,7 +484,7 @@ function targetItem(item) {
   Object.assign(hoverTarget.style, {left: item.x + 'px', top: item.y + 'px', width: item.w + 'px', height: item.h + 'px'});
   return hoverTarget;
 }
-listen(canvas, 'pointermove', event => {
+mapListen(canvas, 'pointermove', event => {
   if (event.pointerType === 'touch') return;
   hoverPoint = {clientX: event.clientX, clientY: event.clientY};
   if (hoverFrame !== null) return;
@@ -493,7 +496,7 @@ listen(canvas, 'pointermove', event => {
     else hideTooltip();
   });
 });
-listen(canvas, 'keydown', event => {
+mapListen(canvas, 'keydown', event => {
   if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
   event.preventDefault();
   const index = Number(event.target.dataset.mapIndex);
@@ -506,11 +509,11 @@ listen(canvas, 'keydown', event => {
     showTooltip(target, mapLayout[next], rect.left, rect.top);
   }
 });
-listen(canvas, 'click', event => {
+mapListen(canvas, 'click', event => {
   const item = event.detail ? hitItem(event) : mapLayout[Number(event.target.dataset.mapIndex)];
   if (item) selectItem(item, targetItem(item), event);
 });
-listen(canvas, 'pointerleave', () => {
+mapListen(canvas, 'pointerleave', () => {
   hideTooltip();
   if (hoverTarget !== document.activeElement) {
     hoverTarget?.remove();
@@ -518,6 +521,7 @@ listen(canvas, 'pointerleave', () => {
   }
 });
 function render(direction = null, origin = null) {
+  if (!mapEnabled) return;
   if (!sections.length) return;
   const continuing = activePulses.filter(pulse => performance.now() - pulse.start < pulse.duration)
     .map(pulse => ({origin: {x: pulse.origin.x / pulse.width * canvas.clientWidth,
@@ -556,8 +560,8 @@ function render(direction = null, origin = null) {
     Object.assign(block.style, {left: item.x + 'px', top: item.y + 'px', width: item.w + 'px', height: item.h + 'px'});
     block.setAttribute('aria-label', item.name + ' · ' + percent(item));
     item.target = block;
-    listen(block, 'blur', () => { if (activeTile === block) hideTooltip(); });
-    listen(block, 'focus', () => {
+    mapListen(block, 'blur', () => { if (activeTile === block) hideTooltip(); });
+    mapListen(block, 'focus', () => {
       if (!block.matches(':focus-visible')) return;
       const rect = block.getBoundingClientRect();
       showTooltip(block, item, rect.left, rect.top);
@@ -569,7 +573,7 @@ function render(direction = null, origin = null) {
   for (const pulse of continuing) ripple(pulse.origin, pulse.start);
   if (direction !== 'search') ripple(origin);
 }
-listen(back, 'click', event => {
+mapListen(back, 'click', event => {
   const origin = clickOrigin(event, back);
   const previous = path.pop();
   render('back', origin);
@@ -579,7 +583,7 @@ listen(back, 'click', event => {
 listen(document, 'keydown', event => {
   if (event.key === 'Escape') hideTooltip();
 });
-listen(window, 'scroll', () => {
+mapListen(window, 'scroll', () => {
   hideTooltip();
   const focused = document.activeElement;
   if (!canvas.contains(focused) || !focused.matches(':focus-visible')) return;
@@ -604,6 +608,7 @@ function validMap(items, kind = null) {
   });
 }
 function renderCounts(functions, type, basis) {
+  if (!root.querySelector('[data-stats="' + type + '"]')) return;
   const available = functions && functions.basis !== 'unavailable' && functions.total > 0;
   if (functions && functions.basis !== 'unavailable' && (functions.basis !== basis || !Number.isSafeInteger(functions.total) || functions.total < 0 || (type === 'function' && functions.total === 0) ||
       !['exact', 'named'].every(field => Number.isSafeInteger(functions[field]) && functions[field] >= 0 && functions[field] <= functions.total))) {
@@ -709,9 +714,9 @@ renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(da
   listen(track, 'blur', clearHover);
   listen(track, 'click', hoverStrip);
 });const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Baseline verified · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Built '+data.built_at;render();}catch(error){if(signal.aborted)return;renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');buildLink.textContent='Progress unavailable';canvas.textContent='Progress unavailable';root.querySelectorAll('.track').forEach(track=>track.setAttribute('aria-valuetext','Unavailable'));}}
-const observer = new ResizeObserver(() => { if (!signal.aborted) render(); });
-observer.observe(canvas);
+const observer = mapEnabled ? new ResizeObserver(() => { if (!signal.aborted) render(); }) : null;
+observer?.observe(canvas);
 const ready = loadProgress();
-return {ready, destroy() { observer.disconnect(); clearMapMotion(); scope.destroy(); }};
+return {ready, destroy() { observer?.disconnect(); clearMapMotion(); scope.destroy(); }};
 
 }
