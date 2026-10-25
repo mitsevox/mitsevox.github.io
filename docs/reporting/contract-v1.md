@@ -1,6 +1,8 @@
 # Public report contract v1
 
-The manifest/configuration schemas and NFL legacy payload schemas are implemented with semantic checks and authenticated ingestion. See [NFL integration](nflstreet2.md) for the exact trust boundary and commands. This first adapter is not a generic producer implementation for other games.
+The manifest/configuration schemas and NFL legacy payload schemas are implemented with semantic checks and authenticated ingestion. See [NFL integration](nflstreet2.md) for the exact trust boundary and commands. Use the [integration handoff](onboarding.md) to implement another producer and its website adapter. Current NFL validators, storage and renderer assumptions must be extended explicitly; the schema describes the shared contract, not already working support for every combination.
+
+`manifest.summary` uses `totalBytes`, `linkedBytes`, `matchedBytes` and nullable `fuzzyEquivalentBytes`. The current browser receives NFL legacy fields (`total`, `linked`, `matched`, optional `fuzzy`) through packaged view models. An adapter must validate that translation; publishing the manifest alone will not populate the existing UI.
 
 ## Package and identity
 
@@ -32,7 +34,7 @@ Missing or unsupported measurements use null or an explicit unsupported module. 
 ## Three independent controls
 
 1. **Producer capabilities:** a module is `supported` with a validated asset, or `unsupported` with a reason. A supported module that failed to generate is a failed report, not a newly unsupported feature.
-2. **Presentation:** `modules` in site project configuration chooses whether maps, function/file counts, timeline and contributor rankings appear. Disabled modules mount no UI, fetches, listeners or empty spacing. Core code/data summaries remain required.
+2. **Presentation:** `modules` in site project configuration chooses whether maps, function/file counts, timeline and contributor rankings appear. Disabled modules must mount no UI, section listeners or empty spacing. Shared assets may still be fetched for an enabled sibling. The current NFL progress reader requires map data, and its activity reader validates both credits and history; the onboarding task must remove those dependencies for summary-only and independently optional payloads. Core code/data summaries remain required.
 3. **Contribution policy:** `contributions.accepting` controls the Contribute button and requires a guide URL when true. NFL is enabled; MVP/TW initially false. It does not control attribution recording or whether past contributors deserve credit.
 
 Enabled UI requires the corresponding supported/valid data. During initial migration, configure unsupported modules off deliberately. For an already-supported module, a refresh failure retains last good data and surfaces CI failure, never silently hides it.

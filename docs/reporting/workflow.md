@@ -2,6 +2,8 @@
 
 Target multi-game requirements. The implemented NFL consumer and its current rollout limits are documented in [NFL integration](nflstreet2.md). Each game retains its build adapter and existing owner/review policy. Shared code standardizes guarantees and public output; it does not authorize merges or change private dependencies.
 
+The [integration handoff](onboarding.md) assigns the concrete two-repository work and acceptance evidence. Multi-game failure isolation and artifact interfaces below are target behavior; the current workflow refreshes NFL only and blocks deployment on any refresh failure. Implement shared dispatch/storage before enabling a second game.
+
 ## Pull request
 
 1. Resolve the exact target, source tree, pinned build environment, compiler/linker/comparison tools and reporting revision.
