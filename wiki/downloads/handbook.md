@@ -6,7 +6,7 @@ Reference snapshot: 2026-10-25. Project repository rules take precedence.
 
 A reusable structure for a decompilation repository, its CI and its place on the shared site.
 
-Use this handbook to establish a new project or align an existing one. It defines repository responsibilities, naming conventions, evidence standards, validation stages, review records and the public report contract. Each project supplies its own target facts, tools and build commands.
+Follow this handbook from an empty repository to its first verified build and site report. It defines repository responsibilities, naming conventions, evidence standards, validation stages, review records and the public report contract. Each project supplies its own target facts, tools and build commands.
 
 ## Follow the template
 
@@ -22,7 +22,7 @@ Use this handbook to establish a new project or align an existing one. It define
 10. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
 11. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
 
-An existing project can keep its working structure and commands. Map these responsibilities onto it instead of reorganizing source just to match a diagram.
+An [optional appendix](/wiki/existing-projects/) covers pre-existing repositories and legacy data. It is separate from this new-project setup path.
 
 ## What belongs where
 
@@ -110,7 +110,7 @@ Initialize an empty local repository without publishing it:
 mkdir game-slug
 cd game-slug
 git init -b main
-git switch -c codex/bootstrap
+git switch -c work/bootstrap
 ```
 
 Inspect staged files before the first commit. Generated objects, originals and research dumps should never enter the commit. Create the hosted repository and configure access only when the owner authorizes those actions.
@@ -121,14 +121,12 @@ Once the repository has an established main branch and origin:
 
 ```sh
 git fetch origin
-git worktree add ../game-slug-task -b codex/task-name origin/main
+git worktree add ../game-slug-task -b work/task-name origin/main
 cd ../game-slug-task
 git status --short --branch
 ```
 
-The command uses `codex/<task>` as an example. A project can choose `work/<task>`, another agent prefix or its existing convention; the branch name is not an identity or authorization check. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.
-
-Distinguish push-trigger filters from PR validation. A repository may limit optional branch-push CI to selected prefixes while validating every PR; that filter is not a shared-site integration requirement. The starter validates PRs without an agent-prefix restriction and only pushes to its adopted main branch. Check actual trigger behavior for the project's chosen branch convention before relying on a push alone.
+Choose one branch convention at setup; the example uses `work/<task>`. Branch names identify tasks, not approval or author identity. Use isolated checkouts, bounded reservations and explicit push/PR authority. The starter validates contribution PRs without an agent-prefix restriction and runs push validation on its adopted main branch. Existing branch/trigger adaptation is optional appendix material.
 
 ## Active work reservations
 
@@ -458,9 +456,11 @@ This chapter specifies the starter default: independent blind accuracy review, a
 
 The public report contract does not impose this review model. It authenticates the producing build/report execution; project policy governs source acceptance. Attribution and contributor rankings are separate choices.
 
-Explicit task authorization and adopted project rules take precedence over generic starter defaults. This includes an owner instruction permitting an agent to merge its own PRs after the selected gates pass. Document persistent delegation so the next agent sees it; do not infer or revoke that authority from this handbook.
+Choose and document merge authority when establishing the project. The selected policy and explicit task authorization govern actual permission; a template does not itself grant authority. Existing-workflow compatibility belongs to the [optional appendix](/wiki/existing-projects/).
 
 ## Contribution sequence
+
+The default sequence is:
 
 Claim scope → establish evidence → reconstruct and measure → self-check → blind accuracy review → hostile review → resolve findings → final-revision CI → owner clearance → owner merge → verified publication.
 
@@ -496,7 +496,7 @@ Coverage: earlier records carried forward and delta checked
 
 Hostile verdicts are SHIP, FIX, REDO or BLOCKED. SHIP means that review passed; it does not authorize a merge. Missing essential evidence is a blocked check, not permission to infer success.
 
-That is the starter verdict vocabulary. A project with SHIP/FIX/REDO may retain it and record missing evidence as an explicit blocked state with a nonpassing verdict/check, or adopt BLOCKED consistently in its documentation and verifier. Never translate blocked evidence into SHIP. Site integration does not require a particular reconstruction verdict enum; the chosen project's clearance check must understand its actual records. The default template grants success only for its declared passing verdicts.
+Use this vocabulary consistently in new project instructions, review records and the selected verifier. Only the declared passing verdict can clear its check; missing essential evidence remains nonpassing. Adapting an older verdict system is covered in the optional appendix.
 
 ## Rechecks and integration
 
@@ -810,11 +810,11 @@ After measurement, build the complete exact-function inventory and reconcile it 
 
 Tracking-disabled projects omit these ledger stages under their explicit policy and publish no contributor payload. They can still build, compare, keep a timeline and integrate with the common site. Never infer tracking requirements from whether contribution links or rankings are shown.
 
-## Recovering past credit
+## Start a measured timeline
 
-Use surviving original PRs, commit authorship, pinned source blobs, integration records and reviewed evidence. A closed PR or deleted branch may still leave useful records; do not assume they are available indefinitely. Distinguish supported attribution, explicit joint work and unresolved ownership.
+At the first verified main build, create one row with that measured revision, timestamp and actual raw code/data totals and linked bytes. Record `measured` provenance pointing to its real execution. No prior history is required. If this capability is not implemented yet, declare it unsupported instead of creating placeholder data.
 
-Keep a bounded recovery record explaining each decision and uncertainty. Do not give every function to the current file author or merger. If a project promises complete exact-function attribution, unresolved gaps block that capability's publication until resolved or the owner explicitly changes the policy.
+Future verified publications append supported measurements to preserved prior rows. Never invent points for unbuilt commits, interpolate gaps or treat a repository commit as evidence of a measured build. The current row agrees with the report summary; repeated publication remains idempotent.
 
 ## Timeline continuity
 
@@ -824,15 +824,8 @@ Restore prior verified history; do not use an unauthenticated live page as autom
 
 Document the selected credit policy, ledger schema and recovery procedure in the repository. Publish contributor data only when that policy can be validated.
 
-## Importing an older timeline
 
-Before initial acceptance, inventory the old history format and keep its raw export/hash. Resolve short SHAs unambiguously to full commits in the intended history. Recover each row's code/data totals and linked bytes from historical reports, versioned target/configuration evidence or reproducible replay. Carry a constant denominator only when its stability is established; rounded percentages usually cannot uniquely recover an exact numerator.
-
-Every row needs a full revision, valid timestamp, positive integer code/data totals, bounded linked counts and a provenance kind/source. Revisions are unique and times nondecreasing. Include the current measured revision with code/data values identical to the current summary. If a commit timestamp is used as a proxy, document that limitation instead of calling it a measured build time.
-
-Use `reconstructed` for evidence-backed reconstruction of old values, `measured` for supported measurement and `inherited` for an unchanged compatible accepted record. Resolving identity alone does not establish totals, and a reconstructed label does not permit invented zeros or interpolated/copied progress. Initially unsupported rows stay in the project's legacy archive with reasons; publish the supported subset or defer the timeline. Do not silently remove or alter previously accepted rows.
-
-The [legacy migration procedure and example](/docs/reporting/platform.md#import-legacy-history) cover normalization, source records and inherited wrappers. The site preserves provenance metadata; its current graph does not show separate provenance badges. Do not promise a visible distinction solely from changing `kind`.
+Legacy history and past-credit recovery belong to the [optional existing-project appendix](/wiki/existing-projects/). New repositories can skip it.
 
 
 ---
@@ -1062,6 +1055,7 @@ Download the [repository starter archive](/wiki/downloads/repository-starter.zip
 | `CI.md` | Exact adapter operations, GitHub outputs, state/paths, packaging and producer-step policy |
 | `reporting/platform.md` and `contract-v1.md` | Implemented shared interface, command usage and metric definitions |
 | `reporting/schema/` and `reporting/examples/` | Generic public schemas and unregistered configuration/report examples |
+| `OPTIONAL-ADOPTION.md` | Optional existing-workflow and legacy-data guidance; outside the new-project checklist |
 
 Fill visible placeholders from verified project facts. The project supplies its own compiler, build/comparison engines and internal evidence formats. Implement `tools/project_ci.py` as the documented thin adapter to those real tools; the kit does not include a fake success-producing adapter. Existing repositories keep established paths where those responsibilities are implemented.
 
@@ -1101,3 +1095,73 @@ Deliver the changes with commands, tested revisions, artifacts, capability setti
 | Website | Shared presentation, configured modules, direct route, deployment and subsequent refresh |
 
 The [integration checklist](/docs/reporting/onboarding.md) repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.
+
+
+---
+
+# Existing projects
+
+**Optional appendix. Skip this when starting a repository from scratch.** The main handbook and starter checklist define the new-project path: choose policy, establish verified tools/inputs, build and measure, start a measured timeline, then register the standard public report.
+
+Use this appendix only when adopting the structure in a repository that already has source, CI, review conventions, attribution or historical data. These are generic adoption procedures; they are not extra prerequisites for new projects.
+
+## Map existing responsibilities
+
+Inventory existing tools, source layout, configuration, validation outputs and owner instructions. Preserve working engines and evidence-supported paths where they fulfill the documented responsibilities. Map them to the adapter contract rather than reorganizing source solely to match example names. Identify actual gaps and test them; do not declare the old workflow equivalent without evidence.
+
+## Adopt policy without overriding authority
+
+Record the review/merge model selected for the project. Existing documented owner/task delegation remains authoritative until explicitly changed; a generic default does not silently grant or revoke merge permission. Preserve review independence and the gates selected by that policy.
+
+The starter uses SHIP/FIX/REDO/BLOCKED. A project retaining SHIP/FIX/REDO must represent missing essential evidence as an explicit blocked state with a nonpassing check, or deliberately adopt BLOCKED across its records and verifier. Never convert blocked evidence into a passing verdict. This is a compatibility decision for an existing workflow; new projects can use the coherent starter vocabulary directly.
+
+## Branch and trigger conventions
+
+Keep a documented existing branch convention if appropriate. A branch prefix is not authorization or a reporting-contract field. Inspect the actual triggers: optional branch-push checks may have prefix filters while PR validation covers all contribution branches. Make any trigger change deliberately and verify both event paths. New projects can use the starter's agent-neutral branch examples and PR/main validation model.
+
+## Recovering past credit
+
+Use surviving original PRs, commit authorship, pinned source blobs, integration records and reviewed evidence. A closed PR or deleted branch may still leave useful records; do not assume they are available indefinitely. Distinguish supported attribution, explicit joint work and unresolved ownership.
+
+Keep a bounded recovery record explaining each decision and uncertainty. Do not give every function to the current file author or merger. If a project promises complete exact-function attribution, unresolved gaps block that capability's publication until resolved or the owner explicitly changes the policy.
+
+## Import legacy history
+
+Existing history is useful even when it predates this pipeline. Migrate it before the first accepted report using a reproducible, reviewed conversion; retain the raw input separately. Do not reset an already accepted timeline during a later refresh.
+
+The same [timeline contract](/docs/reporting/platform.md#timeline-semantics) applies to imported rows. Legacy input does not bypass identity, raw-value, timestamp or continuity requirements.
+
+1. **Inventory the old format.** Record its target, metric meanings, denominators, timestamp basis and evidence sources. Count unresolved rows and preserve the original export/hash in a migration record.
+2. **Resolve abbreviated commits.** Fetch required history, resolve each prefix to exactly one commit, and verify it belongs to the intended project's history. A missing or ambiguous prefix is unresolved; never select the first matching object. Use the adopting project's branch name in ancestry checks.
+3. **Recover values from evidence.** Prefer preserved reports, receipts, versioned target/placement metadata or a reproducible historical replay. A denominator may be carried across rows only with evidence that the target and measured universe were unchanged. Today's total is not automatically every historical total. Rounded percentages generally do not recover an exact byte numerator uniquely.
+4. **Classify provenance.** Use `measured` for supported historical measurement, `reconstructed` for values rebuilt from identified historical evidence, and `inherited` when preserving an already accepted compatible record. A new importer does not turn an old measurement into a newly executed build.
+5. **Normalize without inventing.** Resolve duplicate revisions and ordering using a documented deterministic rule before initial acceptance. Preserve the timestamp's actual meaning; a commit time is not a historical build time. If the available timestamp is a commit-time proxy, state that in reconstructed provenance and the migration record.
+6. **Validate and reconcile.** Check schema, integer arithmetic, evidence-backed denominators, ordering, current-row parity, and continuity against any previously accepted history. Record conversion method, source records/hashes and unresolved/excluded rows in the project.
+
+For a known abbreviated commit, use Git's ambiguity checks rather than matching a log line by eye. Replace these placeholders and the main ref with actual project values:
+
+```sh
+git fetch origin main
+git rev-parse --verify --end-of-options 'ABBREVIATED_SHA^{commit}'
+# Where the timeline policy requires current-main ancestry:
+git merge-base --is-ancestor FULL_COMMIT_SHA origin/main
+```
+
+Missing original refs or rewritten history need a documented recovery decision; they are not reasons to choose a different commit with a similar prefix.
+
+A full SHA proves identity, not missing totals. `reconstructed` requires evidence for the values: it does not permit zero-filling, interpolation or repeating today's numbers. Keep initially unrepresentable rows in the project's legacy archive with reasons and publish the supported subset, or defer timeline support until sufficient evidence is available. Do not silently omit rows already accepted by the site; those require an explicit compatible migration/correction.
+
+An `inherited` wrapper may include the exact prior accepted row as `provenance.record`. Its revision, time, code and data values must remain identical. It cannot wrap an abbreviated/missing-total raw row and simultaneously claim the normalized fields are unchanged. Reconstructed rows identify their source/method through `provenance.source` instead.
+
+See the [illustrative legacy timeline](/docs/reporting/examples/timeline-legacy.json). Its placeholder commit identities and values are not production evidence. The site retains provenance in accepted data; the current graph does not display separate provenance badges, so the metadata label alone does not create a visible rebuilt/measured distinction.
+
+## Adoption acceptance
+
+- [ ] Existing commands and selected policies map to the standard responsibilities without lost evidence or unauthorized changes.
+- [ ] Any retained verdict/branch conventions agree with their actual verifier and CI triggers.
+- [ ] Legacy raw history and credit sources are retained with conversion method, unresolved rows and limitations.
+- [ ] Historical identity and raw values are supported; reconstruction labels do not replace evidence.
+- [ ] Previously accepted history remains unchanged or moves through an explicit compatible transition.
+- [ ] Real report import and the next refresh preserve prior accepted state.
+
+These checks apply only to the adoption being performed. They are intentionally absent from the starter's new-project checklist.

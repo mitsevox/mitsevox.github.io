@@ -143,9 +143,9 @@ one matching job and exactly one successful occurrence of each required step. A 
 does not grant acceptance; use the adopting repository's naming and trigger conventions.
 
 For maps, section/file address unions must match per kind and both views must reconcile with
-the summary. Legacy history requires full SHAs, supported raw totals and evidence-qualified
-provenance; a reconstructed label cannot replace missing values. The bundled platform contract
-contains both complete migration rules and paired examples; validate them before packaging.
+the summary. A new timeline begins with the first actual verified main measurement and appends
+only supported measurements. The bundled platform contract defines both formats and examples.
+OPTIONAL-ADOPTION.md covers pre-existing workflows/history and can be skipped for a new project.
 
 ## Proof and cache contracts
 

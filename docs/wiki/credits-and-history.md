@@ -36,11 +36,11 @@ After measurement, build the complete exact-function inventory and reconcile it 
 
 Tracking-disabled projects omit these ledger stages under their explicit policy and publish no contributor payload. They can still build, compare, keep a timeline and integrate with the common site. Never infer tracking requirements from whether contribution links or rankings are shown.
 
-## Recovering past credit
+## Start a measured timeline
 
-Use surviving original PRs, commit authorship, pinned source blobs, integration records and reviewed evidence. A closed PR or deleted branch may still leave useful records; do not assume they are available indefinitely. Distinguish supported attribution, explicit joint work and unresolved ownership.
+At the first verified main build, create one row with that measured revision, timestamp and actual raw code/data totals and linked bytes. Record `measured` provenance pointing to its real execution. No prior history is required. If this capability is not implemented yet, declare it unsupported instead of creating placeholder data.
 
-Keep a bounded recovery record explaining each decision and uncertainty. Do not give every function to the current file author or merger. If a project promises complete exact-function attribution, unresolved gaps block that capability's publication until resolved or the owner explicitly changes the policy.
+Future verified publications append supported measurements to preserved prior rows. Never invent points for unbuilt commits, interpolate gaps or treat a repository commit as evidence of a measured build. The current row agrees with the report summary; repeated publication remains idempotent.
 
 ## Timeline continuity
 
@@ -50,12 +50,5 @@ Restore prior verified history; do not use an unauthenticated live page as autom
 
 Document the selected credit policy, ledger schema and recovery procedure in the repository. Publish contributor data only when that policy can be validated.
 
-## Importing an older timeline
 
-Before initial acceptance, inventory the old history format and keep its raw export/hash. Resolve short SHAs unambiguously to full commits in the intended history. Recover each row's code/data totals and linked bytes from historical reports, versioned target/configuration evidence or reproducible replay. Carry a constant denominator only when its stability is established; rounded percentages usually cannot uniquely recover an exact numerator.
-
-Every row needs a full revision, valid timestamp, positive integer code/data totals, bounded linked counts and a provenance kind/source. Revisions are unique and times nondecreasing. Include the current measured revision with code/data values identical to the current summary. If a commit timestamp is used as a proxy, document that limitation instead of calling it a measured build time.
-
-Use `reconstructed` for evidence-backed reconstruction of old values, `measured` for supported measurement and `inherited` for an unchanged compatible accepted record. Resolving identity alone does not establish totals, and a reconstructed label does not permit invented zeros or interpolated/copied progress. Initially unsupported rows stay in the project's legacy archive with reasons; publish the supported subset or defer the timeline. Do not silently remove or alter previously accepted rows.
-
-The [legacy migration procedure and example](/docs/reporting/platform.md#import-legacy-history) cover normalization, source records and inherited wrappers. The site preserves provenance metadata; its current graph does not show separate provenance badges. Do not promise a visible distinction solely from changing `kind`.
+Legacy history and past-credit recovery belong to the [optional existing-project appendix](/wiki/existing-projects/). New repositories can skip it.

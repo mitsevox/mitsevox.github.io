@@ -21,7 +21,7 @@ The shared platform implements registered producer authentication, package valid
 
 Snapshots use target + source revision + methodology + generation identity. Store each validated measurement even if it finishes late; move latest only forward by eligible main ancestry. Handle same-revision corrections explicitly. Under a publication lock, re-read the current pointer and use a compare-and-swap Git update; retry conflicts by re-reading, never force-push. A history rewrite or unrelated ancestry requires owner reconciliation.
 
-The timeline preserves evidence-qualified progress records, including explicitly reconstructed legacy points; it does not promise a successful measured build for every commit. Discover and reconcile eligible unprocessed successful runs; record failures/gaps without fabricating points. Document the timestamp basis used for historical chart context; Git ancestry controls promotion. Measurement time and publication time remain separate.
+Start a new timeline with the first verified main measurement, then preserve and append supported results. Optional adoption of legacy history is covered in the [appendix](../../wiki/existing-projects/); it is not a new-project setup prerequisite. Discover and reconcile eligible unprocessed successful runs; record failures/gaps without fabricating points. Document the timestamp basis used for historical chart context; Git ancestry controls promotion. Measurement time and publication time remain separate.
 
 ## Site ingestion and deployment
 

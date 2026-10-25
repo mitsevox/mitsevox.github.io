@@ -10,18 +10,17 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 - [ ] Approved tool/runtime identities, supported hosts and reference access reproducible on a fresh runner.
 - [ ] README, CONTRIBUTING, AGENTS and configuration documents agree on adopted policies and paths.
 - [ ] Review/merge model selected explicitly; default independent accuracy/hostile and owner-only merging confirmed or replaced.
-- [ ] Explicit task/standing delegation, including authorized agent merges, preserved rather than overridden by template defaults.
 - [ ] Attribution tracking decided independently from rankings and contribution acceptance.
 - [ ] Bounded work reservations, shared-file coordination, branches/worktrees and task permissions documented.
 
 ## Implement fresh validation first
 
 - [ ] config/ci.json filled from example; no unresolved identity/tool/command placeholders; acceleration disabled.
-- [ ] Every CI.md operation mapped to real existing engines or implemented with meaningful failure behavior.
+- [ ] Every CI.md operation mapped to real engines or implemented with meaningful failure behavior.
 - [ ] Target verification and applicable original-byte baseline reproduced.
 - [ ] Accepted-source complete-output build and full-extent partial comparisons remain separate.
 - [ ] Source/header/profile/symbol/range/overlap/stale-receipt failures exercised.
-- [ ] Existing ledger provenance checked early if enabled; measured exact inventory and squash credit reconciled later.
+- [ ] Declared ledger provenance checked early if enabled; measured exact inventory and squash credit reconciled later.
 - [ ] Outputs cleared before export; a failing exporter cannot upload stale success.
 - [ ] Canonical report-v1 inputs, approved pinned packager, metadata and public allowlist implemented.
 - [ ] Matching objective and unsupported capabilities reported honestly; no invented map/credit/history data.
@@ -52,8 +51,7 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 - [ ] Raw totals, linked/exact/fuzzy, full-function inventories and enabled modules agree.
 - [ ] Section/file map address unions and both sets of aggregates match; gaps, child extents and full functions reconcile.
 - [ ] Optional modules work independently, including timeline without contributor payload.
-- [ ] History continuity, identical reruns, stale/diverged updates and immutable collisions exercised.
-- [ ] Legacy history resolves SHAs and raw values from evidence; ambiguous/unsupported rows remain archived without fabricated points.
+- [ ] Timeline, if enabled, starts with the first verified main measurement; future append/continuity, identical reruns, stale updates and immutable collisions exercised.
 - [ ] Multi-project restoration/publication and failure isolation preserve all accepted data.
 - [ ] Real main-run import, public direct route, manifest identity and subsequent refresh verified.
 - [ ] Rollback preserves accepted history; no private input or synthetic fixture enters production.

@@ -12,7 +12,7 @@ Three configuration files separate authority, measurement and presentation:
 
 A new producer using `report-v1` needs configuration, artwork and a conforming artifact. No project-specific Python importer, JavaScript project entry or hand-written game route is required. Unknown slugs/formats fail. Report strings cannot load arbitrary executable adapters.
 
-The first source feed retains a legacy format adapter so it can continue unchanged during its CI transition. That adapter translates an older export at the boundary; common installation, locks, storage, registration, rendering and deployment serve all projects.
+New producers use the shared report-v1 contract. Approved historical formats can remain readable through isolated compatibility adapters. Common installation, locks, storage, registration, rendering and deployment serve all registered projects; fresh integrations use the standard interface.
 
 The [producer configuration example](examples/producer.json) and [presentation example](examples/project.json) are unregistered templates with explicit example identities. Replace their target/tool/workflow facts before use; structural validity alone is not execution proof.
 
@@ -55,35 +55,15 @@ The [map example](examples/map.json) and [matching summary](examples/map-summary
 
 For example, two views of 100 bytes at different addresses fail even when every numeric total agrees. A tree can also pass JSON Schema but fail semantic validation because children overlap or parent totals do not reconcile. Run the shared packager/validator locally before uploading.
 
-## Import legacy history
+## Timeline semantics
 
-Existing history is useful even when it predates this pipeline. Migrate it before the first accepted report using a reproducible, reviewed conversion; retain the raw input separately. Do not reset an already accepted timeline during a later refresh.
+For a new project, start the timeline with its first verified main measurement. Write the actual full revision, measurement timestamp, raw code/data totals and linked bytes, and `measured` provenance identifying the real execution. Do not create points for earlier unmeasured commits or make historical recovery a setup requirement. If timeline support is not implemented, declare it unsupported and leave that module off.
 
-Every published row requires a full 40-character commit SHA, valid `built_at` timestamp, positive integer code/data `total`, integer `linked` between zero and total, and provenance `kind` plus a nonempty `source`. Rows have unique revisions and nondecreasing timestamps. The current report revision must have a row whose code/data totals and linked values exactly equal its summary.
+Each row requires a full 40-character commit SHA, valid `built_at` timestamp, positive integer code/data `total`, integer `linked` between zero and total, and provenance `kind` plus nonempty `source`. Revisions are unique and timestamps nondecreasing. The current report revision must have a row whose code/data totals and linked values exactly equal its summary.
 
-1. **Inventory the old format.** Record its target, metric meanings, denominators, timestamp basis and evidence sources. Count unresolved rows and preserve the original export/hash in a migration record.
-2. **Resolve abbreviated commits.** Fetch required history, resolve each prefix to exactly one commit, and verify it belongs to the intended project's history. A missing or ambiguous prefix is unresolved; never select the first matching object. Use the adopting project's branch name in ancestry checks.
-3. **Recover values from evidence.** Prefer preserved reports, receipts, versioned target/placement metadata or a reproducible historical replay. A denominator may be carried across rows only with evidence that the target and measured universe were unchanged. Today's total is not automatically every historical total. Rounded percentages generally do not recover an exact byte numerator uniquely.
-4. **Classify provenance.** Use `measured` for supported historical measurement, `reconstructed` for values rebuilt from identified historical evidence, and `inherited` when preserving an already accepted compatible record. A new importer does not turn an old measurement into a newly executed build.
-5. **Normalize without inventing.** Resolve duplicate revisions and ordering using a documented deterministic rule before initial acceptance. Preserve the timestamp's actual meaning; a commit time is not a historical build time. If the available timestamp is a commit-time proxy, state that in reconstructed provenance and the migration record.
-6. **Validate and reconcile.** Check schema, integer arithmetic, evidence-backed denominators, ordering, current-row parity, and continuity against any previously accepted history. Record conversion method, source records/hashes and unresolved/excluded rows in the project.
+On each subsequent verified main publication, restore the accepted rows unchanged and append the new supported measurement. Repeated publication is idempotent; failed or unmeasured commits add no invented points. Keep original measurement time distinct from publication time when reusing proof. Changing the target/universe/method needs an explicit versioned transition rather than rewriting earlier values.
 
-For a known abbreviated commit, use Git's ambiguity checks rather than matching a log line by eye. Replace these placeholders and the main ref with actual project values:
-
-```sh
-git fetch origin main
-git rev-parse --verify --end-of-options 'ABBREVIATED_SHA^{commit}'
-# Where the timeline policy requires current-main ancestry:
-git merge-base --is-ancestor FULL_COMMIT_SHA origin/main
-```
-
-Missing original refs or rewritten history need a documented recovery decision; they are not reasons to choose a different commit with a similar prefix.
-
-A full SHA proves identity, not missing totals. `reconstructed` requires evidence for the values: it does not permit zero-filling, interpolation or repeating today's numbers. Keep initially unrepresentable rows in the project's legacy archive with reasons and publish the supported subset, or defer timeline support until sufficient evidence is available. Do not silently omit rows already accepted by the site; those require an explicit compatible migration/correction.
-
-An `inherited` wrapper may include the exact prior accepted row as `provenance.record`. Its revision, time, code and data values must remain identical. It cannot wrap an abbreviated/missing-total raw row and simultaneously claim the normalized fields are unchanged. Reconstructed rows identify their source/method through `provenance.source` instead.
-
-See the [illustrative legacy timeline](examples/timeline-legacy.json). Its placeholder commit identities and values are not production evidence. The site retains provenance in accepted data; the current graph does not display separate provenance badges, so the metadata label alone does not create a visible rebuilt/measured distinction.
+The schema also supports `reconstructed` and `inherited` provenance for optional adoption of older data. Existing projects can use the [optional appendix](/wiki/existing-projects/#import-legacy-history); that is outside the new-project setup path.
 
 ## Package a producer report
 

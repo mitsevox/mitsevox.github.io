@@ -58,6 +58,8 @@ class HandbookTests(unittest.TestCase):
             for name in ('platform.md', 'contract-v1.md', 'schema/producer-v1.schema.json',
                          'schema/execution-v1.schema.json', 'schema/report-v1.schema.json'):
                 self.assertEqual(archive.read(base+'reporting/'+name), (ROOT/'docs/reporting'/name).read_bytes())
+            self.assertEqual(archive.read(base+'OPTIONAL-ADOPTION.md'),
+                             (ROOT/'docs/wiki/existing-projects.md').read_bytes())
             self.assertFalse(any('nfl-' in n or 'nflstreet2' in n or 'legacy_nfl' in n
                                  for n in archive.namelist()))
 
