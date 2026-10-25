@@ -161,6 +161,10 @@
         "timeline",
         "contributors"
       ]
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
     }
   },
   "required": [
@@ -177,10 +181,11 @@
     "tools",
     "validation",
     "summary",
-    "modules"
+    "modules",
+    "publishedAt"
   ],
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "Proposed public report manifest v1",
+  "title": "Public report manifest v1",
   "$defs": {
     "asset": {
       "type": "object",

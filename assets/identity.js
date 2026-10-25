@@ -1,3 +1,4 @@
+import {fetchSummary} from './reports.js';
 import {gamecubeLogo} from './console-icon.js';
 import {pageScope} from './lifecycle.js';
 export function mountIdentity(root,project){
@@ -19,7 +20,7 @@ export function mountIdentity(root,project){
     commit.querySelector('.commit-time span').textContent=text;
   }
   const refresh=setInterval(updateTime,60000);
-  const ready=fetch(`/fixtures/${project.slug}/summary.json`,{signal:scope.signal,cache:'no-cache'}).then(response=>{if(!response.ok)throw Error();return response.json();}).then(data=>{
+  const ready=fetchSummary(project, scope.signal).then(data=>{
     if(scope.signal.aborted)return;
     const latest=data.latest_commit;if(!latest?.title)throw Error();
     commit.querySelector('.commit-title').textContent=latest.title;

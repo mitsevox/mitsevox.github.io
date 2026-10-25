@@ -1,0 +1,122 @@
+"""Read GitHub execution metadata and archives with bounded, data-only parsing."""
+import io
+import subprocess
+import tarfile
+import zipfile
+
+from .validation import decode, digest, require, timestamp
+
+MAX_ARCHIVE = 32 * 1024 * 1024
+MAX_EXPANDED = 80 * 1024 * 1024
+
+
+class GitHub:
+    def __init__(self, repository):
+        self.repository = repository
+
+    def raw(self, path):
+        return subprocess.check_output(['gh', 'api', '--method', 'GET',
+                                        f'repos/{self.repository}/{path}'], timeout=90)
+
+    def get(self, path):
+        return decode(self.raw(path))
+
+    def pages(self, path, field=None):
+        rows = []
+        for page in range(1, 11):
+            result = self.get(path + ('&' if '?' in path else '?') + f'per_page=100&page={page}')
+            batch = result[field] if field else result
+            rows.extend(batch)
+            if len(batch) < 100:
+                return rows
+        raise ValueError('GitHub response exceeds pagination bound')
+
+
+def artifact_bytes(api, artifact):
+    require(not artifact['expired'] and 0 < artifact['size_in_bytes'] <= MAX_ARCHIVE, 'Artifact unavailable/oversized')
+    raw = api.raw(f"actions/artifacts/{artifact['id']}/zip")
+    require(len(raw) == artifact['size_in_bytes'] and len(raw) <= MAX_ARCHIVE
+            and artifact['digest'] == 'sha256:' + digest(raw), 'GitHub artifact digest/size differs')
+    return raw
+
+
+def zip_members(raw):
+    require(len(raw) <= MAX_ARCHIVE, 'Archive too large')
+    with zipfile.ZipFile(io.BytesIO(raw)) as zipped:
+        entries = zipped.infolist()
+        require(len(entries) <= 20 and sum(e.file_size for e in entries) <= MAX_EXPANDED,
+                'Archive expands beyond limit')
+        require(len({e.filename for e in entries}) == len(entries), 'Duplicate archive entries')
+        require(all(not e.is_dir() and ((e.external_attr >> 16) & 0o170000) in (0, 0o100000)
+                    and '/' not in e.filename and '\\' not in e.filename for e in entries), 'Unsafe archive entries')
+        return {e.filename:zipped.read(e) for e in entries}
+
+
+def pages_reports(raw):
+    members = zip_members(raw)
+    require(set(members) == {'artifact.tar'}, 'Unexpected Pages archive')
+    result = {}
+    with tarfile.open(fileobj=io.BytesIO(members['artifact.tar']), mode='r:') as tar:
+        total = 0
+        seen = set()
+        for member in tar:
+            total += member.size
+            require(total <= MAX_EXPANDED and len(seen) < 1000, 'Pages archive expands beyond limit')
+            require(member.isfile() or member.isdir(), 'Links or special entries in Pages archive')
+            name = member.name.removeprefix('./')
+            require(name not in seen, 'Duplicate Pages entry')
+            seen.add(name)
+            if name in ('progress.json', 'activity.json'):
+                require(member.isfile(), 'Report is not a file')
+                result[name] = tar.extractfile(member).read()
+    require(set(result) == {'progress.json', 'activity.json'}, 'Missing Pages reports')
+    return result
+
+
+COMMON_STEPS = (
+    'Verify publication handoff rules', 'Select verified final-integration reports',
+    'Decide required validation lanes', 'Upload decomp.dev report',
+    'Prepare verified publication history', 'Preserve verified publication history',
+    'Run actions/upload-pages-artifact@98ef48e41587a300b82de4cf298aa98b57b2faae',
+)
+FULL_STEPS = (
+    'Verify review clearance logic', 'Prepare pinned compiler stages',
+    'Verify source build against complete target', 'Verify provisional function inventory',
+    'Verify compiler stages', 'Verify inventory cache invalidation and real warm reuse',
+    'Measure exact and fuzzy source comparisons',
+    'Verify both progress exports, maps, history and contributor credits',
+    'Verify activity and live receipts on the host',
+)
+REUSE_STEP = 'Publish authenticated final-integration reports'
+
+
+def authenticate_run(policy, run, jobs, workflow_blob):
+    require(run['repository']['full_name'] == policy['repository']
+            and run['head_repository']['full_name'] == policy['repository']
+            and run['path'] == policy['workflow'] and run['head_branch'] == 'main'
+            and run['event'] in ('push', 'workflow_dispatch') and run['status'] == 'completed'
+            and run['conclusion'] == 'success', 'Run is not successful trusted main publication')
+    require(workflow_blob in policy['workflowBlobs'], 'Producer workflow changed; review its trust policy first')
+    baseline = [j for j in jobs if j['name'] == 'Toolchain baseline']
+    require(len(baseline) == 1 and baseline[0]['conclusion'] == 'success'
+            and baseline[0]['run_attempt'] == run['run_attempt']
+            and baseline[0]['head_sha'] == run['head_sha'], 'Wrong baseline job/attempt')
+    job = baseline[0]
+    steps = job['steps']
+    def succeeded(name):
+        return sum(s['name'] == name and s['conclusion'] == 'success' for s in steps) == 1
+    require(all(succeeded(n) for n in COMMON_STEPS), 'Missing publication validation steps')
+    reused = succeeded(REUSE_STEP)
+    full = all(succeeded(n) for n in FULL_STEPS)
+    require(reused != full, 'Ambiguous or incomplete validation lane')
+    return ('reused' if reused else 'full'), job
+
+
+def select_artifact(artifacts, name, run, job):
+    matches = [a for a in artifacts if a['name'] == name and not a['expired']
+               and timestamp(run['run_started_at']) <= timestamp(a['created_at']) <= timestamp(job['completed_at'])]
+    require(len(matches) == 1, 'Missing or ambiguous artifact: ' + name)
+    artifact = matches[0]
+    require(artifact['workflow_run']['id'] == run['id']
+            and artifact['workflow_run']['head_sha'] == run['head_sha'], 'Artifact from another execution')
+    return artifact

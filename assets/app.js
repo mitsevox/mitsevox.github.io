@@ -56,6 +56,9 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
       main.querySelector('.lower h3').textContent=project.slug==='nflstreet2'?'Want to join the blitz?':'Contribute to '+project.shortTitle;
       main.querySelector('.lower a').href=project.contributeUrl;
       if(!project.contributionsEnabled)main.querySelector('.lower').remove();
+      const optional = {functionCounts:'[data-stats="function"]',fileCounts:'[data-stats="file"]',timeline:'.history-section',contributors:'.people-section'};
+      for(const [key,selector] of Object.entries(optional))if(project.modules?.[key]===false)main.querySelector(selector)?.remove();
+      if(!main.querySelector('.function-stats'))main.querySelector('.stats-grid').remove();
 
     }else delete document.body.dataset.project;
     if(wikiController){wikiController.update(main);main=wikiController.main;content.querySelector('.route-error')?.remove();}

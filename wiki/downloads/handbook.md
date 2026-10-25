@@ -13,7 +13,7 @@ This handbook carries forward the practices behind NFL Street 2: reproducible bu
 - **Starting a game:** follow [Repository setup](/wiki/repository-setup/) and [Layout & naming](/wiki/layout-and-naming/), then establish a [verified baseline](/wiki/build-and-validation/).
 - **Starting a task:** read the project's README, CONTRIBUTING and AGENTS files, claim a bounded scope, and use a separate worktree.
 - **Preparing a PR:** follow [Review & approval](/wiki/review-and-approval/). Passing CI and reviewer approval are separate from permission to merge.
-- **Connecting a project:** read [Website](/wiki/website-integration/). The common multi-game reporting pipeline is designed but not implemented yet.
+- **Connecting a project:** read [Website](/wiki/website-integration/). NFL’s consumer integration is implemented; other games need adapters against their actual verified reports.
 - **Handing off to an agent:** use [Starter kit](/wiki/starter-kit/) for repository templates and an agent handoff prompt.
 
 ## What belongs where
@@ -442,9 +442,11 @@ Treat PR text and report payloads as data. Never execute scripts from downloaded
 
 Use a separate build artifact and deployment job. GitHub Pages deployment needs `pages: write`, `id-token: write`, the appropriate environment and a dependency on the artifact-producing job. See [custom Pages workflows](https://docs.github.com/en/enterprise-cloud%40latest/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. Roll back by selecting a verified older site artifact, not by rewriting measurement history.
+Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. To roll back UI, have the owner merge a source revert and let the current-main workflow rebuild with the latest verified reports. Old workflow reruns are rejected; measurement history is never rewound.
 
-The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) details migration; it is not installed CI.
+The [NFL consumer implementation](/docs/reporting/nflstreet2.md) verifies existing artifacts and builds a locked static candidate without adding game CI work. Validation uses read-only permissions. A separate current-main job has site-repository write access for the data-only `report-data` branch, plus Pages and deployment-identity permissions. It preserves snapshots before deployment, rejects stale site revisions and never writes a game repository or merges main.
+
+The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) describes the remaining cross-game migration; distinguish it from the implemented site-only workflow.
 
 
 ---
@@ -502,7 +504,21 @@ One shared renderer, game-owned measurements and modules selected per project.
 
 ## Current state
 
-The shared UI is a local prototype with persistent navigation and individual game routes. NFL uses a frozen real report; MVP and Tiger Woods use synthetic layout measurements. The common reporting contract and CI migration are proposals. This chapter explains the integration target and the concrete remaining work; it is not a claim that a new game's CI can already plug in automatically.
+The shared renderer now consumes authenticated NFL Street 2 report packages. The importer verifies NFL’s existing main CI artifacts; it adds no game build steps. The production builder includes only verified configured projects. MVP and Tiger Woods remain layout previews until their own adapters are validated. A successful current-main site workflow preserves verified reports and deploys Pages.
+
+## Refresh and build NFL
+
+In the website repository, with Python 3.11+, uv and an authenticated GitHub CLI:
+
+```sh
+uv sync --locked
+uv run --locked python -m unittest discover -s tests -v
+uv run --locked python tools/import_nfl.py
+uv run --locked python tools/build_site.py --output build/site
+python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site
+```
+
+Use a new output directory for each retained candidate. The [NFL integration reference](/docs/reporting/nflstreet2.md) documents authentication, immutable packages, failure handling and the remaining production-promotion step.
 
 ## Project identity and artwork
 
@@ -510,7 +526,7 @@ Use the same slug for repository identity, `/games/<slug>/` and asset names. Con
 
 Store covers as `assets/covers/<slug>.webp` with their original aspect ratio. Use owned or authorized presentation artwork; do not export raw game assets through build reports. Console icons and other reused assets retain their provenance/license notes.
 
-The local prototype's `assets/projects.js` is the current registration point. Adding a fixture there enables a layout preview, not production measurement. Production registration will use the versioned configuration and verified report locations described below.
+The local prototype's `assets/projects.js` is the current registration point. Adding a fixture there enables a layout preview, not production measurement. Production registration uses `config/projects.json`; `data/reports.lock.json` selects authenticated snapshots.
 
 ## Report semantics
 
@@ -528,7 +544,7 @@ Data and code fuzzy measurements need separate support. NFL's decomp.dev scalar 
 
 ## Modular configuration
 
-The proposed project configuration independently enables maps, function counts, file counts, timeline and contributor rankings. Core code/data measurements are required by this initial site contract. Producer capabilities describe what actually exists; site preferences select what appears.
+The project configuration independently enables maps, function counts, file counts, timeline and contributor rankings. Core code/data measurements are required by this initial site contract. Producer capabilities describe what actually exists; site preferences select what appears.
 
 ```json
 {
@@ -548,9 +564,9 @@ The proposed project configuration independently enables maps, function counts, 
 }
 ```
 
-This is a draft configuration example. It does not modify the live prototype by itself. Enabling Contribute requires a guide URL. Attribution tracking is a separate game-repository policy; rankings require supported verified attribution data.
+Add a project to `config/projects.json` only after its adapter and first package are validated. This example shows the configuration shape; it does not make an unsupported game ready by itself. Enabling Contribute requires a guide URL. Attribution tracking is a separate game-repository policy; rankings require supported verified attribution data.
 
-A disabled module creates no empty space, fetches or event listeners. Unsupported data is not zero. If an already-supported enabled module fails to export, retain the last valid package and fail the refresh rather than silently hiding it.
+A disabled module creates no empty section or section listeners. NFL shares payloads between map/counts and timeline/rankings; an enabled sibling can still require that shared file. Unsupported data is not zero. If an already-supported enabled module fails to export, retain the last valid package and fail the refresh rather than silently hiding it.
 
 ## Producer adapter checklist
 
@@ -561,15 +577,19 @@ A disabled module creates no empty space, fetches or event listeners. Unsupporte
 5. Produce website and decomp.dev outputs from the same verified computation where possible.
 6. Publish immutable snapshots and advance latest only after success.
 
-The [draft manifest schema](/docs/reporting/schema/report-v1.schema.json), [configuration schema](/docs/reporting/schema/project-v1.schema.json) and [semantic contract](/docs/reporting/contract-v1.md) are available. Full payload schemas, semantic validators and producer adapters remain implementation gates. JSON-schema validation alone does not authenticate CI.
+The [manifest schema](/docs/reporting/schema/report-v1.schema.json), [configuration schema](/docs/reporting/schema/project-v1.schema.json) and [semantic contract](/docs/reporting/contract-v1.md) are available. NFL has payload schemas, semantic checks and a working consumer adapter. New games still need their own producer authentication and mapping. JSON-schema validation alone does not authenticate CI.
 
 ## Consumer and rollout checklist
 
-Fetch packages during the site build, pin exact identities in a lockfile, validate provenance/checksums, reject fixture origins and copy the selected data into the static output. Browser visitors need no GitHub credentials. Load heavy map/history payloads only when their module needs them.
+The NFL importer authenticates and locks packages before static assembly. The builder verifies checksums and semantics, rejects fixture origins and copies selected data into the static output. Browser visitors need no GitHub credentials. Load heavy map/history payloads only when their module needs them.
 
 If one game's refresh fails, keep its last verified package; another game's valid update can still publish. Never present newest-commit metadata as a newly measured build. Test direct routes, custom menus, keyboard navigation, disabled modules, cached assets and rollback before deployment.
 
 Migrate NFL first, compare both consumers at the same revision, then add MVP and Tiger Woods. Preserve their current decomp.dev artifact feeds and histories throughout. Redirect existing game Pages only after owner-approved live parity. The [migration plan](/docs/reporting/migration.md) lists the acceptance gates.
+
+## Current publication boundary
+
+Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes restore the durable last-good package and use read-only access to NFL. A failed refresh fails CI and leaves the live site unchanged. Only current-main publication jobs can append verified snapshots to this site repository’s `report-data` branch and deploy the validated Pages artifact. Historical snapshots remain in Git when candidate artifacts expire after 90 days. No workflow writes game source branches or changes NFL’s existing publication.
 
 
 ---
@@ -622,7 +642,7 @@ A clean handoff for a new project, without pretending the game-specific build al
 ## Download and read
 
 - [Repository starter files](/wiki/downloads/repository-starter.zip) — README, AGENTS, CONTRIBUTING, setup checklist, PR template and .gitignore examples.
-- [Draft report schema](/docs/reporting/schema/report-v1.schema.json) and [project configuration schema](/docs/reporting/schema/project-v1.schema.json).
+- [Report schema](/docs/reporting/schema/report-v1.schema.json) and [project configuration schema](/docs/reporting/schema/project-v1.schema.json).
 
 The starter files contain visible placeholders. Fill them and review them with the owner before adoption. They do not contain a compiler, original game data, a functioning generic CI pipeline, or working multi-game reporting adapters. Do not claim setup is complete because the files were copied.
 
@@ -669,3 +689,5 @@ Do not prefill results or sign off another person's review. A missing stage rema
 ## Reference implementation
 
 Start from the [NFL README](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/README.md), [contribution policy](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md), [agent instructions](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/AGENTS.md), [evidence specification](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md), [target mechanics](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md), [build workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/baseline.yml) and [review workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml). These are pinned examples of a working project's architecture, not permission to copy its assumptions into another game.
+
+The website-side NFL adapter is documented in [Website](/wiki/website-integration/) and the [NFL integration reference](/docs/reporting/nflstreet2.md). New-game agents can follow its acceptance checks, but must implement their own report mapping and trusted producer policy before registering a production project.

@@ -1,3 +1,4 @@
+import {fetchSummary} from './reports.js';
 import {projects} from './projects.js';
 import {gamecubeLogo} from './console-icon.js';
 import {pageScope} from './lifecycle.js';
@@ -100,7 +101,7 @@ for(const project of projects){
   card.innerHTML=`${cover}<div class="entry-details"><h2 class="entry-title">${gamecubeLogo}<span>${project.title}</span></h2><div class="card-progress">${['code','data'].map(kind=>`<div class="card-measure progress-element" data-progress="${kind}"><div class="card-measure-label"><span>${kindLabel(kind)}</span><strong>—</strong></div><div class="card-track" role="progressbar" aria-label="${project.title} ${kind} matched progress" aria-valuemin="0" aria-valuemax="100"><i class="progress-fuzzy"></i><i class="progress-matched"></i><i class="progress-linked"></i></div></div>`).join('')}</div></div><div class="entry-commit" aria-label="Latest commit"><svg class="commit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg><span class="commit-title">Loading latest commit…</span><time class="commit-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><span></span></time></div>`;
   grid.append(card);
   const entry={project,card,index:entries.length,progress:{}};entries.push(entry);
-  pending.push(fetch(`/fixtures/${project.slug}/summary.json`,{cache:'no-cache',signal}).then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{
+  pending.push(fetchSummary(project, signal).then(data=>{
     if(signal.aborted)return;
     const commit=data.latest_commit;
     card.querySelector('.commit-title').textContent=commit?.title||'Latest commit unavailable';

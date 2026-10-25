@@ -1,6 +1,6 @@
 # Migration and adapter plan
 
-All phases below are pending implementation. Existing production pages and decomp.dev feeds continue until parity is demonstrated. No source repository CI/settings changes are authorized merely by this design document.
+The NFL consumer adapter, semantic validation, package locking and static assembly are implemented; see [the operational reference](nflstreet2.md). The remaining phases below are acceptance targets, not a claim of deployment. Existing production pages and decomp.dev feeds continue until parity is demonstrated. No source repository CI/settings changes are authorized merely by this design document.
 
 ## 1. Establish the shared contract locally
 
@@ -12,9 +12,11 @@ Acceptance: all agreed metric definitions round-trip; malformed or incompatible 
 
 ## 2. Adapt NFL Street 2 first
 
+The current implementation consumes NFL’s existing authenticated artifacts and adds no game CI steps. The site now preserves immutable snapshots and its latest lock on its own `report-data` branch before deployment. Game-side `progress-data` branches remain optional future work.
+
 Wrap the existing verified exporter and publication receipts. Preserve matching, map, credit, history and trusted integrated-report reuse checks. Map existing names into the common fields; keep existing decomp.dev generation. Inventory exactness and named-file semantics must retain their evidence requirements.
 
-Add durable public snapshots as an additional output, initially in shadow mode. Import and cross-check existing publication history before initializing the latest pointer. Keep the current artifact archive and Pages path available through migration.
+The site store imports and cross-checks existing publication history before initializing its latest pointer. Keep the current artifact archive and Pages path available through migration.
 
 Acceptance: same revision/target yields equal raw totals, function/file inventories, map coverage, credits and history in the old and new consumers. Verify both a full validation run and a legitimate proof-reuse run. Test a failed export, identical rerun and older run finishing late. Independent review and owner clearance remain separate from these checks.
 
@@ -30,16 +32,16 @@ Acceptance per game: compare the same revision against its current build report,
 
 ## 4. Connect the central site
 
-Create/configure the hosted site repository when separately authorized. Build static pages from locked report snapshots; replace fixture locations with packaged data. Keep the persistent header/router and individual `/games/<slug>/` routes. Verify direct navigation and refresh on the actual Pages base URL.
+The hosted site repository exists publicly and Pages is configured for the authorized current-main workflow. Owner merge remains the launch gate. Build static pages from locked report snapshots; replace fixture locations with packaged data. Keep the persistent header/router and individual `/games/<slug>/` routes. Verify direct navigation and refresh on the actual Pages base URL.
 
 Keep shared reporting definitions in the site repo and pin reviewed versions from game repos. Add manual/scheduled refresh before considering dispatch credentials. Verify cache fingerprinting, stale-data behavior, rollback and per-project isolation when one producer fails.
 
-Acceptance: no synthetic measurement package reaches production; all three routes use verified packages or explicitly configured unsupported modules; contribution button appears only for NFL. Existing game Pages can redirect only after live parity and owner-approved cutover. decomp.dev artifact names/feeds remain working independently.
+Acceptance: no synthetic measurement package reaches production; only verified, production-enabled routes are included; contribution button appears only for NFL. Existing game Pages can redirect only after live parity and owner-approved cutover. decomp.dev artifact names/feeds remain working independently.
 
 ## Decisions at implementation time
 
 - Confirm approved image digests/tool hashes for MVP/TW with the owner; do not modify dependency access or substitute toolchains.
-- Confirm data-branch creation and narrowly scoped publishing permissions. A `progress-data` branch is the proposed store, not an existing resource.
-- Choose refresh cadence and error reporting; decide later whether faster dispatch is worth an extra credential.
+- The site’s `report-data` branch is created by its first successful main publication. Any game-side `progress-data` branch still requires a separate scoped decision.
+- The site refreshes every six hours and fails visibly without replacing the live site on refresh errors; decide later whether faster dispatch is worth an extra credential.
 - Resolve any attribution policy conflict with existing game rules before enabling rankings.
 - Agree the cutover/rollback revision and redirect behavior. No automatic main merge or deployment approval is implied.
