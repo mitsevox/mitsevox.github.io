@@ -2,5 +2,9 @@
   "nflstreet2": {
     "format": "nfl-legacy-v1",
     "policy": "nflstreet2-producer.json"
+  },
+  "tw2004": {
+    "format": "report-v1",
+    "policy": "tw2004-producer.json"
   }
 }
