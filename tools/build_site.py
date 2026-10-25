@@ -100,7 +100,7 @@ def _build_locked(root, output):
         shutil.move(stage/'assets', target/'assets')
         (stage/'.nojekyll').touch()
         (stage/'site-manifest.json').write_bytes(encoded({'schemaVersion':1,'release':release,
-            'projects':lock['projects'], 'deployment':'not-requested'}))
+            'projects':lock['projects']}))
         shutil.copytree(stage, output)
     print('Validated static site:', output)
     return release

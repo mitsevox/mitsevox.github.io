@@ -1,6 +1,6 @@
 # Shared reporting architecture
 
-Status: first NFL consumer adapter implemented. NFL’s existing producer workflow is unchanged. The broader data-store and multi-game migration below remain planned; portfolio Pages deployment is disabled.
+Status: the NFL consumer adapter, durable site report store and main-only Pages workflow are implemented. NFL’s existing producer workflow is unchanged. MVP/TW adapters and any producer-side data branches remain planned. Live deployment is verified separately after owner merge.
 
 The approved UI lives in this repository. Each game remains responsible for its build, measurements, source evidence and attribution. NFL Street 2 is the validation archetype; its compiler commands and evidence layout are not a universal template.
 
@@ -36,4 +36,4 @@ flowchart LR
 
 Future producer-store option: a data-only `progress-data` branch in each game repository, containing immutable snapshot packages and a latest-good pointer. Preserve existing archives during migration. The site fetches pinned packages during its build; visitors use the site's static files, not authenticated GitHub APIs. Start with manual/scheduled ingestion. Cross-repository dispatch is optional later and needs an explicitly scoped credential decision.
 
-The frontend and wiki are published in `mitsevox/mitsevox.github.io`. GitHub Pages remains disabled until production report ingestion is verified. NFL Street 2 is the first integration; the other games follow once its implementation and onboarding documentation are validated.
+The frontend and wiki live in `mitsevox/mitsevox.github.io`. Its `report-data` branch preserves authenticated packages independently of expiring Actions artifacts. Current-main workflows publish the verified NFL portfolio to Pages. The other games follow after their adapters and onboarding documentation are validated.

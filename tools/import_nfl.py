@@ -204,20 +204,23 @@ def latest_commit(api):
 
 
 def accepted_package(entry):
-    """Cache trust comes from the owner's accepted site main, not local claims.
+    """Cache trust comes from owner-controlled main/report-data locks, not local claims.
 
     A candidate branch may edit payloads and all of their checksums. Merely
     matching a real upstream run ID cannot authenticate that edited content.
     Before first acceptance, or after a changed checksum, fetch original proof.
     """
-    try:
-        file = GitHub('mitsevox/mitsevox.github.io').get('contents/data/reports.lock.json?ref=main')
-    except subprocess.CalledProcessError:
-        return False
-    require(file.get('encoding') == 'base64', 'Unexpected accepted lock encoding')
-    accepted = decode(base64.b64decode(file['content']))
-    trusted = accepted['projects'].get('nflstreet2', {})
-    return all(trusted.get(key) == entry.get(key) for key in ('path','manifestSha256','revision'))
+    for branch in ('main', 'report-data'):
+        try:
+            file = GitHub('mitsevox/mitsevox.github.io').get('contents/data/reports.lock.json?ref='+branch)
+        except subprocess.CalledProcessError:
+            continue
+        require(file.get('encoding') == 'base64', 'Unexpected accepted lock encoding')
+        accepted = decode(base64.b64decode(file['content']))
+        trusted = accepted['projects'].get('nflstreet2', {})
+        if all(trusted.get(key) == entry.get(key) for key in ('path','manifestSha256','revision')):
+            return True
+    return False
 
 
 def refresh(root, run_id=None):

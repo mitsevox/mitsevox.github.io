@@ -29,7 +29,7 @@ The site build reads each project's latest manifest once, resolves immutable pat
 
 A failed refresh retains that project's last validated package and reports the failure in CI. Other games may update independently. A project with no valid initial package cannot be published as real data. Display measurement freshness separately from the repository's latest commit; do not imply the newest commit has passed measurement.
 
-Run module/route smoke checks, including direct deep links, back/forward navigation, unavailable data and disabled modules. Build fingerprinted assets and publish one atomic Pages artifact to prevent HTML/CSS/JS version mixing. Site rollback selects a previously validated site artifact; it does not rewrite game history.
+Run module/route smoke checks, including direct deep links, back/forward navigation, unavailable data and disabled modules. Build fingerprinted assets and publish one atomic Pages artifact to prevent HTML/CSS/JS version mixing. The implemented site workflow rolls back UI through an owner-merged source revert and a new current-main build; stale workflow reruns cannot deploy and game history is retained.
 
 Start ingestion on manual runs and a schedule with best-effort latency. An optional future notification can ask the site to refresh; it must never substitute for verifying the referenced package. Keep credentials scoped to the task, with no site write access to game source branches.
 

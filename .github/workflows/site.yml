@@ -38,7 +38,9 @@ jobs:
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
-        run: uv run --locked python tools/import_nfl.py
+        run: |
+          uv run --locked python tools/report_store.py restore
+          uv run --locked python tools/import_nfl.py
       - name: Assemble verified static output
         run: uv run --locked python tools/build_site.py
       - name: Preserve validated site candidate
@@ -52,8 +54,40 @@ jobs:
       - name: Report refresh failure without discarding last good data
         if: steps.refresh.outcome == 'failure'
         run: |
-          echo 'Refresh failed. The assembled candidate retains the committed last-good snapshot.'
+          echo 'Refresh failed. No deployment will replace the live site.'
           exit 1
 
-# This workflow intentionally has no Pages deployment or repository-write job.
-# Publication/cutover remains a separate owner decision.
+  publish:
+    name: Preserve reports and publish Pages
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        with:
+          version: '0.12.9'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: portfolio-site-${{ github.run_id }}-${{ github.run_attempt }}
+          path: build/site
+      - name: Preserve verified snapshots before deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --locked python tools/report_store.py publish
+      - uses: actions/upload-pages-artifact@98ef48e41587a300b82de4cf298aa98b57b2faae
+        with:
+          path: build/site
+      - name: Confirm site source is still current
+        run: uv run --locked python tools/report_store.py check-current
+      - name: Deploy verified portfolio
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346

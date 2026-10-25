@@ -4,7 +4,7 @@ One shared renderer, game-owned measurements and modules selected per project.
 
 ## Current state
 
-The shared renderer now consumes authenticated NFL Street 2 report packages. The importer verifies NFL’s existing main CI artifacts; it adds no game build steps. The production builder includes only verified configured projects. MVP and Tiger Woods remain layout previews until their own adapters are validated. Pages deployment remains disabled.
+The shared renderer now consumes authenticated NFL Street 2 report packages. The importer verifies NFL’s existing main CI artifacts; it adds no game build steps. The production builder includes only verified configured projects. MVP and Tiger Woods remain layout previews until their own adapters are validated. A successful current-main site workflow preserves verified reports and deploys Pages.
 
 ## Refresh and build NFL
 
@@ -89,4 +89,4 @@ Migrate NFL first, compare both consumers at the same revision, then add MVP and
 
 ## Current publication boundary
 
-Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes use read-only GitHub access. A failed refresh retains the committed last-good package and fails CI. Scheduled candidate artifacts expire after 90 days; automatic durable promotion is a separate cutover task. The initial verified snapshot is stored in Git. No workflow in this repository deploys Pages, writes game source branches, or changes NFL’s current publication.
+Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes restore the durable last-good package and use read-only access to NFL. A failed refresh fails CI and leaves the live site unchanged. Only current-main publication jobs can append verified snapshots to this site repository’s `report-data` branch and deploy the validated Pages artifact. Historical snapshots remain in Git when candidate artifacts expire after 90 days. No workflow writes game source branches or changes NFL’s existing publication.

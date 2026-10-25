@@ -442,9 +442,9 @@ Treat PR text and report payloads as data. Never execute scripts from downloaded
 
 Use a separate build artifact and deployment job. GitHub Pages deployment needs `pages: write`, `id-token: write`, the appropriate environment and a dependency on the artifact-producing job. See [custom Pages workflows](https://docs.github.com/en/enterprise-cloud%40latest/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. Roll back by selecting a verified older site artifact, not by rewriting measurement history.
+Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. To roll back UI, have the owner merge a source revert and let the current-main workflow rebuild with the latest verified reports. Old workflow reruns are rejected; measurement history is never rewound.
 
-The [NFL consumer implementation](/docs/reporting/nflstreet2.md) verifies existing artifacts and builds a locked static candidate without adding game CI work. The site workflow has no deployment or source-write permissions.
+The [NFL consumer implementation](/docs/reporting/nflstreet2.md) verifies existing artifacts and builds a locked static candidate without adding game CI work. Validation uses read-only permissions. A separate current-main job has site-repository write access for the data-only `report-data` branch, plus Pages and deployment-identity permissions. It preserves snapshots before deployment, rejects stale site revisions and never writes a game repository or merges main.
 
 The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) describes the remaining cross-game migration; distinguish it from the implemented site-only workflow.
 
@@ -504,7 +504,7 @@ One shared renderer, game-owned measurements and modules selected per project.
 
 ## Current state
 
-The shared renderer now consumes authenticated NFL Street 2 report packages. The importer verifies NFL’s existing main CI artifacts; it adds no game build steps. The production builder includes only verified configured projects. MVP and Tiger Woods remain layout previews until their own adapters are validated. Pages deployment remains disabled.
+The shared renderer now consumes authenticated NFL Street 2 report packages. The importer verifies NFL’s existing main CI artifacts; it adds no game build steps. The production builder includes only verified configured projects. MVP and Tiger Woods remain layout previews until their own adapters are validated. A successful current-main site workflow preserves verified reports and deploys Pages.
 
 ## Refresh and build NFL
 
@@ -589,7 +589,7 @@ Migrate NFL first, compare both consumers at the same revision, then add MVP and
 
 ## Current publication boundary
 
-Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes use read-only GitHub access. A failed refresh retains the committed last-good package and fails CI. Scheduled candidate artifacts expire after 90 days; automatic durable promotion is a separate cutover task. The initial verified snapshot is stored in Git. No workflow in this repository deploys Pages, writes game source branches, or changes NFL’s current publication.
+Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes restore the durable last-good package and use read-only access to NFL. A failed refresh fails CI and leaves the live site unchanged. Only current-main publication jobs can append verified snapshots to this site repository’s `report-data` branch and deploy the validated Pages artifact. Historical snapshots remain in Git when candidate artifacts expire after 90 days. No workflow writes game source branches or changes NFL’s existing publication.
 
 
 ---
