@@ -136,6 +136,17 @@ revision; the consumer verifies both, parents, tree and same-repository identity
 step or changing workflow code requires the site's reviewed producer-policy update. Keep prior
 policies available for existing immutable reports; never widen trust automatically on refresh.
 
+Job/step/artifact strings are case-sensitive exact matches to GitHub's API, not YAML keys or
+patterns. Include the actual matrix display suffix (for example `Build (TARGET_ID)`). Inspect
+the successful run's attempt-specific jobs/steps before registering policy. There must be
+one matching job and exactly one successful occurrence of each required step. A branch prefix
+does not grant acceptance; use the adopting repository's naming and trigger conventions.
+
+For maps, section/file address unions must match per kind and both views must reconcile with
+the summary. A new timeline begins with the first actual verified main measurement and appends
+only supported measurements. The bundled platform contract defines both formats and examples.
+OPTIONAL-ADOPTION.md covers pre-existing workflows/history and can be skipped for a new project.
+
 ## Proof and cache contracts
 
 The full original artifact is the standard report-v1 package, including manifest/receipt.

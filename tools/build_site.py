@@ -2,6 +2,7 @@
 """Assemble a static site from validated locked snapshots; fixtures are never copied."""
 import argparse
 import fcntl
+from html.parser import HTMLParser
 import shutil
 import tempfile
 from pathlib import Path
@@ -9,6 +10,31 @@ from pathlib import Path
 from reporting.validation import ROOT, decode, digest, encoded, require, schema, validate_package
 from reporting.state import read_lock
 from reporting.registry import producer, snapshot_path, snapshot_directory
+
+
+def version_html_assets(source, prefix):
+    """Version real tag references, preserving literal URLs inside documentation."""
+    offsets, position = [], 0
+    for line in source.splitlines(keepends=True):
+        offsets.append(position)
+        position += len(line)
+    edits = []
+
+    class References(HTMLParser):
+        def handle_starttag(self, tag, attrs):
+            raw = self.get_starttag_text()
+            changed = raw.replace('/assets/', prefix)
+            if raw != changed:
+                line, column = self.getpos()
+                start = offsets[line - 1] + column
+                edits.append((start, start + len(raw), changed))
+
+        handle_startendtag = handle_starttag
+
+    References(convert_charrefs=False).feed(source)
+    for start, end, changed in reversed(edits):
+        source = source[:start] + changed + source[end:]
+    return source
 
 
 def locked_projects(root):
@@ -107,7 +133,9 @@ def _build_locked(root, output):
         release = digest(b'\0'.join(fingerprints))[:20]
         for path in stage.rglob('*'):
             if path.suffix in ('.html','.js','.css'):
-                path.write_text(path.read_text().replace('/assets/', f'/releases/{release}/assets/'))
+                source=path.read_text();prefix=f'/releases/{release}/assets/'
+                path.write_text(version_html_assets(source,prefix) if path.suffix=='.html'
+                                else source.replace('/assets/',prefix))
         target = stage/'releases'/release
         target.mkdir(parents=True)
         shutil.move(stage/'assets', target/'assets')

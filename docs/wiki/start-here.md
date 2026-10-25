@@ -2,7 +2,7 @@
 
 A reusable structure for a decompilation repository, its CI and its place on the shared site.
 
-Use this handbook to establish a new project or align an existing one. It defines repository responsibilities, naming conventions, evidence standards, validation stages, review records and the public report contract. Each project supplies its own target facts, tools and build commands.
+Follow this handbook from an empty repository to its first verified build and site report. It defines repository responsibilities, naming conventions, evidence standards, validation stages, review records and the public report contract. Each project supplies its own target facts, tools and build commands.
 
 ## Follow the template
 
@@ -18,7 +18,7 @@ Use this handbook to establish a new project or align an existing one. It define
 10. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
 11. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
 
-An existing project can keep its working structure and commands. Map these responsibilities onto it instead of reorganizing source just to match a diagram.
+An [optional appendix](/wiki/existing-projects/) covers pre-existing repositories and legacy data. It is separate from this new-project setup path.
 
 ## What belongs where
 
