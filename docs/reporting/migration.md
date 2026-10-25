@@ -2,6 +2,8 @@
 
 The NFL consumer adapter, semantic validation, package locking and static assembly are implemented; see [the operational reference](nflstreet2.md). The remaining phases below are acceptance targets, not a claim of deployment. Existing production pages and decomp.dev feeds continue until parity is demonstrated. No source repository CI/settings changes are authorized merely by this design document.
 
+For an executable implementation assignment rather than this phased overview, use the [integration handoff](onboarding.md). It names existing code to extend, working versus required-new commands, and the game/site landing sequence.
+
 ## 1. Establish the shared contract locally
 
 Implement semantic validators and payload schemas beside the draft manifest schema. Use sanitized NFL packages plus explicit synthetic edge cases: partial, exact-unlinked, unknown inventory, zero denominator, duplicate ranges, changed boundaries, missing credits, stale runs and corrupt history. Keep fixtures isolated from production ingestion.

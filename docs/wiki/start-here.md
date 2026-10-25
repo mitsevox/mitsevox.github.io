@@ -9,7 +9,7 @@ This handbook carries forward the practices behind NFL Street 2: reproducible bu
 - **Starting a game:** follow [Repository setup](/wiki/repository-setup/) and [Layout & naming](/wiki/layout-and-naming/), then establish a [verified baseline](/wiki/build-and-validation/).
 - **Starting a task:** read the project's README, CONTRIBUTING and AGENTS files, claim a bounded scope, and use a separate worktree.
 - **Preparing a PR:** follow [Review & approval](/wiki/review-and-approval/). Passing CI and reviewer approval are separate from permission to merge.
-- **Connecting a project:** read [Website](/wiki/website-integration/). NFL’s consumer integration is implemented; other games need adapters against their actual verified reports.
+- **Connecting a project:** read [Website](/wiki/website-integration/). NFL is publicly integrated. Give a new game agent both checkouts and the [integration handoff](/docs/reporting/onboarding.md); it specifies the producer, common website extensions, adapter and acceptance evidence.
 - **Handing off to an agent:** use [Starter kit](/wiki/starter-kit/) for repository templates and an agent handoff prompt.
 
 ## What belongs where

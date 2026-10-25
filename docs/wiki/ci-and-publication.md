@@ -32,7 +32,7 @@ Keep these guarantees when extracting reusable steps. Do not replace NFL's matur
 
 Restore prior verified history before appending. Fetch or parse failure must not reset an established timeline. Make identical reruns idempotent. Distinguish commit time, measurement time and publication time.
 
-The proposed shared store is a data-only branch per game with immutable snapshot packages and a latest-good pointer. It is not implemented yet. Preserve current archives until migration is verified. Git ancestry, immutable identity and an atomic pointer update prevent an older slow run from replacing newer progress; concurrency settings alone are insufficient.
+The implemented website store is its data-only `report-data` branch, currently accepting NFL packages. It preserves immutable snapshots and a latest-good pointer. A separate data-only branch per game is an optional future producer store, not an onboarding requirement. Preserve existing game archives during migration and extend the site store for multiple projects as specified in the [integration handoff](/docs/reporting/onboarding.md). Git ancestry, immutable identity and an atomic pointer update prevent an older slow run from replacing newer progress; concurrency settings alone are insufficient.
 
 A timeline records available verified measurements, not a guaranteed build for every commit. Preserve gaps and legacy evidence quality. Do not manufacture measurements by repeating a previous value and labeling it a fresh build.
 

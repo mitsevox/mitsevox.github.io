@@ -7,6 +7,9 @@ export function createHeader() {
   const node=document.createElement('header');
   node.innerHTML=`<div class="header-location"><a class="wordmark" href="/" aria-label="mitsevox — all projects">mitsevox</a><span class="wordmark-slash" aria-hidden="true">/</span><div class="project-switcher"><button type="button" class="project-trigger" aria-expanded="false" aria-haspopup="true" aria-controls="project-menu"><span class="game-title"></span>${chevron}</button><nav id="project-menu" class="project-menu hub-popover" aria-label="Switch game" hidden>${projects.map(p=>`<a data-project="${p.slug}" href="${p.href}"><img src="${p.cover}" alt=""><span>${p.title}<small>${p.console}</small></span><span class="current-mark" aria-hidden="true" hidden>✓</span></a>`).join('')}</nav></div></div><nav class="main-nav" aria-label="Main navigation"><a class="wiki-link" href="/wiki/"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></svg><span>Wiki</span></a><a class="github-link">${github}<span>GitHub</span></a><a class="contribute-link" aria-label="Contribute" hidden>${contributionIcon}<span>Contribute</span></a></nav>`;
   const switcher=node.querySelector('.project-switcher'),trigger=node.querySelector('.project-trigger'),menu=node.querySelector('#project-menu'),contribute=node.querySelector('.contribute-link');
+  const wikiLabel=document.createElement('span');
+  wikiLabel.className='wiki-location game-title';wikiLabel.textContent='Wiki';wikiLabel.hidden=true;
+  switcher.after(wikiLabel);
   const links=[...menu.querySelectorAll('a')];
   function close(restore=false){menu.hidden=true;trigger.setAttribute('aria-expanded','false');if(restore)trigger.focus();}
   function open(focusLast=false){
@@ -33,7 +36,8 @@ export function createHeader() {
   });
   function update(project,{wiki=false}={}){
     if(!menu.hidden&&menu.contains(document.activeElement))trigger.focus();close();
-    node.querySelector('.game-title').textContent=project?.shortTitle||'Projects';
+    switcher.hidden=wiki;wikiLabel.hidden=!wiki;
+    trigger.querySelector('.game-title').textContent=project?.shortTitle||'Projects';
     trigger.setAttribute('aria-label','Switch game: '+(project?.title||'All projects'));
     for(const link of links){const selected=link.dataset.project===project?.slug;if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');link.querySelector('.current-mark').hidden=!selected;}
     const wikiLink=node.querySelector('.wiki-link');if(wiki)wikiLink.setAttribute('aria-current','page');else wikiLink.removeAttribute('aria-current');

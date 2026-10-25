@@ -8,6 +8,7 @@ from html import escape
 import json
 import re
 import zipfile
+from urllib.parse import urljoin
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,4 +65,12 @@ with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFL
             info = zipfile.ZipInfo("repository-starter/"+str(path.relative_to(SOURCE / "starter")), date_time=(2026,10,25,0,0,0))
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, path.read_bytes())
+    info = zipfile.ZipInfo("repository-starter/INTEGRATION.md", date_time=(2026,10,25,0,0,0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    integration = (ROOT / "docs/reporting/onboarding.md").read_text()
+    # Keep the standalone handoff's reference links usable outside the checkout.
+    integration = re.sub(r"\]\((?!https?://|#)([^)]+)\)",
+                         lambda match: "](" + urljoin("https://mitsevox.github.io/docs/reporting/", match[1]) + ")",
+                         integration)
+    archive.writestr(info, integration.encode())
 print(f"Built {len(chapters)} wiki routes, search index and starter downloads.")

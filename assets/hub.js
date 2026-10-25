@@ -4,7 +4,8 @@ import {gamecubeLogo} from './console-icon.js';
 import {pageScope} from './lifecycle.js';
 export function mountHub(root) {
 const scope=pageScope();
-const {signal,listen,frame}=scope;
+const {signal,listen,frame,animate}=scope;
+const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 const pending=[];
 const grid=root.querySelector('.project-grid');
 const tooltip=root.querySelector('#card-tooltip');
@@ -94,7 +95,8 @@ function updateEntries(){
 listen(search,'input',updateEntries);
 listen(root.querySelector('#project-reset'),'click',()=>{search.value='';filterValue='all';syncControls();updateEntries();search.focus();});
 const kindLabel=kind=>kind==='code'?'Code':'Data';
-function hideTooltip(){tooltip.hidden=true;}
+let clearLift=null;
+function hideTooltip(){tooltip.hidden=true;clearLift?.();clearLift=null;}
 for(const project of projects){
   const card=document.createElement('a');card.className='project-card';card.href=project.href;card.setAttribute('aria-label','Explore '+project.title);
   const cover=`<img class="project-cover" src="${project.cover}" alt="" width="${project.coverWidth}" height="${project.coverHeight}" ${project.slug==='nflstreet2'?'fetchpriority="high"':'loading="lazy"'}>`;
@@ -118,13 +120,37 @@ for(const project of projects){
       element.querySelector('strong').textContent=values.matched.toFixed(2)+'%';
       track.setAttribute('aria-valuenow',values.matched);track.setAttribute('aria-valuetext',Object.entries(values).map(([key,value])=>`${key} ${value.toFixed(2)}%`).join(', '));
       frame(()=>frame(()=>{for(const field of ['fuzzy','matched','linked'])track.querySelector('.progress-'+field).style.width=values[field]+'%';}));
-      listen(track, 'pointermove',event=>{
-        const rect=track.getBoundingClientRect(),percent=(event.clientX-rect.left)/rect.width*100;
-        const field=['linked','matched','fuzzy'].find(field=>percent<values[field]);
-        if(!field){hideTooltip();return;}
-        tooltip.textContent=field[0].toUpperCase()+field.slice(1)+' '+values[field].toFixed(2)+'%';tooltip.hidden=false;
-        tooltip.style.left=Math.min(event.clientX+12,innerWidth-tooltip.offsetWidth-12)+'px';tooltip.style.top=(event.clientY-tooltip.offsetHeight-12)+'px';
-      });
+      const lift=document.createElement('div');lift.className='progress-hover';lift.hidden=true;lift.setAttribute('aria-hidden','true');track.append(lift);
+      let liftedStrip=null,stripAnimation=null;
+      function clearHover(){stripAnimation?.cancel();liftedStrip=null;lift.hidden=true;}
+      function hoverStrip(event){
+        if(event.pointerType==='touch')return;
+        const rect=track.getBoundingClientRect(),x=event.clientX-rect.left;
+        let start=0;
+        for(const field of ['linked','matched','fuzzy']){
+          const end=track.querySelector('i.progress-'+field).getBoundingClientRect().width;
+          if(x>=start&&x<end){
+            if(clearLift&&clearLift!==clearHover)hideTooltip();
+            clearLift=clearHover;
+            if(liftedStrip!==field||lift.style.width!==(end-start)+'px'){
+              stripAnimation?.cancel();liftedStrip=field;lift.hidden=false;
+              lift.className='progress-hover progress-'+field;lift.style.left=start+'px';lift.style.width=(end-start)+'px';
+              if(!motionPreference.matches)stripAnimation=animate(lift,[
+                {transform:'translateY(-50%) scale(1)',opacity:.5},
+                {transform:'translateY(-50%) scale(1.008,1.3)',opacity:1}
+              ],{duration:160,easing:'cubic-bezier(.22,1,.36,1)'});
+            }
+            tooltip.textContent=field[0].toUpperCase()+field.slice(1)+' '+values[field].toFixed(2)+'%';tooltip.hidden=false;
+            tooltip.style.left=Math.max(12,Math.min(event.clientX+12,innerWidth-tooltip.offsetWidth-12))+'px';
+            tooltip.style.top=Math.max(12,event.clientY-tooltip.offsetHeight-12)+'px';
+            return;
+          }
+          start=end;
+        }
+        hideTooltip();
+      }
+      listen(track, 'pointerenter',hoverStrip);
+      listen(track, 'pointermove',hoverStrip);
       listen(track, 'pointerleave',hideTooltip);
     }
     if(['latest','code','data'].includes(sortValue))updateEntries();
@@ -132,6 +158,8 @@ for(const project of projects){
 }
 updateEntries();
 listen(window, 'scroll',hideTooltip,{passive:true});
+listen(window, 'resize',hideTooltip);
+listen(motionPreference,'change',hideTooltip);
 
 return {ready:Promise.allSettled(pending),destroy(){clearInterval(timeRefresh);scope.destroy();}};
 }

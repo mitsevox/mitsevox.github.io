@@ -14,7 +14,13 @@ Leave unknowns unresolved; do not check items without evidence.
 - [ ] Final-head CI and owner-clearance logic exercised for passing/failing/stale cases.
 - [ ] Owner configures required checks and verifies bypass/merge authority.
 - [ ] Supported report capabilities and durable history verified.
-- [ ] Website adapter implemented; production fixtures rejected.
+- [ ] Read INTEGRATION.md and INTEGRATION-PROMPT.md; game and website ownership/branches assigned.
+- [ ] Capability matrix recorded; contribution acceptance, tracking and rankings selected independently.
+- [ ] Required common website extensions implemented without losing NFL history/data.
+- [ ] Website adapter implemented; raw report parity checked and production fixtures rejected.
+- [ ] Optional data truly optional, including a timeline without a contributor payload.
+- [ ] Multi-project restore/publication and failure isolation exercised.
+- [ ] Real main-run import, first public deployment and next refresh verified.
 - [ ] Site routes, freshness, failure behavior and rollback verified.
 
 For each completed item, record the revision, command/artifact and limitations in the appropriate
