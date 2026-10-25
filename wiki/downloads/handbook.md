@@ -126,7 +126,9 @@ cd ../game-slug-task
 git status --short --branch
 ```
 
-Use `codex/<task>` for agent branches by default; a project's own convention takes precedence. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.
+The command uses `codex/<task>` as an example. A project can choose `work/<task>`, another agent prefix or its existing convention; the branch name is not an identity or authorization check. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.
+
+Distinguish push-trigger filters from PR validation. A repository may limit optional branch-push CI to selected prefixes while validating every PR; that filter is not a shared-site integration requirement. The starter validates PRs without an agent-prefix restriction and only pushes to its adopted main branch. Check actual trigger behavior for the project's chosen branch convention before relying on a push alone.
 
 ## Active work reservations
 
@@ -381,7 +383,7 @@ A repeatable assignment, reconstruction and delivery process, with project polic
 
 ## Adopt the project policy first
 
-The default is an isolated author branch, independent blind accuracy review, a fresh hostile reviewer, final-revision CI and owner-only merge authority. These are defaults for a new project, not assumptions an agent may silently impose on an existing one. The owner records any alternative in CONTRIBUTING.md before work begins. The site contract does not enforce a reconstruction review model.
+The default is an isolated author branch, independent blind accuracy review, a fresh hostile reviewer, final-revision CI and owner-only merge authority. These are defaults for a new project, not assumptions an agent may silently impose on an existing one. Explicit project/task authorization governs actual merge authority; record persistent alternatives in CONTRIBUTING.md so future agents see them. The site contract does not enforce a reconstruction review model.
 
 Record who can assign work, push, open PRs, review, clear and merge. Permission to implement does not automatically authorize publishing or changing repository settings. Attribution tracking, rankings and accepting contributions remain separate decisions.
 
@@ -416,6 +418,10 @@ Keep pushes coherent. A new PR push normally cancels that PR's older CI. Tooling
 For the default policy, supply the full revision, scoped source/headers, target evidence, extents, profiles, comparisons and existing validation artifacts. The accuracy reviewer first interprets target behavior without the author's proposed names/comments; then reconciles the interpretation. The hostile reviewer checks the evidence and integrity checklist independently.
 
 Reviewer independence is about authorship and prior reasoning, not a different display name. Creating another agent does not automatically make its work independent. Do not fabricate a review record when no reviewer or evidence was available. Use the project's accepted reviewer arrangement and document limitations.
+
+For the default all-agent arrangement, use reviewers that did not author/edit the scoped reconstruction or participate in its implementation decisions. Give them a fresh context containing the task, target evidence, relevant configuration and validation artifacts rather than the author's conversation/chain of reasoning. An accuracy reviewer first records its target interpretation without proposed names/comments or author conclusions, then compares that result with the submission. A fresh hostile reviewer examines the submitted source and evidence without inheriting the author's or accuracy reviewer's conclusions as its starting verdict.
+
+Each review record declares reviewer identity/session, scoped authorship or prior involvement, supplied inputs, context isolation/blinding method, reviewed revision and independently reached findings. Reusing a model is allowed; changing models or logins is not proof of independence. An author fork carrying its full reasoning does not qualify merely because it has another agent ID. Focused rechecks by the original independent reviewer remain valid under the delta rules. If isolation is impossible or prior involvement exists, disclose it and follow the owner's adopted alternative; never assert an independent pass that did not occur. CI can check record fields and revisions, but cannot mechanically prove what context an agent saw or the quality of its reasoning.
 
 Report findings with a location, evidence and required correction. Measured incompleteness alone is not a failed fidelity review. A useful partial may pass while its original bytes remain linked.
 
@@ -452,6 +458,8 @@ This chapter specifies the starter default: independent blind accuracy review, a
 
 The public report contract does not impose this review model. It authenticates the producing build/report execution; project policy governs source acceptance. Attribution and contributor rankings are separate choices.
 
+Explicit task authorization and adopted project rules take precedence over generic starter defaults. This includes an owner instruction permitting an agent to merge its own PRs after the selected gates pass. Document persistent delegation so the next agent sees it; do not infer or revoke that authority from this handbook.
+
 ## Contribution sequence
 
 Claim scope → establish evidence → reconstruct and measure → self-check → blind accuracy review → hostile review → resolve findings → final-revision CI → owner clearance → owner merge → verified publication.
@@ -487,6 +495,8 @@ Coverage: earlier records carried forward and delta checked
 ```
 
 Hostile verdicts are SHIP, FIX, REDO or BLOCKED. SHIP means that review passed; it does not authorize a merge. Missing essential evidence is a blocked check, not permission to infer success.
+
+That is the starter verdict vocabulary. A project with SHIP/FIX/REDO may retain it and record missing evidence as an explicit blocked state with a nonpassing verdict/check, or adopt BLOCKED consistently in its documentation and verifier. Never translate blocked evidence into SHIP. Site integration does not require a particular reconstruction verdict enum; the chosen project's clearance check must understand its actual records. The default template grants success only for its declared passing verdicts.
 
 ## Rechecks and integration
 
@@ -814,6 +824,16 @@ Restore prior verified history; do not use an unauthenticated live page as autom
 
 Document the selected credit policy, ledger schema and recovery procedure in the repository. Publish contributor data only when that policy can be validated.
 
+## Importing an older timeline
+
+Before initial acceptance, inventory the old history format and keep its raw export/hash. Resolve short SHAs unambiguously to full commits in the intended history. Recover each row's code/data totals and linked bytes from historical reports, versioned target/configuration evidence or reproducible replay. Carry a constant denominator only when its stability is established; rounded percentages usually cannot uniquely recover an exact numerator.
+
+Every row needs a full revision, valid timestamp, positive integer code/data totals, bounded linked counts and a provenance kind/source. Revisions are unique and times nondecreasing. Include the current measured revision with code/data values identical to the current summary. If a commit timestamp is used as a proxy, document that limitation instead of calling it a measured build time.
+
+Use `reconstructed` for evidence-backed reconstruction of old values, `measured` for supported measurement and `inherited` for an unchanged compatible accepted record. Resolving identity alone does not establish totals, and a reconstructed label does not permit invented zeros or interpolated/copied progress. Initially unsupported rows stay in the project's legacy archive with reasons; publish the supported subset or defer the timeline. Do not silently remove or alter previously accepted rows.
+
+The [legacy migration procedure and example](/docs/reporting/platform.md#import-legacy-history) cover normalization, source records and inherited wrappers. The site preserves provenance metadata; its current graph does not show separate provenance badges. Do not promise a visible distinction solely from changing `kind`.
+
 
 ---
 
@@ -839,6 +859,8 @@ Choose a stable lowercase slug. Use it consistently in report identity, `/games/
 The shared site renders each project using the same header, gutters, code/data bars, metric rows, map controls, tooltips, timeline and contributor style. Register data and capabilities through the shared renderer rather than copying a standalone page per game.
 
 Store cover artwork as `assets/covers/<slug>.webp` with the original aspect ratio. Use authorized artwork and retain required license/provenance notes. The latest commit title/time is independent of measured build progress.
+
+Configure the stable source path `/assets/covers/<slug>.webp`. A `/releases/<hash>/...` URL belongs to a built site artifact and must never be copied into project registration; the builder versions real asset references itself.
 
 ## Required public contract
 
@@ -870,6 +892,14 @@ Receipts bind the public files to the producing execution. The consumer verifies
 Derive percentages from raw totals. Keep code and data denominators stable and account for all declared ranges. Linked, matched and fuzzy overlap; never add them. Preserve the actual relationship between linked and matched under the project's promotion policy.
 
 A function fragment cannot earn full-function exactness. A compiled unit marked complete does not establish an original file boundary. Address labels do not count as descriptive names. Support code and data fuzzy independently; never copy one into the other or label a fallback as measured fuzzy progress.
+
+## Map parity and geometry
+
+A supported map includes both `sections` and `files`. For each of code and data separately, their leaf address unions must be identical and each view's top-level metrics must sum to the summary. The views can group bytes differently; matching numeric totals at different addresses still fail.
+
+Use positive, end-exclusive intervals without overlaps inside a view. Preserve disjoint ranges through `mapped_extents`, aggregate child metrics into parents, and represent measured bytes without known file ownership as gap/unmapped nodes. Do not invent ownership or drop unassigned bytes. Function fragments must collectively cover the declared complete extent and reconcile any reported function inventory; fragments alone cannot earn full-function exact credit.
+
+The [map specification and paired examples](/docs/reporting/platform.md#map-semantics) list the exact field/aggregation rules. Validate with the shared packager locally; a schema-valid JSON tree can still fail coverage checks.
 
 ## Choose modules independently
 
@@ -937,6 +967,8 @@ Consumers may reuse an identical previously authenticated package after temporar
 ## Register and use the platform
 
 The site owner registers a producer in `config/producers.json` and its presentation in `config/projects.json`. Producer policy and artifact data follow the shared versioned schemas. A conforming producer uses the common importer and renderer; adding a project does not require a separate site implementation. Artwork stays in the website repository.
+
+Producer `job`, `requiredSteps`, selected-lane steps and artifact names match GitHub's actual run API **exactly**, including case, spaces and matrix suffixes. For a matrix job displayed as `Build (TARGET_ID)`, register that resolved name, not merely `Build` or the YAML job key. Inspect the actual successful run/attempt; there must be one matching producer job and exactly one successful occurrence of every required step. See [policy inspection commands](/docs/reporting/platform.md#execution-policy-and-reuse).
 
 The [platform contract and commands](/docs/reporting/platform.md) specify the public input files, packager metadata, producer policy, full/reused execution lanes, import CLI and preserved historical policies. These are shared interfaces; the project supplies its own measured inputs and approved execution facts.
 

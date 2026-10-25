@@ -60,7 +60,9 @@ cd ../game-slug-task
 git status --short --branch
 ```
 
-Use `codex/<task>` for agent branches by default; a project's own convention takes precedence. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.
+The command uses `codex/<task>` as an example. A project can choose `work/<task>`, another agent prefix or its existing convention; the branch name is not an identity or authorization check. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.
+
+Distinguish push-trigger filters from PR validation. A repository may limit optional branch-push CI to selected prefixes while validating every PR; that filter is not a shared-site integration requirement. The starter validates PRs without an agent-prefix restriction and only pushes to its adopted main branch. Check actual trigger behavior for the project's chosen branch convention before relying on a push alone.
 
 ## Active work reservations
 

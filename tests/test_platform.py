@@ -108,6 +108,20 @@ class PlatformTests(unittest.TestCase):
         with self.assertRaises(ValueError):authenticate(POLICY,run,[{**job,'steps':[]}],'c'*40)
         with self.assertRaises(ValueError):authenticate(POLICY,run,[job],'f'*40)
 
+    def test_matrix_job_and_step_names_are_exact_api_display_names(self):
+        policy={**POLICY,'job':'Build (TARGET_ID)'}
+        run={'repository':{'full_name':POLICY['repository']},'head_repository':{'full_name':POLICY['repository']},
+             'path':POLICY['workflow'],'head_branch':'main','event':'push','status':'completed','conclusion':'success',
+             'head_sha':REVISION,'run_attempt':1}
+        job={'name':policy['job'],'conclusion':'success','head_sha':REVISION,'run_attempt':1,
+             'steps':[{'name':'Validate measurements','conclusion':'success'}]}
+        authenticate(policy,run,[job],'c'*40)
+        for name in ('Build', 'build (TARGET_ID)', 'Build (TARGET_ID) '):
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError,'producer job'):
+                authenticate(policy,run,[{**job,'name':name}],'c'*40)
+        with self.assertRaisesRegex(ValueError,'validation step'):
+            authenticate(policy,run,[{**job,'steps':[{'name':'validate measurements','conclusion':'success'}]}],'c'*40)
+
 
     def test_approved_historical_policy_survives_producer_format_cutover(self):
         registry=decode((self.root/'config/producers.json').read_bytes())

@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "sections": [
+    {
+      "name": "Code",
+      "kind": "code",
+      "type": "section",
+      "address": "0x00001000",
+      "size": 100,
+      "linked": 20,
+      "matched": 40,
+      "fuzzy": 50
+    },
+    {
+      "name": "Data",
+      "kind": "data",
+      "type": "section",
+      "address": "0x00002000",
+      "size": 10,
+      "linked": 2,
+      "matched": 3,
+      "fuzzy": 4
+    }
+  ],
+  "files": [
+    {
+      "name": "src/descriptive-file.c",
+      "kind": "code",
+      "type": "file",
+      "address": "0x00001000",
+      "size": 60,
+      "linked": 20,
+      "matched": 40,
+      "fuzzy": 50
+    },
+    {
+      "name": "Unassigned code",
+      "kind": "code",
+      "type": "gap",
+      "address": "0x0000103C",
+      "size": 40,
+      "linked": 0,
+      "matched": 0,
+      "fuzzy": 0
+    },
+    {
+      "name": "Data group",
+      "kind": "data",
+      "type": "file",
+      "address": "0x00002000",
+      "size": 10,
+      "linked": 2,
+      "matched": 3,
+      "fuzzy": 4
+    }
+  ]
+}

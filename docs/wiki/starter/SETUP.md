@@ -10,6 +10,7 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 - [ ] Approved tool/runtime identities, supported hosts and reference access reproducible on a fresh runner.
 - [ ] README, CONTRIBUTING, AGENTS and configuration documents agree on adopted policies and paths.
 - [ ] Review/merge model selected explicitly; default independent accuracy/hostile and owner-only merging confirmed or replaced.
+- [ ] Explicit task/standing delegation, including authorized agent merges, preserved rather than overridden by template defaults.
 - [ ] Attribution tracking decided independently from rankings and contribution acceptance.
 - [ ] Bounded work reservations, shared-file coordination, branches/worktrees and task permissions documented.
 
@@ -26,6 +27,7 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 - [ ] Matching objective and unsupported capabilities reported honestly; no invented map/credit/history data.
 - [ ] Fresh PR and main CI passed with actual checkout/tree/run/attempt/artifact evidence.
 - [ ] Selected review verifier exercised for passing, failing, draft, stale, edited/deleted and withdrawn records.
+- [ ] Reviewer independence records identify authorship, prior involvement, supplied context and blind interpretation where required; verdict vocabulary matches the adopted verifier.
 - [ ] Owner configured required statuses and verified bypass/merge authority after bootstrap.
 
 ## Optional acceleration, separately enabled
@@ -44,11 +46,14 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 
 - [ ] Read INTEGRATION.md and INTEGRATION-PROMPT.md; assign producer/site scope and authorization.
 - [ ] Approved producer policy binds actual workflow blob, job, artifact, required common and selected-lane steps.
+- [ ] Exact API display names, including matrix suffixes, verified on the actual run attempt.
 - [ ] Site configuration/artwork supplied; a conforming report uses the shared importer, not a new game-specific pipeline.
 - [ ] Full/audit/reused step outcomes authenticate correctly; old policies remain readable for historical reports.
 - [ ] Raw totals, linked/exact/fuzzy, full-function inventories and enabled modules agree.
+- [ ] Section/file map address unions and both sets of aggregates match; gaps, child extents and full functions reconcile.
 - [ ] Optional modules work independently, including timeline without contributor payload.
 - [ ] History continuity, identical reruns, stale/diverged updates and immutable collisions exercised.
+- [ ] Legacy history resolves SHAs and raw values from evidence; ambiguous/unsupported rows remain archived without fabricated points.
 - [ ] Multi-project restoration/publication and failure isolation preserve all accepted data.
 - [ ] Real main-run import, public direct route, manifest identity and subsequent refresh verified.
 - [ ] Rollback preserves accepted history; no private input or synthetic fixture enters production.
