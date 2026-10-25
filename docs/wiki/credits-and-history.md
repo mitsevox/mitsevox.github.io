@@ -28,6 +28,14 @@ Open the authorized draft PR to obtain its real number; never guess a future PR 
 
 Validate the introduced source blob in reachable landed history. If squash merging is supported, check the actual landed or predicted squash tree against the PR base. Pinned original commits must be accessible; missing provenance is a validation gap, not a reason to attribute the function to the integrator.
 
+## Put checks in both CI phases
+
+Run a cheap ledger-only preflight before compiling: validate identities, duplicate entries, source paths, referenced commits/blobs and reachable attribution on the candidate and predicted squash history. Batch Git fetches/object queries where equivalent results have been established; an optimization must preserve errors and evidence requirements.
+
+After measurement, build the complete exact-function inventory and reconcile it against the ledger. Include eligible exact unlinked comparisons and require complete function extents. This catches newly exact functions that were unknowable to a ledger-only check. Compare candidate and predicted-squash contributor results, then recheck actual landed history during reused publication. Reusing a build does not skip landed attribution validation.
+
+Tracking-disabled projects omit these ledger stages under their explicit policy and publish no contributor payload. They can still build, compare, keep a timeline and integrate with the common site. Never infer tracking requirements from whether contribution links or rankings are shown.
+
 ## Recovering past credit
 
 Use surviving original PRs, commit authorship, pinned source blobs, integration records and reviewed evidence. A closed PR or deleted branch may still leave useful records; do not assume they are available indefinitely. Distinguish supported attribution, explicit joint work and unresolved ownership.

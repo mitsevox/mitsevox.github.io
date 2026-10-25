@@ -2,6 +2,12 @@
 
 Independent evidence, exact revisions and an owner-controlled merge decision.
 
+## Policy selection
+
+This chapter specifies the starter default: independent blind accuracy review, a fresh hostile review and owner-only merges. The owner may adopt a different project policy explicitly in CONTRIBUTING.md and CI configuration. Record which passes apply, reviewer independence, required records/statuses, clearance authority and merge authority. Do not require a status whose verifier was never installed, or silently weaken an adopted policy for a difficult patch.
+
+The public report contract does not impose this review model. It authenticates the producing build/report execution; project policy governs source acceptance. Attribution and contributor rankings are separate choices.
+
 ## Contribution sequence
 
 Claim scope → establish evidence → reconstruct and measure → self-check → blind accuracy review → hostile review → resolve findings → final-revision CI → owner clearance → owner merge → verified publication.
@@ -66,3 +72,20 @@ Agents may prepare a clearance draft when asked, but must not impersonate the ow
 Adapt the owner identity, check names and record rules deliberately. Install the clearance logic using trusted base-branch code before requiring the check. Test missing, malformed, stale and withdrawn clearance plus draft PRs. Do not mark a status successful because a workflow file exists.
 
 Put the review record specification in CONTRIBUTING.md and its verifier in trusted workflow code. Declare whether contributions use same-repository branches or forks; fork builds do not automatically have access to private references. Match review effort to scope: source reconstruction needs fidelity review; presentation and documentation changes need relevant checks without unnecessary binary-build or reconstruction-review passes.
+
+The starter archive includes an editable `review.yml.template` for the default record model. It uses trusted GitHub-script logic without checking out a PR or receiving build secrets. Set the adopted `REVIEW_OWNER` repository variable, inspect the pinned Action, adapt event/branch policies, then exercise it before making its status required. The verifier checks record fields and the owner's clearance; it does not create reviews or decide reviewer independence.
+
+## Verifier acceptance matrix
+
+| Case | Default-policy result |
+| --- | --- |
+| Current head, owner clearance, two distinct passing comments on that PR, ready PR | Success |
+| No clearance or clearance from another identity | Pending |
+| Head changed after reviews/clearance | Pending until final-head coverage and owner clearance |
+| Same link twice, another PR, malformed headers, wrong revision or failing verdict | Pending |
+| Draft PR | Pending |
+| Latest clearance edited to remove revision/links or deleted | Re-evaluate; no success without another valid current clearance |
+| Linked review comment edited/deleted | Re-evaluate; a missing record must not leave an old success |
+| Contribution code or title contains executable-looking text | Treat as data; never execute it |
+
+On every relevant event set the current-head status pending before evaluating evidence. Handle missing/deleted evidence as invalid clearance and finish with pending; do not let a failed fetch leave an earlier success in force. Exercise live event delivery as well as parser tests. An agent must not issue passing records, owner clearance or merge commands simply because the template lists them.

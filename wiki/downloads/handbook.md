@@ -14,11 +14,13 @@ Use this handbook to establish a new project or align an existing one. It define
 2. [Layout & naming](/wiki/layout-and-naming/): organize source, declarations, evidence, configuration and generated output.
 3. [Evidence](/wiki/evidence-and-reconstruction/): reconstruct from reproducible observations and preserve uncertainty.
 4. [Build & validation](/wiki/build-and-validation/): distinguish baseline, accepted-source build and partial comparisons.
-5. [Review & approval](/wiki/review-and-approval/): bind review and clearance to the actual revision.
-6. [CI & publication](/wiki/ci-and-publication/): validate candidates, authenticate main results and publish coherent reports.
-7. [Credits & history](/wiki/credits-and-history/): select attribution policy and preserve measured history.
-8. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
-9. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
+5. [Agent workflow](/wiki/agent-workflow/): scope, isolate, investigate, reconstruct and deliver without losing evidence or authorship.
+6. [Review & approval](/wiki/review-and-approval/): adopt the project policy and bind review and clearance to the actual revision.
+7. [CI & publication](/wiki/ci-and-publication/): implement fresh validation and the editable workflow's stage contracts.
+8. [Cache & proof](/wiki/cache-and-proof/): optionally add inventory reuse, audited build caches and PR-to-main proof reuse.
+9. [Credits & history](/wiki/credits-and-history/): select attribution policy and preserve measured history.
+10. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
+11. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
 
 An existing project can keep its working structure and commands. Map these responsibilities onto it instead of reorganizing source just to match a diagram.
 
@@ -40,6 +42,14 @@ Record the platform, region/revision, executable hash, source objective, approve
 A faithful matching reconstruction and a nonmatching port have different validation objectives. Declare which one the project promises and label its reports accordingly. Compiler equivalence alone does not establish original names, intent or source-file boundaries.
 
 Attribution tracking, contributor rankings and accepting contributions are three independent choices. Progress reporting can operate without a contributor feed.
+
+## Fixed contracts and project decisions
+
+The fixed reporting boundary is the versioned public contract, authenticated execution, honest metric meanings, optional-capability declarations and history preservation. The site owner curates registrations and artwork. A new project uses the common importer and renderer rather than a copied game-specific website pipeline.
+
+The project chooses its console/executable format, tools, supported hosts, source layout, evidence vocabulary, build commands, promotion objective and review/merge policy. Owner-only merging with independent accuracy and hostile reviews is the starter default; the owner can adopt a different documented model. Attribution is optional. Caching and publication reuse start disabled until fresh validation works.
+
+The starter supplies an editable GitHub Actions workflow, configuration example and exact adapter interface. It cannot supply a target's extraction, compiler profile, linker geometry or disassembly interpretation. An implementing agent maps those contracts to the project's real tools, tests them and records unresolved gaps. It must not replace missing implementation with successful no-ops.
 
 ## Use the handbook with an agent
 
@@ -76,6 +86,21 @@ sha1sum /path/to/original-executable
 Compare the result with a verified target identity before using it. This identifies the input; it does not prove source fidelity. Keep the original executable outside public Git.
 
 ## Bootstrap the repository
+
+Before adopting the starter, have the owner settle the following decisions and record them in README/CONTRIBUTING and `config/ci.json`:
+
+| Decision | Starter default | Must be supplied or confirmed |
+| --- | --- | --- |
+| Target/objective | Faithful matching, one explicit target | Console, executable format, region/revision, hashes, measurement universe and any different objective |
+| Tools/runtime | Pinned approved environment | Actual digest/hash, supported hosts, tools/profiles and reference access |
+| Author workflow | Isolated branch/worktree and bounded active scope | Branch convention, reservations, dependencies and push/PR authority |
+| Review/merge | Independent accuracy and hostile review; owner-only merge | Adopting owner and any explicit alternative policy |
+| Attribution | Explicit decision required | Track or do not track; exact inventory/joint-credit rules if enabled |
+| Acceleration | All caches and proof reuse disabled | Enable each only after fresh correctness and failure tests |
+| Site capabilities | Honest supported data only | Map, counts, timeline, rankings and independent contribution acceptance |
+| Publication | Validated main reports through shared site | Artifact retention, trusted workflow/tool identities and durable history source |
+
+No project names, compiler family or console-specific directory conventions are inherited from another repository. The templates describe responsibilities; the adopted configuration records facts.
 
 Start with README, CONTRIBUTING, AGENTS, .gitignore, target configuration and a bounded build plan. Select and document licensing/provenance appropriate to your own tooling and imported sources; do not blanket-relicense imported code. The [starter files](/wiki/starter-kit/) provide editable scaffolding, not a build system.
 
@@ -159,15 +184,42 @@ game-slug/
       units.json           # accepted source placement / compiler profiles
       comparisons.json     # independent partial/exact comparisons
       evidence.tsv         # curated claims and reproducible locators
-  tools/                   # reproducible build, comparison and export tools
+      contributors.json    # optional original-source attribution
+      history.json         # optional reviewed history checkpoint
+    ci.json                # adopted CI policy and stage mapping
+    producer.json          # approved public-report execution policy
+  tools/
+    project_ci.py          # thin adapter to existing tools; see starter CI.md
+    ...                    # actual build, comparison and export implementations
   tests/                   # meaningful checks for those tools and contracts
   docs/                    # durable design and setup documentation
   .github/
     workflows/
+      validate.yml         # fresh build first; optional audited acceleration
+      review.yml           # trusted metadata-only clearance, if selected
     pull_request_template.md
   build/                   # ignored generated outputs
   scratch/                 # ignored experiments
 ```
+
+## Generated output boundaries
+
+Use stable role-based paths so stages cannot accidentally consume yesterday's successful output:
+
+| Path | Contents and lifetime |
+| --- | --- |
+| `build/baseline/` | Original-byte baseline output/receipt; private and disposable |
+| `build/source/` | Accepted-source executable, objects and complete-output receipt; private |
+| `build/comparisons/` | Partial/exact comparison objects, linked slices and measurements; private |
+| `build/inventory/` | Bounded reusable inventory metadata plus its input/digest receipt |
+| `build/cache/` | Optional compile/measurement entries; approved cache storage only |
+| `build/ci/` | Run context, lane selection and cache statistics; generated metadata |
+| `build/public-input/` | Only canonical `summary.json` and supported public module JSON |
+| `build/public-report/` | Validated manifest, execution receipt and allowlisted public payloads |
+
+These are template names, not required engine paths. Document the actual mapping once. Every producer stage clears its owned stale output before work and writes success output only after verification. Upload the explicit public directory, never `build/**`. Public packages cannot contain original binaries, objects, compiler caches or complete debug exports.
+
+Document each JSON/TSV schema next to its validator: required keys, address format, end-exclusive intervals, stable identities, enum meanings and version behavior. A path listed here does not invent a universal source-unit or evidence schema. The shared public schemas are the fixed boundary; target-internal schemas are project-owned.
 
 Use this layout for a new repository. In an existing repository, retain established paths and map these responsibilities onto them. Define and validate the formats of target configuration, accepted placements, comparisons and evidence. Optional contributor ledgers and history checkpoints belong alongside target configuration.
 
@@ -323,9 +375,82 @@ Run focused checks during iteration and required final checks for the actual int
 
 ---
 
+# Agent workflow
+
+A repeatable assignment, reconstruction and delivery process, with project policy made explicit.
+
+## Adopt the project policy first
+
+The default is an isolated author branch, independent blind accuracy review, a fresh hostile reviewer, final-revision CI and owner-only merge authority. These are defaults for a new project, not assumptions an agent may silently impose on an existing one. The owner records any alternative in CONTRIBUTING.md before work begins. The site contract does not enforce a reconstruction review model.
+
+Record who can assign work, push, open PRs, review, clear and merge. Permission to implement does not automatically authorize publishing or changing repository settings. Attribution tracking, rankings and accepting contributions remain separate decisions.
+
+## Intake and scope
+
+1. Read README.md, CONTRIBUTING.md, AGENTS.md and configuration documentation. Inspect the actual checkout, current main, open PRs and active reservations.
+2. Inventory authorized executables, symbols, debug information, maps, source references and tool access. Record what exists and what is missing; distinguish a searched location from a complete absence claim.
+3. Identify one bounded question and scope: functions, data ranges, declarations, original units or tooling. Include affected shared files and dependent branches.
+4. Reserve active work using the project's chosen mechanism. Establish a dedicated branch/worktree; preserve unrelated dirty work and prior useful partials.
+5. Record the base revision, target/hash, evidence locators, applicable compiler profiles, deliverables, exclusions and task authorization in the issue or PR. Keep detailed experiments private.
+
+For an integration task, additionally inventory current CI triggers, job permissions, build stages, cache trust, public outputs, history storage and site registration. Map existing tools onto the contracts in the [starter kit](/wiki/starter-kit/); do not replace working tools just to obtain the example filenames.
+
+## Evidence before reconstruction
+
+Establish behavior, boundaries, references, calling convention and accessed layouts. Distinguish recovered original names from descriptive inferred names and neutral unknown labels. Do not let a desired name or a high matching score decide the interpretation.
+
+Escalate according to the unresolved question: static analysis for behavior/ownership, compiler intermediate output for code-generation questions, bounded runtime tracing for an execution hypothesis. State the question, inputs, tool settings, result and remaining uncertainty. An unavailable essential reference is a named gap, not permission to invent an answer.
+
+Implement useful partial source in its normal location. Keep original bytes in the verified linked build until promotion. Register complete comparison extents, dependencies and the supported profile. Do not move unfinished functions into a separate source tree merely to distinguish their reporting status.
+
+## Iteration and attribution
+
+Run the smallest relevant build/comparison and self-check evidence, names, declarations, comments, boundaries and ranges. Preserve mismatches honestly. Matching-only flags, patched output, invented padding, unsupported assembly and excluded failing bytes are not a valid repair.
+
+When tracking is enabled, register original contributors and source provenance. A source edit can invalidate a pinned blob even if the function's bytes still match: re-pin and check the actual final source. Run ledger-only checks before an expensive build; reconcile coverage against the measured exact inventory after comparisons. Fuzzy source retains provenance without full exact-function credit.
+
+Keep pushes coherent. A new PR push normally cancels that PR's older CI. Tooling/profile changes have wider invalidation than ordinary source changes and deserve their own bounded change where practical.
+
+## Independent review
+
+For the default policy, supply the full revision, scoped source/headers, target evidence, extents, profiles, comparisons and existing validation artifacts. The accuracy reviewer first interprets target behavior without the author's proposed names/comments; then reconciles the interpretation. The hostile reviewer checks the evidence and integrity checklist independently.
+
+Reviewer independence is about authorship and prior reasoning, not a different display name. Creating another agent does not automatically make its work independent. Do not fabricate a review record when no reviewer or evidence was available. Use the project's accepted reviewer arrangement and document limitations.
+
+Report findings with a location, evidence and required correction. Measured incompleteness alone is not a failed fidelity review. A useful partial may pass while its original bytes remain linked.
+
+After a fix, the reviewer checks the finding and affected dependencies, carrying forward adequate earlier coverage. A new reviewer may use that record; replacement alone is not grounds to restart everything. Follow the [review record and clearance specification](/wiki/review-and-approval/).
+
+## Refresh, batches and final revision
+
+Fetch current main before final integration. Inspect the changed inputs, conflict resolutions and shared declarations; record the resulting head. Review the delta and affected dependencies, then issue final-head review records that cite carried-forward coverage. A prior verdict does not by itself cover a new head.
+
+A batch preserves each original PR, author revision and review evidence. Reconcile shared metadata by stable identity, resolve overlaps, and validate the combined tree once. Independently passing component builds do not establish the combined build. Close originals as incorporated only after the combined change lands.
+
+Distinguish these identities: the PR head is reviewed and cleared; the synthetic merge tree is usually what PR CI builds; the landed commit is what main publishes. Receipts bind the tested tree and both relevant revisions. Tree equality allows authenticated reuse across a squash; identical commit messages or file counts do not.
+
+## Delivery and owner decision
+
+Post concise separate review records for the actual final revision, resolve findings, and link successful final CI and measured artifacts. The owner then follows the selected clearance/merge policy. A reviewer returning SHIP has not authorized a merge.
+
+After merge, verify the eligible main publication, report identity, prior history and subsequent site refresh. A green PR, a local preview and a deployed page are different evidence. End with changes, tested revision/commands, measured results, unresolved gaps and the precise review/publication state. Never add a running public diary of agent activity.
+
+## Implementing this template with an agent
+
+An agent setting up CI must deliver a command mapping, adopted policy, pinned environment, stage receipts, meaningful invalidation tests, report-v1 packaging and real successful/failing execution evidence. Start with fresh validation. Add caches and proof reuse only after that path works and the owner selects them. The [setup checklist](/wiki/starter-kit/#acceptance-checklist) is the handoff boundary; unchecked items must stay visible.
+
+
+---
+
 # Review & approval
 
 Independent evidence, exact revisions and an owner-controlled merge decision.
+
+## Policy selection
+
+This chapter specifies the starter default: independent blind accuracy review, a fresh hostile review and owner-only merges. The owner may adopt a different project policy explicitly in CONTRIBUTING.md and CI configuration. Record which passes apply, reviewer independence, required records/statuses, clearance authority and merge authority. Do not require a status whose verifier was never installed, or silently weaken an adopted policy for a difficult patch.
+
+The public report contract does not impose this review model. It authenticates the producing build/report execution; project policy governs source acceptance. Attribution and contributor rankings are separate choices.
 
 ## Contribution sequence
 
@@ -392,83 +517,247 @@ Adapt the owner identity, check names and record rules deliberately. Install the
 
 Put the review record specification in CONTRIBUTING.md and its verifier in trusted workflow code. Declare whether contributions use same-repository branches or forks; fork builds do not automatically have access to private references. Match review effort to scope: source reconstruction needs fidelity review; presentation and documentation changes need relevant checks without unnecessary binary-build or reconstruction-review passes.
 
+The starter archive includes an editable `review.yml.template` for the default record model. It uses trusted GitHub-script logic without checking out a PR or receiving build secrets. Set the adopted `REVIEW_OWNER` repository variable, inspect the pinned Action, adapt event/branch policies, then exercise it before making its status required. The verifier checks record fields and the owner's clearance; it does not create reviews or decide reviewer independence.
+
+## Verifier acceptance matrix
+
+| Case | Default-policy result |
+| --- | --- |
+| Current head, owner clearance, two distinct passing comments on that PR, ready PR | Success |
+| No clearance or clearance from another identity | Pending |
+| Head changed after reviews/clearance | Pending until final-head coverage and owner clearance |
+| Same link twice, another PR, malformed headers, wrong revision or failing verdict | Pending |
+| Draft PR | Pending |
+| Latest clearance edited to remove revision/links or deleted | Re-evaluate; no success without another valid current clearance |
+| Linked review comment edited/deleted | Re-evaluate; a missing record must not leave an old success |
+| Contribution code or title contains executable-looking text | Treat as data; never execute it |
+
+On every relevant event set the current-head status pending before evaluating evidence. Handle missing/deleted evidence as invalid clearance and finish with pending; do not let a failed fetch leave an earlier success in force. Exercise live event delivery as well as parser tests. An agent must not issue passing records, owner clearance or merge commands simply because the template lists them.
+
 
 ---
 
 # CI & publication
 
-Build once, validate the result, then publish an authenticated report.
+Implement fresh validation first, then optionally accelerate it without changing what a published result proves.
 
-## Workflow structure
+## Responsibilities and authority
 
-Use separate jobs for the responsibilities below. Map the commands to the repository's documented build tools.
+A matching project verifies the complete accepted-source executable against its declared target, measures full registered comparison extents, reconciles optional attribution, and derives public reports from those results. A different source objective needs explicit corresponding validation; it must not claim byte identity it does not establish. CI cannot prove original names, intent, types or file boundaries: source/evidence review remains separate.
 
-| Job | Runs when | Work | Permissions |
-| --- | --- | --- | --- |
-| Configuration and evidence checks | PRs and main | Validate target configuration, declarations, evidence and changed dependencies | Source read |
-| Build and measure | PRs and eligible main runs | Verify inputs; build/compare; generate a candidate report and receipt | Source/packages read; approved private inputs only |
-| Review clearance | Relevant PR changes | Check revision, required review records and owner decision using trusted code | Read PR records; write its named status |
-| Report publication | Successful eligible main result | Authenticate the measured tree, validate prior history, export public data | Read artifacts; narrowly scoped history/report writes if needed |
-| Website validation | Site PRs and refreshes | Authenticate/import reports and assemble a coherent site candidate | Public source/artifact read |
-| Website deployment | Successful current site main | Preserve accepted reports, then deploy the exact candidate | Site data-store writes, Pages and deployment identity |
+Separate responsibilities and permissions; they need not be separate jobs. Keeping a dependent build/measure/export chain in one job avoids copying private build output between runners. Use separate privileged jobs/workflows where authority changes.
 
-Game build jobs do not need website deployment permissions. Publishing jobs process report data without executing scripts downloaded from artifacts. Keep private originals, complete debug exports and build credentials out of the website job.
-
-## PR validation
-
-Run the project's required baseline, accepted-source and comparison stages for the actual candidate inputs. Cheap checks should fail before expensive work where possible. Delete stale output before export; a failed exporter must not leave an earlier report available for upload.
-
-Emit a candidate artifact containing public measurements and a receipt binding repository, target/hash, full tested revision/tree, tools, methodology and payload checksums. Candidate artifacts support review; they do not advance public latest or the production timeline.
-
-Pin Actions/shared tools to reviewed commits, images to approved digests and downloaded tools by version/hash. Cache keys include target, toolchain, relevant configuration and source inputs. Document the cache's scope and invalidation rules.
-
-## Main validation and reuse
-
-A main publication must have either a successful full validation or authenticated proof for the complete landed tree. Reuse requires matching target, tools/environment, methodology, complete tested inputs and original artifact integrity. Validate landed attribution too when the project's policy enables it.
-
-A missing or incompatible reusable proof requires the full validation path. An inventory-only change can regenerate inventory separately when source-build proof remains valid. Never combine reports from several independently tested branches into proof of an integrated build.
-
-Keep original measurement time separate from publication time. Latest repository commit metadata is another input and does not make a previous build newly measured.
-
-## Publication sequence
-
-1. Select an eligible successful main run and its actual attempt.
-2. Authenticate repository, workflow revision, job/lane, tested tree and artifact digest.
-3. Restore validated prior history; an established history must not reset after a fetch/parse failure.
-4. Generate the public package from measured input and validate schema, arithmetic, extents, capabilities and history continuity.
-5. Store immutable snapshot files before updating the latest pointer atomically.
-6. Preserve the accepted package before deploying the matching website artifact.
-
-An identical rerun is a no-op. Different bytes for an existing immutable identity fail. A correction needs a new version/generation and recorded provenance. Check ancestry before advancing latest; concurrent job ordering alone cannot prevent stale publication.
-
-The shared website owns a durable data-only report store so accepted measurements outlive temporary CI artifacts. Individual projects can retain their existing history/archive mechanism. A separate data branch in each game repository is optional.
-
-## Failure behavior
-
-| Failure | Required behavior |
+| Responsibility | Authority |
 | --- | --- |
-| Missing or malformed required report | Fail the refresh and keep the prior accepted package |
-| Unsupported optional capability | Declare it unsupported and configure its UI off |
-| Failed export of a supported capability | Fail; do not silently change it to unsupported |
-| Stale or diverged measured revision | Reject promotion and retain history |
-| Existing immutable identity with changed content | Reject the collision |
-| Concurrent store writer | Reread and reconcile after a normal push conflict; never force overwrite |
-| Obsolete site-source workflow | Reject deployment |
-| Missing private build access | Report the missing input; do not change dependency access or substitute tools |
+| Candidate validation | Source/packages read and approved private input access; no site deployment or repository write |
+| Owner clearance, if selected | Trusted metadata-only logic; read PR records and write only the named status |
+| Producer report publication | Read authenticated upstream artifacts; narrow history writes only when the selected storage needs them |
+| Site import | Read registered public source/artifacts; validate packages without executing their contents |
+| Site storage/deployment | Owner-controlled site main; preserve accepted packages before Pages deployment |
 
-Define whether a refresh failure blocks the whole site deployment or allows other validated projects to publish. Test and document that policy explicitly. In either case, a failed project retains its last-good data.
+The [starter archive](/wiki/downloads/repository-starter.zip) includes `.github/workflows/validate.yml.template`, `config/ci.example.json` and `CI.md`. Copy/adapt the workflow and configuration, implement the documented adapter operations using actual project tools, and prove the acceptance cases below. Templates do not configure repository settings or compile an unknown target automatically.
 
-## Workflow security and approval
+## Triggers and lanes
 
-Evaluate clearance using trusted base/default-branch logic. PR text, payload JSON and filenames are data, not commands. A privileged follow-up workflow must authenticate its upstream execution before using its artifacts. Declare how fork contributions receive build validation without assuming private secret access.
+The reference workflow assumes default branch `main`; change every branch/eligibility guard together if the project uses another name. It defaults to same-repository contribution branches. Forks need an explicitly designed reference/secret-access policy before their code runs with private build inputs.
 
-See GitHub's [secure workflow guidance](https://docs.github.com/en/actions/reference/security/secure-use) and [workflow_run behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run). Configure required statuses after real passing, failing and stale cases have been observed; a workflow file alone does not enforce approval.
+| Event | Validation | Shared cache save | Public result |
+| --- | --- | --- | --- |
+| PR | Fresh full path, or valid input-keyed reuse when enabled | Never | Candidate only; reusable proof only if zero compiled/measured results reused |
+| Main push | Authenticate eligible proof when enabled; otherwise full fresh validation/audit | After successful full main validation when caching is enabled | Validated report artifact for shared-site ingestion |
+| Main manual, normal | Same selection/fallback as main push | No build-cache save | Validated main report |
+| Main manual, explicit audit | Skip proof selection; force full fresh validation/audit | Yes when caching is enabled | Validated main report |
+| Other-branch manual | Validation only | Never | No production publication |
 
-## Website deployment
+Cancel superseded PR/branch runs; keep main runs uncancelled by the workflow's concurrency policy. Main still needs ancestry/current-state checks because queue order does not guarantee safe publication order.
 
-Build one static artifact with fingerprinted assets. The deploy job depends on successful validation and storage and receives only the permissions it needs. GitHub Pages supports [custom Actions workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+Three internal decisions are independent: `full` means run source build/comparisons/tests/export; `inventory` means validate/regenerate inventory; `receipts` means run the host live-receipt re-export. Fresh validation sets all applicable lanes. Reused source proof can still require inventory maintenance. An audit request on another branch must not grant main publication or save rights.
 
-Verify home, direct project/wiki routes, refresh, back/forward and the selected report identity at the public URL. Use a reviewed site-source revert for a UI rollback while retaining current accepted measurement history. Do not deploy an obsolete workflow or rewrite measured history to roll back styling.
+## Step-by-step implementation
+
+The adapter contract in starter `CI.md` specifies input/output paths, GitHub outputs and fail-closed behavior for every operation. Existing tools can keep their names; one thin adapter gives the workflow stable boundaries.
+
+| Order | Operation | Result/failure boundary |
+| --- | --- | --- |
+| 1 | Checkout exact candidate with required history | Record PR head/base, actual checked-out commit/tree, repository, target and run/attempt |
+| 2 | Validate configuration/evidence and runtime pins | Reject unknown target, missing tools/inputs, unsupported policy, placeholders and unsafe publication paths |
+| 3 | Compute/restore optional inventory candidate | Restore is provisional; internal input/digest receipt must still validate |
+| 4 | Select proof on eligible main unless auditing | Authenticated match selects reuse; unavailable/incompatible proof selects full |
+| 5 | Decide full/inventory/receipt lanes | Strict booleans, explicit fresh default; inconsistent state fails |
+| 6 | Ledger/provenance preflight if tracking enabled | Check recorded entries on candidate and predicted squash history before expensive work |
+| 7 | Baseline/setup and optional build-cache restore | Verify original input/relink where applicable and prepare pinned tools |
+| 8 | Build accepted source | Parallel independent compiles; deterministic placement/link order; complete target-objective check |
+| 9 | Inventory and tool tests | Validate restored metadata or regenerate; run applicable regression tests |
+| 10 | Measure comparisons | Full extents and declared method; validated reuse or fresh measurements; explicit cache statistics |
+| 11 | Export from one measured result | Reconcile linked/exact/fuzzy, map, inventories, optional credits and restored history |
+| 12 | Host receipt verification | Keep on full main and zero-reuse proof-producing PRs; other host tests still run |
+| 13 | Promote selected proof, if reused | Recheck landed tree/attribution/history, preserve original measurement identity |
+| 14 | Package and validate public JSON | Versioned manifest/receipt and checksums; no stale output or private files |
+| 15 | Upload eligible artifact; save eligible caches | Only exact directories; explicit main/PR-zero-reuse guards |
+| 16 | Shared-site import/storage/deployment | Authenticate actual successful run/attempt, preserve history and project isolation, publish one coherent artifact |
+
+An early ledger check validates the existing ledger and Git provenance. It cannot establish coverage of exact functions not yet measured. The exporter later reconciles the complete measured exact inventory and, where selected, compares actual-candidate and synthetic-squash credit results. Disabling tracking records an explicit policy decision; it must not fabricate a contributor feed.
+
+## Candidate and landed identities
+
+On a typical `pull_request` build, GitHub checks out a synthetic merge commit. The API's PR head SHA, that tested commit/tree and the later landed commit are different identities. Record all relevant identities and merge parents; do not label a merge-tree measurement as a head-only build. See [GitHub event semantics](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request).
+
+A main publication requires successful full validation or authenticated proof covering the complete landed tree. Squash/rebase can change a commit ID without changing its tree; reuse is permitted only after verifying the full tree, target, tools, method and source execution. Never combine independently tested PR reports into an integrated build proof.
+
+Review/owner clearance normally names the current PR head. CI evidence explains which integrated tree it tested. New source/build inputs invalidate earlier validation; review comments alone do not require another binary build.
+
+## Fresh path and public contract
+
+The fresh path is the required starting implementation. Baseline, accepted-source build and independent comparisons remain distinct. Do not report the complete executable as reconstructed simply because original bytes fill unpromoted ranges.
+
+Delete owned stale output before each export/package operation. Generate `summary.json` and only supported module files under `build/public-input/`. Use the [shared packager and schemas](/docs/reporting/platform.md#package-a-producer-report) from an approved pinned site-tool revision. The metadata uses actual target/revision/tree, method/generation, tools, run/attempt, workflow blob and separate measurement/publication times.
+
+Upload the exact resulting `build/public-report/` files as the policy's declared artifact. On PRs it is evidence only; it does not advance public latest or the durable timeline. The website does not run the game compiler, rebuild the binary or execute downloaded scripts.
+
+Register common required steps only when they succeed on every published lane. Put full-build steps in `lanes.full` and proof-authentication steps in `lanes.reused`. Exactly one lane must succeed. Proof selection is a decision step, not a mandatory success on an audit that deliberately skips it. Approve the actual workflow Git blob after inspecting the adopted YAML; editing a trusted workflow requires a reviewed policy update.
+
+## Optional acceleration
+
+Follow [Cache & proof](/wiki/cache-and-proof/) for key construction, shadow dependencies, main-only saves, fresh disagreement audits, bootstrap and complete-tree reuse. Keep acceleration disabled while establishing correctness. Then test inventory reuse, build caches and publication reuse separately.
+
+A warm-cache PR may be faster but causes a fresh main rebuild under this trust model. A cold zero-reuse PR can be slower but give main a reusable proof. Quote observed hosted timings with run/attempt and hit counts; do not inherit another project's duration as a promise.
+
+## History and publication
+
+1. Restore previously accepted history from authenticated storage. A fetch/parse failure must not silently create empty history.
+2. Authenticate full or reused execution, including original artifact where required.
+3. Validate report schemas, arithmetic, extents, enabled attribution and continuity. Keep original measurement time separate from publication and latest repository commit times.
+4. Upload immutable public report artifacts only after applicable checks pass.
+5. The shared site authenticates/imports the selected package, installs immutable snapshots and atomically advances only that project's pointer after ancestry checks.
+6. Preserve accepted packages in durable site storage before deploying the exact static candidate.
+
+Temporary Actions artifacts are not a durable timeline. An identical rerun is a no-op; conflicting bytes for an existing immutable identity fail. Retain historical policies/schemas when changing producers. Use a new method/generation for a justified measurement change without rewriting old rows.
+
+The current shared site attempts each registered refresh, retains a failed project's last-good data, and blocks deployment if any refresh fails. Successful candidate imports do not imply that a mixed/failing candidate was deployed. A project-owned history archive is optional when durable site storage fulfills the requirement; do not require every project to create another data branch.
+
+## Clearance and private access
+
+When the project adopts review clearance, evaluate it using trusted base/default-branch logic without checking out or running contribution code. Validate current head, distinct actual review comments, verdict format, owner identity, draft/stale/withdrawn cases. The status cannot establish reviewer independence or reasoning quality by itself.
+
+Keep build secrets and private originals out of metadata-only clearance and site jobs. Do not combine privileged `pull_request_target`/follow-up execution with untrusted code checkout. Pin external Actions to reviewed full commit SHAs and the build environment to an approved digest. See [GitHub secure workflow guidance](https://docs.github.com/en/actions/reference/security/secure-use).
+
+The owner adopts required checks and bypass/merge controls after real success, failure and stale cases are observed. A workflow file or starter policy is not enforcement. Projects choosing another review model document and test the corresponding gate instead.
+
+## Acceptance and failure cases
+
+Demonstrate a real passing fresh candidate and main report first. Exercise wrong input hash, stale source/header receipt, overlap/extent errors, missing export, corrupt history, uncredited exact function when tracking, stale clearance and stale/diverged publication. Optional acceleration has its own failure matrix in the next chapter.
+
+The website side must reject unapproved workflow blobs, wrong run attempts, missing lane steps, artifact digest mismatch and malformed payloads while preserving all accepted projects. Verify direct routes, selected manifest identity, and the next successful refresh. A schema-valid fixture or local preview is not evidence of live integration.
+
+For a UI rollback, revert reviewed site source while retaining current accepted measurement history. For a producer failure, fix the failing layer; do not weaken checks, reset history or change private dependency access to get green.
+
+
+---
+
+# Cache & proof
+
+Optional acceleration after fresh validation and publication work correctly.
+
+## Three mechanisms, three meanings
+
+| Mechanism | Reuses | What still runs |
+| --- | --- | --- |
+| Inventory cache | Target inventory/analysis metadata | Identity, input and metadata integrity checks; fresh build/measurement unless separate proof covers them |
+| Compile/measurement cache | Exact-input objects and comparison results | Dependency validation, complete target verification and report reconciliation |
+| Publication proof | A successful integrated build's public report package | Upstream execution/artifact authentication, complete landed-tree check, attribution when enabled and history validation |
+
+An Actions cache is disposable acceleration. An authenticated artifact is execution evidence. The site's durable report store preserves accepted history. None substitutes for the others.
+
+## Adoption sequence
+
+First run fresh input checks, build, comparisons, tests, export and main publication successfully. Test their failure paths. Then enable inventory reuse, audited build caches and publication reuse separately, testing each boundary before enabling the next. They are optional; a project can remain on fresh validation indefinitely.
+
+Use trusted main runs as the only writers of shared compiler/measurement results. PRs restore and validate entries but never save them. A full main build uses audit mode: compile and measure fresh; compare every still-valid cached entry with the fresh result; fail on disagreement; replace the local cache with fresh results before saving. A missing or invalidated key is a fresh computation, not a failed audit.
+
+Branches may be able to read main caches. Do not assume caches can safely contain credentials or restricted originals. Objects may also contain recoverable target bytes: the owner must approve what cache storage and access permit. Keep such files out of public report artifacts and website Git. See GitHub's [cache access and retention rules](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching).
+
+## Inventory keys
+
+Bind inventory metadata to target hash, approved environment, analysis tool identity, inventory configuration and geometry/data extents that influence discovery. Store an internal receipt with those inputs and the metadata digest. A restore prefix can locate a candidate, but cannot validate it.
+
+If internal identity or integrity fails, delete the restored inventory and regenerate. A broad tools-directory key is conservative and may invalidate inventory after unrelated tooling edits; document that cost. Narrow keys only when dependencies are established and failure-tested.
+
+## Compile keys and invalidation
+
+Bind a compiled object to:
+
+- Source bytes, compiler/linker-driver identities, compiler profile/flags and comparison-build selection.
+- Include search order, compile directory and generated compiler inputs.
+- Every dependency actually read by the compiler, with content hashes.
+- Relevant symlinks and files that can shadow an include, including case-insensitive name collisions where applicable.
+
+Do not derive dependency coverage from the source file alone. If reliable dependency discovery is unavailable, disable object reuse or include a conservative full dependency universe. A same-named newly added header can change resolution even though the old header did not change.
+
+In use mode, restore only a valid object and its dependency receipt. In audit mode, rebuild and compare object bytes and the declared reproducibility outputs for the same valid key. A disagreement fails the run; do not silently accept the cached or fresh version as a repair.
+
+## Measurement keys and invalidation
+
+Bind the result to compared object bytes, configured placement/full function extents, resolved referenced-symbol addresses, overlapping accepted source, relevant data slices, target identity and measurement tools/methodology. Restore referenced linked comparison outputs too, then run the same extent/arithmetic/integrity checks used for fresh results.
+
+Changing a declaration can invalidate compilation; changing a symbol address or accepted placement can invalidate measurement without changing the comparison object's bytes. Retired extents must not remain in the exported inventory. Record compile and measurement hit/miss/audit counts separately.
+
+## Save and bootstrap rules
+
+Save build caches only after successful full main validation, on a main push or an explicitly requested main audit dispatch. Default manual runs validate but do not write shared caches. Other branches and PRs never save. Inventory caching can have its own explicitly documented main-only save policy.
+
+Actions cache entries use immutable keys. Use a save identity including target/environment compatibility, source revision and run/attempt so a later explicit audit can save a new entry even on the same source revision. Restore by a compatible prefix and validate each internal key. A key match is not a proof of trusted origin or input equality.
+
+A cold PR can produce a publishable fresh proof. Main may reuse it and skip the full build, so no compiler cache gets seeded. Provide an explicit main audit input to bypass proof selection and force fresh validation/cache save:
+
+```sh
+gh workflow run validate.yml --ref main -f audit_build_cache=true
+```
+
+This is the starter workflow's filename/input. An adopted project documents its actual equivalent. A rerun of a failed seed needs a new save identity, not deletion of a valid shared entry to force an overwrite.
+
+## Publication eligibility
+
+For this cache model, a PR that reused any compiled object or measurement may pass validation but cannot upload a reusable full-build proof. Sum reuse counts from all applicable cache layers; missing or malformed enabled-cache statistics must fail eligibility. Zero reuse means computation was fresh, not that no cache was restored.
+
+A zero-reuse PR retains host receipt verification and may upload a full report-v1 package. A cached PR can omit a redundant host live-receipt re-export only after tests establish the primary export already checks those receipts; keep host unit tests and all semantic checks. Main full validation retains that re-export.
+
+Main attempts proof selection unless an explicit audit was requested. Missing, expired or incompatible proof selects full validation. Invalid attribution or history discovered during promotion blocks publication; it must not be bypassed by resetting history or relabeling the result full.
+
+## Authenticate the original proof
+
+Before selecting reuse, verify these independently of downloaded JSON claims:
+
+1. Same registered repository; successful permitted event/workflow/run/attempt and expected validation job/steps.
+2. Approved workflow Git blob and tool/environment identities. On PRs, distinguish the API's head SHA from the actual tested merge commit and its parents.
+3. Artifact name, originating run, attempt time window, size, digest and bounded safe archive contents.
+4. Exact target, complete source tree, method/generation and input/output checksums. The tested integrated tree must equal the landed tree.
+5. A successful full lane, zero reused results under the approved producing workflow, and unchanged measured summary/map/credits.
+
+Never combine several PR reports into proof of a combined build. A changed tree requires fresh integrated validation. See [PR event identities](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request) and the [implemented platform receipt contract](/docs/reporting/platform.md#execution-policy-and-reuse).
+
+## Promote without claiming a rebuild
+
+Retain the original revision, tree, run/attempt, artifact digest and measurement time in the reused receipt. Record the landed revision and publication time separately. Recheck enabled attribution against landed history, restore previously accepted history, and append the current publication. Candidate-only PR history must not become a fake landed milestone.
+
+The common importer supports reuse of an original full report-v1 package. A private custom proof layout must first be adapted to that contract; uploading arbitrary JSON with a real run ID is insufficient. Keep historical policies readable when approving a new producer workflow.
+
+## Required experiments before enabling acceleration
+
+| Experiment | Expected result |
+| --- | --- |
+| Cold then warm PR on identical inputs | Equal measured outputs, excluding explicitly volatile timestamps; observed hit counts and durations |
+| Source/header/profile change | Only valid dependencies reuse; affected objects rebuild |
+| New shadowing header or changed symlink | Relevant object key invalidates |
+| Symbol address, placement, data or target change | Affected measurements invalidate |
+| Deliberately altered valid cached object/result | Main audit fails on disagreement |
+| Cached PR | Green if valid, but no reusable proof artifact |
+| Fresh PR, identical landed tree | Main authenticates reuse, with original measurement time |
+| Missing proof or changed tree | Main performs full validation |
+| Explicit audit on main | Selection skipped, full fresh path and permitted save |
+| Default/branch dispatch | No shared build-cache save |
+| Expired evidence or corrupt prior history | No unauthenticated new import or silent history reset |
+
+Measure hosted cold/warm timings after seeding. Local speed, a projected duration or a fixture's log line is not evidence of hosted cache reuse. Do not repeat expensive checks merely to decorate a handoff; rerun when inputs, failures or coverage gaps justify it.
 
 
 ---
@@ -502,6 +791,14 @@ Explicit joint credit is allowed: each person receives that function once. Perso
 Open the authorized draft PR to obtain its real number; never guess a future PR number. Record its actual original/integration references and validate the complete ledger against the candidate exact inventory. For a batch, use the actual batch PR as integration metadata while preserving original authorship.
 
 Validate the introduced source blob in reachable landed history. If squash merging is supported, check the actual landed or predicted squash tree against the PR base. Pinned original commits must be accessible; missing provenance is a validation gap, not a reason to attribute the function to the integrator.
+
+## Put checks in both CI phases
+
+Run a cheap ledger-only preflight before compiling: validate identities, duplicate entries, source paths, referenced commits/blobs and reachable attribution on the candidate and predicted squash history. Batch Git fetches/object queries where equivalent results have been established; an optimization must preserve errors and evidence requirements.
+
+After measurement, build the complete exact-function inventory and reconcile it against the ledger. Include eligible exact unlinked comparisons and require complete function extents. This catches newly exact functions that were unknowable to a ledger-only check. Compare candidate and predicted-squash contributor results, then recheck actual landed history during reused publication. Reusing a build does not skip landed attribution validation.
+
+Tracking-disabled projects omit these ledger stages under their explicit policy and publish no contributor payload. They can still build, compare, keep a timeline and integrate with the common site. Never infer tracking requirements from whether contribution links or rankings are shown.
 
 ## Recovering past credit
 
@@ -620,6 +917,8 @@ Unsupported data remains unavailable. Valid zero stays zero. If a supported expo
 
 Do not upload original binaries, object code, complete debug exports, credentials or private experiment files. Retain the existing decomp.dev feed where used; compare fields supported by that format against the same raw measurements.
 
+The downloadable workflow maps its operations onto the canonical report-v1 inputs, not a particular game's old export format. Implement the mapping to `summary.json` and supported `map.json`, `timeline.json`, `contributors.json`; then use the shared packager from an approved pinned tools revision. The starter's `CI.md` lists metadata fields, step policy and full/reused artifact requirements. No separate website importer is needed for a conforming report-v1 producer.
+
 ## Consumer template
 
 1. Register a trusted producer policy and an adapter for the export format.
@@ -647,6 +946,8 @@ uv run --locked python tools/build_site.py --output build/new-candidate
 ```
 
 ## Integration acceptance
+
+A workflow change is also a consumer trust change. Approve its actual Git blob after reviewing the code, update full/reused step requirements together, and test deliberate audit-step skips. Preserve archived policies and immutable history. A green upstream run must not automatically expand the receiver's trust.
 
 | Area | Required evidence |
 | --- | --- |
@@ -683,6 +984,12 @@ Diagnose the failing layer before changing source, configuration or publication.
 | Older progress replaces newer | Run ordering, ancestry and latest-pointer promotion | Sorting publication by completion time |
 | Site mixes old and new styling | Asset versions, deployment artifact and browser cache | Assuming a correct local page proves production |
 | Missing contributors | Declared tracking policy, exact inventory and preserved provenance | Assigning everything to the merger |
+| New CI works but site refresh rejects it | Approved workflow Git blob, common/selected lane steps and actual run attempt | Automatically trusting changed workflow code |
+| Audit run fails the site's step check | Selection may be intentionally skipped; full lane must still prove fresh validation | Requiring proof selection on all lanes or dropping full-build checks |
+| Warm PR has no reusable artifact | Actual compile/measurement reuse counters and the zero-reuse publication rule | Relabeling cached work as fresh proof |
+| Cache never appears after cold PR/main | Main may reuse proof and skip cache production; run the explicit main audit | Letting PRs save trusted shared caches |
+| Main cache audit disagrees | Nondeterminism, incomplete keys or changed dependency resolution | Ignoring the disagreement or silently choosing one result |
+| Repeated audit cannot save a refreshed cache | Immutable Actions save key; include run/attempt in build-cache identity | Deleting unrelated valid caches or assuming save overwrote them |
 
 ## Investigate with a bounded record
 
@@ -702,6 +1009,8 @@ When a command, report format or owner workflow changes, update its project docu
 
 A new agent should finish each handoff with changed files, evidence, checked revision/results, unresolved findings and review/publication state. “Implemented,” “reviewed,” “CI passed,” “owner cleared,” “merged” and “live” are different states.
 
+The handbook stores reusable contracts and decisions, not game-specific run IDs, workflow blobs, timing claims or migration diaries. Record those facts in the adopting project's PR/configuration. When changing CI, review both the producer and the site's approved policy/lane requirements; keep old policies readable for retained reports. Verify an explicit audit and a normal/reused publication before declaring a workflow transition complete.
+
 
 ---
 
@@ -711,9 +1020,20 @@ Repository scaffolding and an agent prompt for applying this handbook.
 
 ## Files
 
-Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It contains README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, an integration checklist and an agent prompt.
+Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It contains README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, integration checklist and agent prompt, plus:
 
-Fill visible placeholders from verified project facts. The files define responsibilities and conventions; the project supplies its own compiler, build system, evidence formats, CI commands and report adapter. Existing repositories keep their established paths where those responsibilities are already implemented.
+| File | Use |
+| --- | --- |
+| `config/ci.example.json` | Verified project facts, adopted policy, command mapping and acceleration switches |
+| `.github/workflows/validate.yml.template` | Editable fresh-validation workflow with optional cache/proof lanes; no deployment authority |
+| `.github/workflows/review.yml.template` | Optional metadata-only clearance verifier for the default review policy |
+| `CI.md` | Exact adapter operations, GitHub outputs, state/paths, packaging and producer-step policy |
+| `reporting/platform.md` and `contract-v1.md` | Implemented shared interface, command usage and metric definitions |
+| `reporting/schema/` and `reporting/examples/` | Generic public schemas and unregistered configuration/report examples |
+
+Fill visible placeholders from verified project facts. The project supplies its own compiler, build/comparison engines and internal evidence formats. Implement `tools/project_ci.py` as the documented thin adapter to those real tools; the kit does not include a fake success-producing adapter. Existing repositories keep established paths where those responsibilities are implemented.
+
+Adopt project review/merge policy explicitly; independent accuracy/hostile review and owner-only merging are the default, not a site-imposed rule. Attribution is a separate choice. Leave caching and proof reuse disabled until fresh validation works, then enable/test requested mechanisms independently. Rename a workflow `.template` only after its adapter and configuration are ready.
 
 ## Prompt for an agent
 
@@ -727,6 +1047,12 @@ Use a dedicated branch and checkout/worktree.
 Record the actual target/hash, approved toolchain, build commands, source
 objective, current validation and supported report capabilities. Adapt the
 handbook's responsibilities to this project's established structure.
+
+Read the starter's CI.md and map its exact operations to real project tools.
+Adopt review/merge policy explicitly, using independent accuracy/hostile and
+owner-only merges as the default. Implement fresh validation first. Caches
+and publication reuse are optional later optimizations, with their own
+invalidation, main-audit, zero-reuse proof and bootstrap acceptance tests.
 
 Implement missing pieces needed for a reproducible build, honest exact/fuzzy
 measurements, versioned public reports, preserved history and site integration.
@@ -753,6 +1079,7 @@ before declaring the site integration complete.
 | Comparisons | Full extents, profiles, dependencies and exact/fuzzy measurements |
 | Review | Scope-appropriate independent coverage, actual revision and resolved findings |
 | CI | Documented command mapping; real passing/failing/stale cases; appropriately scoped permissions |
+| Optional acceleration | Off until fresh correctness; actual cold/warm parity, dependency invalidation, main audit and complete-tree proof evidence before enabling |
 | Credits | Explicit policy, with evidence reconciliation when enabled |
 | Reports | Validated shared manifest, raw parity, supported modules and execution proof |
 | History | Durable continuity, idempotence, ordering and recovery |

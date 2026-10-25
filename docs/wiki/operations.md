@@ -17,6 +17,12 @@ Diagnose the failing layer before changing source, configuration or publication.
 | Older progress replaces newer | Run ordering, ancestry and latest-pointer promotion | Sorting publication by completion time |
 | Site mixes old and new styling | Asset versions, deployment artifact and browser cache | Assuming a correct local page proves production |
 | Missing contributors | Declared tracking policy, exact inventory and preserved provenance | Assigning everything to the merger |
+| New CI works but site refresh rejects it | Approved workflow Git blob, common/selected lane steps and actual run attempt | Automatically trusting changed workflow code |
+| Audit run fails the site's step check | Selection may be intentionally skipped; full lane must still prove fresh validation | Requiring proof selection on all lanes or dropping full-build checks |
+| Warm PR has no reusable artifact | Actual compile/measurement reuse counters and the zero-reuse publication rule | Relabeling cached work as fresh proof |
+| Cache never appears after cold PR/main | Main may reuse proof and skip cache production; run the explicit main audit | Letting PRs save trusted shared caches |
+| Main cache audit disagrees | Nondeterminism, incomplete keys or changed dependency resolution | Ignoring the disagreement or silently choosing one result |
+| Repeated audit cannot save a refreshed cache | Immutable Actions save key; include run/attempt in build-cache identity | Deleting unrelated valid caches or assuming save overwrote them |
 
 ## Investigate with a bounded record
 
@@ -35,3 +41,5 @@ A changed owner policy needs a focused proposal and appropriate review. Do not l
 When a command, report format or owner workflow changes, update its project documentation and the relevant handbook chapter together. Link the exact implementation revision. Distinguish established behavior from proposals and examples. Keep recurring tool failures in issues; avoid permanent running diaries of agent activity in public source.
 
 A new agent should finish each handoff with changed files, evidence, checked revision/results, unresolved findings and review/publication state. “Implemented,” “reviewed,” “CI passed,” “owner cleared,” “merged” and “live” are different states.
+
+The handbook stores reusable contracts and decisions, not game-specific run IDs, workflow blobs, timing claims or migration diaries. Record those facts in the adopting project's PR/configuration. When changing CI, review both the producer and the site's approved policy/lane requirements; keep old policies readable for retained reports. Verify an explicit audit and a normal/reused publication before declaring a workflow transition complete.

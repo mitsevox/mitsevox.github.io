@@ -30,6 +30,12 @@
     "group": "Reconstruction"
   },
   {
+    "slug": "agent-workflow",
+    "title": "Agent workflow",
+    "summary": "Scope, evidence, isolated author work, independent review and final-revision delivery.",
+    "group": "Delivery"
+  },
+  {
     "slug": "review-and-approval",
     "title": "Review & approval",
     "summary": "Independent evidence, exact revisions and an owner-controlled merge decision.",
@@ -39,6 +45,12 @@
     "slug": "ci-and-publication",
     "title": "CI & publication",
     "summary": "Validate once, preserve the evidence and publish only a coherent verified result.",
+    "group": "Delivery"
+  },
+  {
+    "slug": "cache-and-proof",
+    "title": "Cache & proof",
+    "summary": "Optional input-keyed caches, fresh main audits and authenticated publication reuse.",
     "group": "Delivery"
   },
   {

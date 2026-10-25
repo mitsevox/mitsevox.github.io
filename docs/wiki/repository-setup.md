@@ -21,6 +21,21 @@ Compare the result with a verified target identity before using it. This identif
 
 ## Bootstrap the repository
 
+Before adopting the starter, have the owner settle the following decisions and record them in README/CONTRIBUTING and `config/ci.json`:
+
+| Decision | Starter default | Must be supplied or confirmed |
+| --- | --- | --- |
+| Target/objective | Faithful matching, one explicit target | Console, executable format, region/revision, hashes, measurement universe and any different objective |
+| Tools/runtime | Pinned approved environment | Actual digest/hash, supported hosts, tools/profiles and reference access |
+| Author workflow | Isolated branch/worktree and bounded active scope | Branch convention, reservations, dependencies and push/PR authority |
+| Review/merge | Independent accuracy and hostile review; owner-only merge | Adopting owner and any explicit alternative policy |
+| Attribution | Explicit decision required | Track or do not track; exact inventory/joint-credit rules if enabled |
+| Acceleration | All caches and proof reuse disabled | Enable each only after fresh correctness and failure tests |
+| Site capabilities | Honest supported data only | Map, counts, timeline, rankings and independent contribution acceptance |
+| Publication | Validated main reports through shared site | Artifact retention, trusted workflow/tool identities and durable history source |
+
+No project names, compiler family or console-specific directory conventions are inherited from another repository. The templates describe responsibilities; the adopted configuration records facts.
+
 Start with README, CONTRIBUTING, AGENTS, .gitignore, target configuration and a bounded build plan. Select and document licensing/provenance appropriate to your own tooling and imported sources; do not blanket-relicense imported code. The [starter files](/wiki/starter-kit/) provide editable scaffolding, not a build system.
 
 Initialize an empty local repository without publishing it:
