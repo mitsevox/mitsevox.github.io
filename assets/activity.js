@@ -88,7 +88,10 @@ export function mountActivity(root, project) {
   if (timeline) listen(chart, 'pointerleave',()=>{if(rows.length){index=rows.length-1;draw();}});
   const ready = fetchActivity(project,signal).then(data=>{
     if(signal.aborted)return;
-    validate(data);if(timeline){rows=data.snapshots;index=rows.length-1;first=Date.parse(rows[0].built_at);last=Date.parse(rows[index].built_at);if(last===first)last=first+1;
+    validate(data);if(timeline){
+    const completed=data.snapshots.findIndex(row=>fields.every(kind=>row[kind].linked===row[kind].total));
+    rows=completed<0?data.snapshots:data.snapshots.slice(0,completed+1);
+    index=rows.length-1;first=Date.parse(rows[0].built_at);last=Date.parse(rows[index].built_at);if(last===first)last=first+1;
     ceiling=Math.min(100,Math.max(5,Math.ceil(Math.max(...rows.flatMap(row=>fields.map(kind=>percent(row,kind))))/5)*5));
     if (timeline) { scrub.max=rows.length-1;root.querySelector('.history-ceiling').textContent=ceiling+'%';
     const ticks=[first,(first+last)/2,last],format=last-first<3*86400000?fullDate:shortDate;
