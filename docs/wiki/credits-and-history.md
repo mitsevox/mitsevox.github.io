@@ -12,9 +12,9 @@ Choose attribution policy deliberately, and preserve the meaning of every histor
 
 A game can publish progress without function attribution. Turning rankings off does not inherently turn tracking off. Changing tracking policy is an explicit repository decision; hiding a UI section must not silently delete evidence already recorded.
 
-NFL requires exact-function attribution today. MVP, Tiger Woods and future projects do not acquire that requirement merely by joining the site. If tracking is disabled, mark the contributor capability unavailable and keep rankings off; enabling accurate rankings later may require reconstruction that is not fully possible.
+Choose the tracking policy when the repository is established; site integration does not impose function-level attribution. If tracking is disabled, mark the contributor capability unavailable and keep rankings off; enabling accurate rankings later may require reconstruction that is not fully possible.
 
-## NFL's credit model
+## Function-credit model
 
 Credit follows the original source contributor, not the person who merges or batches the PR. Store stable function extents, original contribution references, original revision/source blob and integration provenance as required by the ledger. Retain the original identity when imports are corrected or squash-merged.
 
@@ -26,7 +26,7 @@ Explicit joint credit is allowed: each person receives that function once. Perso
 
 Open the authorized draft PR to obtain its real number; never guess a future PR number. Record its actual original/integration references and validate the complete ledger against the candidate exact inventory. For a batch, use the actual batch PR as integration metadata while preserving original authorship.
 
-NFL validates the introduced source blob in reachable landed history, including a synthetic squash against the actual PR base. Pinned original commits must be accessible; missing provenance is a validation gap, not a reason to attribute the function to the integrator.
+Validate the introduced source blob in reachable landed history. If squash merging is supported, check the actual landed or predicted squash tree against the PR base. Pinned original commits must be accessible; missing provenance is a validation gap, not a reason to attribute the function to the integrator.
 
 ## Recovering past credit
 
@@ -40,4 +40,4 @@ Keep full commit identity, target, methodology, raw totals/denominators and evid
 
 Restore prior verified history; do not use an unauthenticated live page as automatic recovery evidence. An intentional checkpoint recovery needs a documented audit. Latest repository commit metadata is separate from the latest measured build, even when the header displays both near each other.
 
-See [NFL timeline and contributor rules](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md#timeline-and-contributor-credits) and [history recovery](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md#history-recovery).
+Document the selected credit policy, ledger schema and recovery procedure in the repository. Publish contributor data only when that policy can be validated.

@@ -1,54 +1,56 @@
 # Build & validation
 
-Separate a working baseline, reconstructed source and independent comparison measurements.
+Define reproducible stages with explicit inputs, outputs and failure conditions.
 
-## Three different results
+## Validation stages
 
-| Result | Establishes | Does not establish |
+| Stage | Required result | Recorded evidence |
 | --- | --- | --- |
-| Original-object relink | Target extraction, placement and relink can reproduce the executable | Recovered source, original compiler identity or progress |
-| Accepted-source build | Selected source replaces its accepted ranges and complete output still matches | Exactness of every original file boundary |
-| Independent comparison | Full registered functions/data have measured exact or fuzzy similarity | Permission to replace their original linked bytes |
+| Input verification | Authorized executable and required references match declared hashes | Target/hash and input inventory |
+| Original-byte baseline | Extraction, placement and relink reproduce the complete target where applicable | Tool identities, geometry and complete-output comparison |
+| Accepted-source build | Accepted source replaces its declared ranges while the complete build satisfies the project's objective | Source/configuration tree, placement and build receipt |
+| Independent comparisons | Registered functions/data receive full-extent exact and fuzzy measurements | Extents, dependencies, method and comparison receipt |
+| Public export | Summaries and supported modules derive from those same measurements | Manifest, checksums and semantic-validation result |
 
-A new project must implement and document these distinctions for its executable format. NFL's DOL section layout and tool profiles cannot simply be copied to another target.
+Implement applicable stages for the target's executable format. Document any stage that cannot be supported and its effect on the claims the project can make.
 
-## NFL command reference
+## Command contract
 
-These commands are executable entry points in NFL Street 2, not commands available in an empty repository. Follow its README host/setup requirements first.
+The README must give a concrete command for each implemented stage. Keep local and CI commands aligned. Names may follow the repository's existing tools; the responsibilities remain consistent.
 
-```sh
-python3 tools/setup_compiler.py
-python3 tools/baseline.py --original /path/to/main.dol
-python3 tools/source_build.py --original /path/to/main.dol
-python3 tools/analyze.py --original /path/to/main.dol
-python3 tools/matching.py --original /path/to/main.dol
-python3 -m unittest discover -s tests -v
-```
+| README entry | Inputs | Expected output |
+| --- | --- | --- |
+| Setup | Approved tool versions and hashes | Usable pinned tools |
+| Baseline | Verified original input and target configuration | Complete baseline comparison and receipt |
+| Build | Accepted source, headers and placement/profile configuration | Reproducible target output and receipt |
+| Compare | Registered source, full target extents and approved profiles | Exact/fuzzy comparison report |
+| Validate | Evidence, configuration, reports and dependencies | Nonzero exit on invalid or stale inputs |
+| Export | Validated measured report and prior history | Public package conforming to the site contract |
 
-NFL additionally validates its SN-linker original-object relink. Run relevant focused checks during iteration and the required final checks before submission; do not repeatedly run the entire suite when nothing affecting it changed.
+The template intentionally does not assume a compiler, executable format or build system. Adapt these entries to the tools already used by the project; do not add duplicate build paths solely to rename commands.
 
-## Establish the new project's baseline
+## Target and tool identity
 
-Record executable identity, section sizes/addresses, entry point and target hash. Verify the complete reconstructed executable against the original, not only selected functions or a summary score. Document all placement, alignment, small-data and relocation handling. Keep unassigned bytes represented.
+Record executable hash, section sizes/addresses, entry point and measurement universe. Preserve unassigned ranges. Document placement, alignment, small-data and relocation rules where applicable.
 
-Pin the usable compiler, linker, wrappers and conversion tools with hashes. Record unit/library compiler-profile evidence separately. A successful diagnostic compile can establish compatibility without uniquely identifying the original compiler version.
+Pin usable compilers, linkers, wrappers and comparison tools by version and hash. Record evidence for unit/library profiles separately. A successful diagnostic compile establishes compatibility under those conditions; it does not uniquely identify the original compiler.
 
-## Register partial comparisons
+## Partial reconstruction
 
-Define source path, profile, full target extents, code/data placement and dependencies. Reject overlaps, missing functions, unresolved references and stale receipts. Compare compiler-produced bodies without truncating mismatches. Weight fuzzy similarity by the target extent, not the size of an expanded draft.
+Keep useful incomplete bodies in normal source files. Register source path, full target extent, profile and dependencies separately. Compare the complete produced body; do not truncate a mismatch or adjust boundaries to improve a score.
 
-Use normal source files for partial work. Where accepted and draft code coexist, a documented comparison guard can select draft bodies for measurement while preserving the accepted build. Keep original bytes linked until promotion; partial mismatch alone is not a reason to reject a well-supported reconstruction.
+When accepted and draft code coexist, use a documented comparison configuration or guard. Preserve original linked bytes until replacement is validated. Fuzzy coverage describes measured similarity and does not grant exact-function credit.
 
 ## Promotion
 
-After review and validation, change the accepted source-placement configuration, remove obsolete guards/registrations and verify the entire executable. Do not move a function into a different source tree merely because it became exact. Preserve its attribution if tracking is enabled, and avoid counting a linked range again through a comparison entry.
+After review and validation, update accepted placement, remove obsolete comparison selection and verify the complete output. Keep source paths and original attribution stable. Prevent accepted ranges from being counted again through independent comparisons.
 
-Uninitialized storage has no speculative fuzzy byte score. Validate its layout and the project's stated accounting rules. Code/data classification follows the declared target measurement universe, including documented data embedded in executable sections; do not silently change denominators for the chart.
+Exact function status requires the complete declared extent to match. Exact file status additionally requires original boundary evidence and exact constituent content. A descriptive filename can count as named while its boundaries remain provisional.
 
-## Bind results to inputs
+## Receipts and stale results
 
-Reports should identify target hash, tested revision/tree, source/header hashes, unit manifest, profile, tool versions and comparison methodology. Reject a stale report after its inputs change. A successful earlier build is not proof of the current tree.
+Bind results to target hash, source revision/tree, relevant source/header/configuration hashes, tools, profiles and comparison method. Reject a receipt when any required input has changed. A build cache can accelerate work but cannot establish correctness.
 
-Validation tools need meaningful failure tests: wrong target, stale dependency, overlapping range, missing symbol, changed compiled extent, unsupported data placement and corrupt report. Do not weaken validators to accept the current patch. Record failures and unresolved questions honestly.
+Validate wrong target, missing dependency, overlapping ranges, missing symbol, changed extent, unsupported placement and corrupt report through meaningful failure cases. Test the code that decides validity rather than reproducing its implementation in assertions.
 
-See [NFL target mechanics and comparison workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md) for concrete formats, constraints and implementation details.
+Run focused checks during iteration and required final checks for the actual integrated inputs. Broaden testing when a changed dependency, failure or coverage gap justifies it.

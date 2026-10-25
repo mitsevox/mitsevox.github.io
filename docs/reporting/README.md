@@ -6,7 +6,7 @@ The approved UI lives in this repository. Each game remains responsible for its 
 
 ## Documents
 
-- [New-game integration handoff](onboarding.md): two-repository assignment, current NFL-specific extension points, producer data, optional modules, commands, coordination and acceptance checks.
+- [New-game integration handoff](onboarding.md): reusable repository/CI structure, public contract, optional modules and acceptance checks.
 
 - [NFL integration](nflstreet2.md): implemented commands, trust boundary, package format, module controls and rollout limits.
 
@@ -38,4 +38,4 @@ flowchart LR
 
 Future producer-store option: a data-only `progress-data` branch in each game repository, containing immutable snapshot packages and a latest-good pointer. Preserve existing archives during migration. The site fetches pinned packages during its build; visitors use the site's static files, not authenticated GitHub APIs. Start with manual/scheduled ingestion. Cross-repository dispatch is optional later and needs an explicitly scoped credential decision.
 
-The frontend and wiki live in `mitsevox/mitsevox.github.io`. Its `report-data` branch preserves authenticated packages independently of expiring Actions artifacts. Current-main workflows publish the verified NFL portfolio to Pages. The [integration handoff](onboarding.md) defines the implementation assignment for the other games. Its commands and current-code references are checked against the working NFL path; each new adapter still needs its own real parity, failure and live-refresh acceptance evidence.
+The frontend and wiki live in `mitsevox/mitsevox.github.io`. Its `report-data` branch preserves authenticated packages independently of expiring Actions artifacts. Current-main workflows publish the verified NFL portfolio to Pages. The [project integration template](onboarding.md) defines the reusable structure. Each producer supplies its own implementation and verifies parity, failure behavior and live refresh.

@@ -16,7 +16,7 @@ Leave unknowns unresolved; do not check items without evidence.
 - [ ] Supported report capabilities and durable history verified.
 - [ ] Read INTEGRATION.md and INTEGRATION-PROMPT.md; game and website ownership/branches assigned.
 - [ ] Capability matrix recorded; contribution acceptance, tracking and rankings selected independently.
-- [ ] Required common website extensions implemented without losing NFL history/data.
+- [ ] Site adapter validates the public report contract and preserves all existing projects’ data.
 - [ ] Website adapter implemented; raw report parity checked and production fixtures rejected.
 - [ ] Optional data truly optional, including a timeline without a contributor payload.
 - [ ] Multi-project restore/publication and failure isolation exercised.

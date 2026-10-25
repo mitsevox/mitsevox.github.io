@@ -1,49 +1,48 @@
 # Start here
 
-From an empty repository to a measured, reviewable decompilation project.
+A reusable structure for a decompilation repository, its CI and its place on the shared site.
 
-This handbook carries forward the practices behind NFL Street 2: reproducible builds, evidence-backed reconstruction, useful partial source, independent reviews and honest reporting. Use it with a new project and a fresh agent, then record the choices in that project's own repository.
+Use this handbook to establish a new project or align an existing one. It defines repository responsibilities, naming conventions, evidence standards, validation stages, review records and the public report contract. Each project supplies its own target facts, tools and build commands.
 
-## Choose the right starting point
+## Follow the template
 
-- **Starting a game:** follow [Repository setup](/wiki/repository-setup/) and [Layout & naming](/wiki/layout-and-naming/), then establish a [verified baseline](/wiki/build-and-validation/).
-- **Starting a task:** read the project's README, CONTRIBUTING and AGENTS files, claim a bounded scope, and use a separate worktree.
-- **Preparing a PR:** follow [Review & approval](/wiki/review-and-approval/). Passing CI and reviewer approval are separate from permission to merge.
-- **Connecting a project:** read [Website](/wiki/website-integration/). NFL is publicly integrated. Give a new game agent both checkouts and the [integration handoff](/docs/reporting/onboarding.md); it specifies the producer, common website extensions, adapter and acceptance evidence.
-- **Handing off to an agent:** use [Starter kit](/wiki/starter-kit/) for repository templates and an agent handoff prompt.
+1. [Repository setup](/wiki/repository-setup/): identify the owner, target, approved inputs and supported environment.
+2. [Layout & naming](/wiki/layout-and-naming/): organize source, declarations, evidence, configuration and generated output.
+3. [Evidence](/wiki/evidence-and-reconstruction/): reconstruct from reproducible observations and preserve uncertainty.
+4. [Build & validation](/wiki/build-and-validation/): distinguish baseline, accepted-source build and partial comparisons.
+5. [Review & approval](/wiki/review-and-approval/): bind review and clearance to the actual revision.
+6. [CI & publication](/wiki/ci-and-publication/): validate candidates, authenticate main results and publish coherent reports.
+7. [Credits & history](/wiki/credits-and-history/): select attribution policy and preserve measured history.
+8. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
+9. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
+
+An existing project can keep its working structure and commands. Map these responsibilities onto it instead of reorganizing source just to match a diagram.
 
 ## What belongs where
 
 | Location | Responsibility |
 | --- | --- |
-| Game repository | Source, evidence, target configuration, build tools, validation, comparison reports and history |
-| Private local research / approved build environment | Original binaries, complete debug exports, analysis databases and discarded experiments |
-| Shared website repository | UI, artwork, project configuration, report contracts and static-site assembly |
-| PR and issue records | Task ownership, reviews, findings, tested revisions and the owner's decision |
+| Game repository | Source, declarations, evidence, target configuration, build/comparison tools and report exports |
+| Approved private inputs | Original executables, restricted tools, complete debug exports and private research |
+| Shared website repository | UI, artwork, project registration, report adapters/validators, durable public reports and site deployment |
+| PR and issue records | Task scope, reviews, tested revisions, findings and owner decisions |
 
-A new game normally needs one source repository and access to this shared website. An additional private tooling repository is only needed when its build inputs require that arrangement; it is not a mandatory extra repository for every game.
+The game produces measurements. The website validates and presents them through the shared design. Visitors need neither private game inputs nor GitHub credentials.
 
-## The first-project sequence
+## Establish the project facts
 
-1. Identify owner, repository slug, platform, region, revision, executable and verified hash.
-2. Inventory authorized evidence before reconstructing anything. Record what was actually inspected and what remains unavailable.
-3. Establish a reproducible original-byte baseline, then an accepted-source build that validates the complete output.
-4. Document compiler profiles, comparison rules, evidence format and project-specific commands.
-5. Put review rules and owner authority in CONTRIBUTING and concise agent instructions in AGENTS.
-6. Add CI that enforces those rules on the actual tested revision. Test its failure paths before making checks required.
-7. Recover a bounded unit with provenance; retain measured partial source where appropriate.
-8. Connect verified reports to the site when the reporting adapter is available. Never substitute layout fixtures for measurements.
+Record the platform, region/revision, executable hash, source objective, approved build tools, supported hosts and exact local commands in README.md. Put contribution and matching-integrity rules in CONTRIBUTING.md, concise agent instructions in AGENTS.md, and evidence/configuration formats next to their tools.
 
-## Defaults, not assumptions
+A faithful matching reconstruction and a nonmatching port have different validation objectives. Declare which one the project promises and label its reports accordingly. Compiler equivalence alone does not establish original names, intent or source-file boundaries.
 
-The recommended process is faithful matching reconstruction. A nonmatching port may adopt the evidence and review practices, but must define a different validation objective and label its measurements accordingly. Copying NFL's target hash, compiler flags or function counts does not establish anything about a new game.
+Attribution tracking, contributor rankings and accepting contributions are three independent choices. Progress reporting can operate without a contributor feed.
 
-Attribution tracking, contributor rankings and accepting contributions are three independent project choices. NFL requires exact-function attribution; the website itself does not require every project to adopt that policy. See [Credits & history](/wiki/credits-and-history/).
+## Use the handbook with an agent
 
-Existing repository rules govern work there. Adopting or changing those rules requires its owner's agreement. This handbook does not override them.
+Give the agent this wiki, the repository and its current instructions. For site integration, also supply the shared site's report contract and registration access. The [starter prompt](/wiki/starter-kit/#prompt-for-an-agent) specifies the work without prescribing a particular game's implementation.
 
-## Source and maintenance
+The agent fills project facts, adapts the template to established tools, implements missing checks and supplies evidence for the acceptance checklist. Unknown inputs remain explicit. A copied template is a starting structure; real successful and failing runs establish that the project works.
 
-The NFL reference is pinned to `d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211`, inspected on October 25, 2026. Links throughout the handbook identify the source policy or implementation. Check current repository instructions before applying a pinned example to live work.
+## Maintain the template
 
-Edit the Markdown under `docs/wiki/`, then run `uv run tools/build_wiki.py` in the website repository to rebuild the pages, search index, Markdown handbook and starter archive. The website serves the generated static files; it needs no documentation backend. Review handbook changes with the workflow or tooling changes they describe.
+Keep this handbook reusable. Project targets, repository names, workflow revisions, run IDs, migration plans and one-off status belong in their project's records. Update the template when a reusable convention or public contract changes, and version any incompatible reporting change.

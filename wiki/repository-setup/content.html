@@ -7,13 +7,13 @@
 <article class="wiki-article"><h1 id="repository-setup">Repository setup</h1>
 <p>Establish ownership, target identity and a safe working environment before the first reconstruction.</p>
 <h2 id="record-the-project-identity">Record the project identity</h2>
-<p>Choose a stable lowercase repository slug such as <code>nflstreet2</code>; use the same slug for its site route and reporting identity. Keep its display title separate. A second platform or revision is a separate target, not a silent replacement for the first one.</p>
+<p>Choose a stable lowercase repository slug such as <code>game-slug</code>; use the same slug for its site route and reporting identity. Keep its display title separate. A second platform or revision is a separate target, not a silent replacement for the first one.</p>
 <p>The README must identify the game, platform, region/revision, target executable hash, owner, supported host requirements, setup/build entry points and links to CONTRIBUTING and AGENTS. Use a full target hash; a filename or disc label alone is insufficient.</p>
-<p>For a GameCube DOL, an initial local hash check can be:</p>
+<p>For an original executable, an initial local hash check can be:</p>
 <pre><code class="language-sh"># macOS
-shasum -a 1 /path/to/main.dol
+shasum -a 1 /path/to/original-executable
 # Linux
-sha1sum /path/to/main.dol
+sha1sum /path/to/original-executable
 </code></pre>
 <p>Compare the result with a verified target identity before using it. This identifies the input; it does not prove source fidelity. Keep the original executable outside public Git.</p>
 <h2 id="bootstrap-the-repository">Bootstrap the repository</h2>
@@ -34,12 +34,12 @@ git status --short --branch
 </code></pre>
 <p>Use <code>codex/&lt;task&gt;</code> for agent branches by default; a project's own convention takes precedence. Do not reuse another contributor's dirty checkout. Claim the unit or shared-file scope in an issue or draft PR and identify dependency branches. An agent should receive explicit authority before pushing or opening a PR.</p>
 <h2 id="active-work-reservations">Active work reservations</h2>
-<p>NFL distinguishes backlog from active work. Before starting, check open PRs and active branches, then reserve a bounded current batch in an issue or draft PR with the functions/unit action, branch and shared-file dependencies. Do not reserve an entire subsystem or future batches.</p>
-<p>At the pinned NFL revision, a reservation expires after 48 hours without a meaningful update. Renew with pushed work, concrete findings or an explicit handoff; release paused or abandoned scope. Before taking over expired work, inspect existing branches/PRs and preserve useful partial source and credit. An old backlog claim does not own the code. A live overlap needs coordination even when two tasks touch different functions in the same header, file or compilation group.</p>
-<p>A new project should choose and document its reservation policy rather than silently inheriting this timeout. See <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md#work-coordination">NFL work coordination</a>.</p>
+<p>Distinguish backlog from active work. Before starting, check open PRs and active branches, then reserve a bounded current batch in an issue or draft PR with the functions/unit action, branch and shared-file dependencies. Do not reserve an entire subsystem or future batches.</p>
+<p>Set a documented reservation timeout, such as 48 hours without a meaningful update. Renew with pushed work, concrete findings or an explicit handoff; release paused or abandoned scope. Before taking over expired work, inspect existing branches/PRs and preserve useful partial source and credit. An old backlog claim does not own the code. A live overlap needs coordination even when two tasks touch different functions in the same header, file or compilation group.</p>
+<p>Record the chosen timeout and coordination rules in CONTRIBUTING.md so every contributor uses the same policy.</p>
 <h2 id="tool-and-reference-access">Tool and reference access</h2>
 <p>Record required tools, versions, hashes, host architecture and installation instructions. Use the owner's approved build image or tool archive. A working compiler is not proof that its version and flags match the original; those claims need unit/library evidence.</p>
-<p>NFL's current baseline supports macOS ARM64 and Linux x86-64; its macOS Wibo path requires existing Rosetta support. Those requirements are NFL examples, not universal requirements for every platform.</p>
+<p>List supported host operating systems and architectures. Document any compatibility wrappers or translation layers alongside the exact tool versions that require them.</p>
 <p>If access is missing, report exactly which input or tool is unavailable. Do not change private package permissions, rebuild supporting images or substitute a different compiler to make a patch pass. Keep credentials out of scripts, report packages and source control.</p>
 <h2 id="owner-configured-github-controls">Owner-configured GitHub controls</h2>
 <p>After the checks exist and their failing cases have been exercised, the owner configures the default branch rules: PR-based changes, the intended validation checks, review clearance, and restrictions on direct pushes, force pushes and deletion appropriate to the account. Verify who can bypass those rules; documentation alone does not enforce owner-only merging.</p>

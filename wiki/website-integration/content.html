@@ -5,24 +5,78 @@
 <details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-setup/"><span class="wiki-nav-number">02</span>Repository setup</a><a href="/wiki/layout-and-naming/"><span class="wiki-nav-number">03</span>Layout &amp; naming</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/evidence-and-reconstruction/"><span class="wiki-nav-number">04</span>Evidence</a><a href="/wiki/build-and-validation/"><span class="wiki-nav-number">05</span>Build &amp; validation</a><p class="wiki-nav-group">Delivery</p><a href="/wiki/review-and-approval/"><span class="wiki-nav-number">06</span>Review &amp; approval</a><a href="/wiki/ci-and-publication/"><span class="wiki-nav-number">07</span>CI &amp; publication</a><a href="/wiki/credits-and-history/"><span class="wiki-nav-number">08</span>Credits &amp; history</a><p class="wiki-nav-group">Integration</p><a href="/wiki/website-integration/" aria-current="page"><span class="wiki-nav-number">09</span>Website</a><a href="/wiki/operations/"><span class="wiki-nav-number">10</span>Troubleshooting &amp; upkeep</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">11</span>Starter kit</a></nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>Integration <span aria-hidden="true">/</span> 09</span><a href="/docs/wiki/website-integration.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="website">Website</h1>
-<p>Implement the game export and website adapter, validate one real package, then publish it through the shared renderer.</p>
-<h2 id="current-state">Current state</h2>
-<p>NFL Street 2 is integrated and publicly deployed. Its importer authenticates existing main CI artifacts without adding game build steps. The website preserves accepted reports on <code>report-data</code> before publishing Pages. MVP and Tiger Woods remain previews until their producer and website adapters pass the onboarding checks.</p>
-<p>The instructions below are an implementation assignment for a new agent. Configuration alone does not integrate a game: the current importer, validator and durable store explicitly support NFL. The <a href="/docs/reporting/onboarding.md">complete integration handoff</a> names every shared-code extension, payload requirement, command and acceptance result. Read it before starting either repository.</p>
-<h2 id="refresh-and-build-nfl">Refresh and build NFL</h2>
-<p>In the website repository, with Python 3.11+, uv and an authenticated GitHub CLI:</p>
-<pre><code class="language-sh">uv sync --locked
-uv run --locked python -m unittest discover -s tests -v
-uv run --locked python tools/import_nfl.py
-uv run --locked python tools/build_site.py --output build/site
-python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site
-</code></pre>
-<p>Use a new output directory for each retained candidate. The <a href="/docs/reporting/nflstreet2.md">NFL integration reference</a> documents authentication, immutable packages, failure handling and the deployed publication flow.</p>
-<h2 id="project-identity-and-artwork">Project identity and artwork</h2>
-<p>Use the same slug for repository identity, <code>/games/&lt;slug&gt;/</code> and asset names. Configure title, console, target ID/hash, repository link, cover dimensions and contribution policy. Keep region/revision explicit. A different target must not overwrite another target's report history.</p>
-<p>Store covers as <code>assets/covers/&lt;slug&gt;.webp</code> with their original aspect ratio. Use owned or authorized presentation artwork; do not export raw game assets through build reports. Console icons and other reused assets retain their provenance/license notes.</p>
-<p>The local prototype's <code>assets/projects.js</code> is the current registration point. Adding a fixture there enables a layout preview, not production measurement. Production registration uses <code>config/projects.json</code>; <code>data/reports.lock.json</code> selects authenticated snapshots.</p>
-<h2 id="report-semantics">Report semantics</h2>
+<p>Export a versioned public report and register it with the shared renderer.</p>
+<h2 id="responsibilities">Responsibilities</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Game repository</th>
+<th>Shared website</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Defines target/hash, approved tools and validation objective</td>
+<td>Owns the shared layout, navigation, styling and interactions</td>
+</tr>
+<tr>
+<td>Produces source-derived measurements and execution evidence</td>
+<td>Authenticates imports and validates the public contract</td>
+</tr>
+<tr>
+<td>Maintains supported map, inventory, history and credit data</td>
+<td>Stores accepted snapshots and selects one exact package per project</td>
+</tr>
+<tr>
+<td>Documents build/export commands and capability policy</td>
+<td>Registers projects, selects modules and publishes the static site</td>
+</tr>
+</tbody>
+</table></div>
+<p>Use the repository's existing structure and build tools. The integration boundary is the public report contract. A site adapter translates the project's actual export into that contract and the renderer's view model; game code does not need to adopt another project's compiler, source paths or internal ledgers.</p>
+<h2 id="project-identity-and-presentation">Project identity and presentation</h2>
+<p>Choose a stable lowercase slug. Use it consistently in report identity, <code>/games/&lt;slug&gt;/</code>, project registration and artwork names. Keep display title, console, target ID/hash and repository URL explicit. Different targets must not silently replace each other's histories.</p>
+<p>The shared site renders each project using the same header, gutters, code/data bars, metric rows, map controls, tooltips, timeline and contributor style. Register data and capabilities through the shared renderer rather than copying a standalone page per game.</p>
+<p>Store cover artwork as <code>assets/covers/&lt;slug&gt;.webp</code> with the original aspect ratio. Use authorized artwork and retain required license/provenance notes. The latest commit title/time is independent of measured build progress.</p>
+<h2 id="required-public-contract">Required public contract</h2>
+<p>Use the <a href="/docs/reporting/schema/report-v1.schema.json">manifest schema</a>, <a href="/docs/reporting/schema/project-v1.schema.json">project configuration schema</a> and <a href="/docs/reporting/contract-v1.md">metric definitions</a>. A producer and its site adapter must agree on schema and methodology versions before registration.</p>
+<p>A package contains a manifest, a validated summary, an execution receipt, and JSON assets for each supported module. Paths are package-relative and checksummed. Keep raw public measurement output available for parity checks. A manifest or valid checksum alone does not authenticate a build.</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Manifest group</th>
+<th>Required content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Identity</td>
+<td>Project/repository, platform, target/hash, full measured revision and source tree</td>
+</tr>
+<tr>
+<td>Method</td>
+<td>Methodology, generation and pinned tool identities</td>
+</tr>
+<tr>
+<td>Time</td>
+<td>Measurement time and publication time separately</td>
+</tr>
+<tr>
+<td>Summary</td>
+<td>Raw code/data totals, linked/exact bytes, independently supported fuzzy coverage and optional inventories</td>
+</tr>
+<tr>
+<td>Validation</td>
+<td>Full/reused mode, run/attempt, workflow revision and checksummed receipt</td>
+</tr>
+<tr>
+<td>Modules</td>
+<td>Each optional capability declared supported with a typed asset, or unsupported with a reason</td>
+</tr>
+</tbody>
+</table></div>
+<p>Receipts bind the public files to the producing execution. The consumer verifies repository/workflow/job identity, success, attempt, target/tree, artifact digest and main eligibility against its trusted producer policy. Never execute a report package.</p>
+<h2 id="measurement-rules">Measurement rules</h2>
 <div class="wiki-table"><table>
 <thead>
 <tr>
@@ -33,35 +87,35 @@ python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site
 <tbody>
 <tr>
 <td>Linked</td>
-<td>Source incorporated into the verified target build</td>
+<td>Source-produced bytes incorporated into the validated target build</td>
 </tr>
 <tr>
 <td>Matched</td>
-<td>Exact measured source bytes, including eligible unlinked functions</td>
+<td>Exact measured bytes, including eligible unlinked comparisons</td>
 </tr>
 <tr>
 <td>Fuzzy</td>
-<td>Target-size-weighted similarity; never exact-function credit</td>
+<td>Target-size-weighted similarity; null when unsupported</td>
 </tr>
 <tr>
 <td>Functions exact / named</td>
-<td>Complete exact extents / supported descriptive names within the declared inventory</td>
+<td>Complete exact extents / names accepted under the naming policy</td>
 </tr>
 <tr>
 <td>Files exact / named</td>
-<td>Exact evidenced file boundaries and contents / descriptive file identities, including provisional ones</td>
+<td>Exact original boundaries and content / descriptive source groups, including provisional groups</td>
 </tr>
 </tbody>
 </table></div>
-<p>Overlapping progress layers are not additive percentages. A neutral name does not earn naming credit. A complete file claim requires its own boundary evidence. Map groups can be provisional without earning source progress. Preserve unmapped ranges.</p>
-<p>Data and code fuzzy measurements need separate support. NFL's decomp.dev scalar is code-only; the website's packaged report carries separately measured code and data fuzzy coverage. Never copy a code score into a data metric to fill a missing field.</p>
-<h2 id="modular-configuration">Modular configuration</h2>
-<p>The project configuration independently enables maps, function counts, file counts, timeline and contributor rankings. Core code/data measurements are required by this initial site contract. Producer capabilities describe what actually exists; site preferences select what appears.</p>
+<p>Derive percentages from raw totals. Keep code and data denominators stable and account for all declared ranges. Linked, matched and fuzzy overlap; never add them. Preserve the actual relationship between linked and matched under the project's promotion policy.</p>
+<p>A function fragment cannot earn full-function exactness. A compiled unit marked complete does not establish an original file boundary. Address labels do not count as descriptive names. Support code and data fuzzy independently; never copy one into the other or label a fallback as measured fuzzy progress.</p>
+<h2 id="choose-modules-independently">Choose modules independently</h2>
+<p>Presentation settings belong in the site's project registration, such as <code>config/projects.json</code>:</p>
 <pre><code class="language-json">{
   &quot;schemaVersion&quot;: 1,
   &quot;slug&quot;: &quot;game-slug&quot;,
   &quot;title&quot;: &quot;Game title&quot;,
-  &quot;repository&quot;: &quot;owner/game-slug&quot;,
+  &quot;repository&quot;: &quot;OWNER/REPO&quot;,
   &quot;target&quot;: &quot;TARGET_ID&quot;,
   &quot;modules&quot;: {
     &quot;map&quot;: true,
@@ -73,142 +127,75 @@ python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site
   &quot;contributions&quot;: { &quot;accepting&quot;: false }
 }
 </code></pre>
-<p>Add a project to <code>config/projects.json</code> only after its adapter and first package are validated. This example shows the configuration shape; it does not make an unsupported game ready by itself. Enabling Contribute requires a guide URL. Attribution tracking is a separate game-repository policy; rankings require supported verified attribution data.</p>
-<p>A disabled module creates no empty section or section listeners. NFL shares payloads between map/counts and timeline/rankings; an enabled sibling can still require that shared file. Unsupported data is not zero. If an already-supported enabled module fails to export, retain the last valid package and fail the refresh rather than silently hiding it.</p>
-<h2 id="hand-a-game-to-an-agent">Hand a game to an agent</h2>
-<p>Give the agent the game checkout and <code>mitsevox/mitsevox.github.io</code>, each on its own work branch. The game owns builds, comparisons and source-derived reports. The website owns authentication, normalization, durable storage, project registration and rendering. An agent working only in the game repository cannot finish both halves.</p>
-<p>Use this prompt together with the project's current repository instructions:</p>
-<pre><code class="language-text">Integrate this game with https://mitsevox.github.io/.
-Read the wiki and https://mitsevox.github.io/docs/reporting/onboarding.md.
-Work in separate game and website branches/worktrees; preserve unrelated work.
-
-Inspect the real target, approved tools, build/report workflows and history.
-Record supported measurements and optional modules. Do not infer credits from
-merger identity or populate unsupported metrics from the layout fixtures.
-
-Implement both the game report export and its website adapter. Account for
-all NFL-specific assumptions listed in the handoff, including authentication,
-package validation, multi-project storage, renderer inputs and CI refresh.
-Keep contribution acceptance, attribution tracking and rankings independent.
-
-Use a real successful main report for parity. Test absent optional data,
-failed refreshes, unchanged reruns, stale runs, immutable collisions and
-NFL-plus-this-game storage. Preserve previous history and decomp.dev output.
-
-Deliver the two coordinated changes with exact revisions, commands, run and
-artifact evidence, capability settings and the onboarding acceptance results.
-Follow existing task authorization for pushes, PRs, publication and merges.
-Do not call integration complete until the public page and its next refresh
-have been verified against the accepted package.
-</code></pre>
-<p>The <a href="/wiki/downloads/repository-starter.zip">starter archive</a> includes this prompt and the complete technical handoff. Agents should read the linked schemas and actual source rather than treat the starter files as a working compiler or generic CI pipeline.</p>
-<p>If separate game agents work concurrently, assign one website integration owner for shared validation, storage, renderer and workflow changes. Implement that common extension once. Each game then supplies its own producer policy, adapter, tests and registration through it.</p>
-<h2 id="implementation-sequence">Implementation sequence</h2>
-<div class="wiki-table"><table>
-<thead>
-<tr>
-<th>Step</th>
-<th>Game repository</th>
-<th>Website repository</th>
-<th>Evidence before moving on</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Inventory</td>
-<td>Identify target/hash, build tools, raw report and history</td>
-<td>Read the current NFL path and shared extension map</td>
-<td>Verified facts and a capability matrix</td>
-</tr>
-<tr>
-<td>Common foundation</td>
-<td>Preserve the current build</td>
-<td>Add trusted adapter dispatch, per-project storage and optional renderer inputs</td>
-<td>NFL plus a second-project test; existing NFL data intact</td>
-</tr>
-<tr>
-<td>Producer</td>
-<td>Export supported public JSON and execution evidence from the existing measured build</td>
-<td>Keep the new project disabled</td>
-<td>Successful main artifact under a reviewed workflow/tool policy</td>
-</tr>
-<tr>
-<td>Adapter</td>
-<td>Retain original report, history and supported decomp.dev output</td>
-<td>Authenticate the run; normalize, validate and lock the real package</td>
-<td>Same-revision raw metric and module parity</td>
-</tr>
-<tr>
-<td>Registration</td>
-<td>Document the new export</td>
-<td>Configure modules, contribution policy and production route</td>
-<td>Build and browser checks with no fixtures</td>
-</tr>
-<tr>
-<td>Publication</td>
-<td>Keep the old feed until cutover is approved</td>
-<td>Preserve the package, deploy and exercise the next refresh</td>
-<td>Public manifest/route and durable lock agree</td>
-</tr>
-</tbody>
-</table></div>
-<p>The technical handoff gives MVP and TW's current target/report identities and build commands. It also explains their specific migration work: preserve MVP's separate publisher; preserve TW's stale-object pruning and audit checks while separating history writes from build permissions. Verify current revisions before implementation.</p>
-<h2 id="required-public-data">Required public data</h2>
-<p>Use the <a href="/docs/reporting/schema/report-v1.schema.json">manifest</a>, <a href="/docs/reporting/schema/project-v1.schema.json">project configuration</a> and <a href="/docs/reporting/contract-v1.md">semantic contract</a>. Each adapter adds payload schemas and a trusted producer policy for its actual workflow. Copying NFL's receipt type, job names or step names does not authenticate another game.</p>
-<p>A package binds full source revision/tree, target/hash, methodology/generation, tool identities, measurement/publication times and file checksums to GitHub-verified run/artifact evidence. Raw byte totals remain authoritative; percentages are derived. Code/data fuzzy support is independent. Larger map/history/credit payloads are optional and referenced by checksum. The original public report remains available for parity checks.</p>
-<p>A game with no contributor feed declares contributors unsupported and disables its rankings. A timeline must work without a contributor field. A summary-only game must display bars without inventing maps or inventory. The existing NFL readers still require common-code changes for these combinations; the <a href="/docs/reporting/onboarding.md#renderer-compatibility-work">renderer compatibility checklist</a> names them explicitly.</p>
-<p>A newly failed supported report is an error, not a new unsupported capability. Keep last-good data and report the failure. Preserve history evidence quality; do not manufacture historical measurements or contributor ownership to fill gaps.</p>
-<h2 id="website-changes-an-agent-must-implement">Website changes an agent must implement</h2>
+<p>Replace identity placeholders with verified facts. Enable a module only when the producer supplies data validated by its adapter. A disabled module leaves no heading, empty space or section listeners. Shared payloads can still serve another enabled module, but a timeline must not require contributor data and summaries must not require an invented map.</p>
+<p>Attribution tracking, contributor rankings and accepting contributions are independent. <code>contributions.accepting: true</code> adds the Contribute button and lower contribution section and requires an HTTPS <code>guideUrl</code>. It does not enable tracking or rankings.</p>
+<p>Unsupported data remains unavailable. Valid zero stays zero. If a supported export unexpectedly fails, retain last-good data and report the failure instead of silently hiding the capability.</p>
+<h2 id="producer-template">Producer template</h2>
+<ol>
+<li>Run the project's documented validation and comparison commands.</li>
+<li>Export raw byte measures and supported modules from the same measured inputs.</li>
+<li>Validate ranges, recursive totals, complete function extents and inventory policy.</li>
+<li>Restore history and append the measurement without rewriting existing records.</li>
+<li>Reconcile contributor evidence only when the selected tracking policy requires it.</li>
+<li>Generate the versioned manifest, payload checksums and execution receipt.</li>
+<li>Upload only public JSON after all required checks pass.</li>
+</ol>
+<p>Do not upload original binaries, object code, complete debug exports, credentials or private experiment files. Retain the existing decomp.dev feed where used; compare fields supported by that format against the same raw measurements.</p>
+<h2 id="consumer-template">Consumer template</h2>
+<ol>
+<li>Register a trusted producer policy and an adapter for the export format.</li>
+<li>Select a successful eligible main execution and authenticate its actual artifact.</li>
+<li>Parse a bounded, exact allowlist of public files; reject unsafe paths, links and malformed values.</li>
+<li>Validate schema, target/revision, arithmetic, optional modules and raw-report parity.</li>
+<li>Check the new package against prior accepted history and Git ancestry.</li>
+<li>Install immutable files and atomically update only this project's lock entry.</li>
+<li>Build one coherent static site from the selected locked packages.</li>
+<li>Preserve accepted snapshots in durable storage before deployment.</li>
+</ol>
+<p>Keep project-specific field translation inside the adapter. The website owns shared contract validation, storage and rendering. An import must preserve every other project's lock and snapshots. A report's strings must not select arbitrary executable code.</p>
+<p>Consumers may reuse an identical previously authenticated package after temporary upstream artifacts expire. A changed or previously unaccepted package still needs original execution proof. Latest commit metadata never changes the selected measurement identity.</p>
+<h2 id="integration-acceptance">Integration acceptance</h2>
 <div class="wiki-table"><table>
 <thead>
 <tr>
 <th>Area</th>
-<th>Existing implementation to extend</th>
+<th>Required evidence</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Artifact selection and execution proof</td>
-<td><code>tools/import_nfl.py</code>, <code>tools/reporting/github.py</code></td>
+<td>Producer</td>
+<td>Successful validated main result with target, source/tree, tool and artifact identities</td>
 </tr>
 <tr>
-<td>Trusted adapter selection and payload validation</td>
-<td><code>tools/reporting/validation.py</code>, per-game producer policy and payload schemas</td>
+<td>Summary</td>
+<td>Raw total/linked/exact parity; correct independent fuzzy support</td>
 </tr>
 <tr>
-<td>Multiple projects in the permanent archive</td>
-<td><code>tools/report_store.py</code></td>
+<td>Optional modules</td>
+<td>Enabled modules work; absent map/count/history/credits do not create empty sections or fake data</td>
 </tr>
 <tr>
-<td>Verified data bindings and static routes</td>
-<td><code>tools/build_site.py</code>, <code>assets/projects.js</code>, <code>assets/report-projects.js</code></td>
+<td>History and storage</td>
+<td>Existing records survive, identical reruns are no-ops, stale/diverged updates and immutable collisions fail</td>
 </tr>
 <tr>
-<td>Optional map/count/history/credit data and fuzzy layers</td>
-<td><code>assets/progress.js</code>, <code>assets/activity.js</code>, <code>assets/reports.js</code>, homepage bars</td>
+<td>Isolation</td>
+<td>Updating or failing one project preserves the other projects' accepted data</td>
 </tr>
 <tr>
-<td>Refresh all registered games</td>
-<td><code>.github/workflows/site.yml</code></td>
+<td>Build</td>
+<td>No fixtures or private files; exact lock selection and fingerprinted assets</td>
 </tr>
 <tr>
-<td>Regression and isolation coverage</td>
-<td>Existing reporting/store tests plus the new adapter's tests</td>
+<td>Browser</td>
+<td>Shared styling, direct route/refresh, navigation, hover and map behavior</td>
+</tr>
+<tr>
+<td>Publication</td>
+<td>Public page and manifest agree; the next refresh preserves the same accepted state</td>
 </tr>
 </tbody>
 </table></div>
-<p>The handoff specifies a project-selecting <code>tools/import_reports.py</code> interface for agents to implement. It does <strong>not</strong> exist yet. Keep the current NFL CLI working during that extension. The current Pages workflow blocks deployment if any refresh fails; independently preserving a successful project's import does not change that deployment policy.</p>
-<h2 id="acceptance-and-completion">Acceptance and completion</h2>
-<p>Use the <a href="/docs/reporting/onboarding.md#6-commands-and-acceptance-evidence">full acceptance matrix</a>. It requires authentic execution, raw metric parity, optional-module behavior, honest maps/inventories, history continuity, multi-project storage, failure isolation and browser/live checks.</p>
-<p>Website validation needs no game compiler:</p>
-<pre><code class="language-sh">uv sync --locked
-uv run --locked python -m unittest discover -s tests -v
-uv run --locked python tools/build_wiki.py
-uv run --locked python tools/build_site.py --output build/onboarding-candidate
-python3 -m http.server 54876 --bind 127.0.0.1 --directory build/onboarding-candidate
-</code></pre>
-<p>Use a new build output directory. Offline validation cannot authenticate a new upstream package; separately run the implemented adapter against a real successful main run. Test corruption and races in isolated fixtures/remotes, not by damaging public history. Reuse adequate existing coverage and required game build evidence instead of repeating unrelated full builds.</p>
-<p>The final handoff supplies both PRs/revisions, target/tools, producing run/attempt/artifact, import/build commands, manifest digest/lock, capability/policy matrix, parity/failure results and live refresh verification. A second game is integrated when its public route and the next scheduled/manual refresh preserve the accepted data alongside NFL. Any blocker gets a concrete next action; it is not checked off as complete.</p>
-<h2 id="current-publication-boundary">Current publication boundary</h2>
-<p>Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes restore the durable last-good package and use read-only access to NFL. A failed refresh fails CI and leaves the live site unchanged. Only current-main publication jobs can append verified snapshots to this site repository’s <code>report-data</code> branch and deploy the validated Pages artifact. Historical snapshots remain in Git when candidate artifacts expire after 90 days. No workflow writes game source branches or changes NFL’s existing publication.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#current-state">Current state</a><a href="#refresh-and-build-nfl">Refresh and build NFL</a><a href="#project-identity-and-artwork">Project identity and artwork</a><a href="#report-semantics">Report semantics</a><a href="#modular-configuration">Modular configuration</a><a href="#hand-a-game-to-an-agent">Hand a game to an agent</a><a href="#implementation-sequence">Implementation sequence</a><a href="#required-public-data">Required public data</a><a href="#website-changes-an-agent-must-implement">Website changes an agent must implement</a><a href="#acceptance-and-completion">Acceptance and completion</a><a href="#current-publication-boundary">Current publication boundary</a></nav></aside></main>
+<p>Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The <a href="/docs/reporting/onboarding.md">integration checklist</a> and <a href="/wiki/starter-kit/">starter files</a> provide a reusable handoff. Each repository supplies its own implementation details.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#integration-acceptance">Integration acceptance</a></nav></aside></main>

@@ -33,27 +33,27 @@
   build/                   # ignored generated outputs
   scratch/                 # ignored experiments
 </code></pre>
-<p>File names above reflect NFL's pattern; their formats must be defined by the new project's tools. Creating an empty <code>units.json</code> does not make NFL's builder work on a different game. Optional contributor ledgers and history checkpoints belong in target configuration when the project's policy enables them.</p>
+<p>Use this layout for a new repository. In an existing repository, retain established paths and map these responsibilities onto them. Define and validate the formats of target configuration, accepted placements, comparisons and evidence. Optional contributor ledgers and history checkpoints belong alongside target configuration.</p>
 <h2 id="naming-rules">Naming rules</h2>
 <ul>
 <li><strong>Original names:</strong> preserve spelling and case when target evidence supports them. Keep the evidence locator.</li>
 <li><strong>Descriptive names:</strong> make them readable, but mark them inferred rather than claiming the original name was recovered.</li>
-<li><strong>Unknown code/data:</strong> retain stable neutral address labels. NFL uses <code>fn_XXXXXXXX</code> and <code>lbl_XXXXXXXX</code> with uppercase hexadecimal digits; these receive no named-function credit.</li>
+<li><strong>Unknown code/data:</strong> retain stable neutral address labels. Use a documented form such as <code>fn_XXXXXXXX</code> and <code>lbl_XXXXXXXX</code> with uppercase hexadecimal digits; these receive no named-function credit.</li>
 <li><strong>Files:</strong> use recovered source paths when established. A descriptive filename can count as named while its original boundaries remain provisional.</li>
 <li><strong>Tools/docs:</strong> use consistent repository conventions; Python tools commonly use <code>snake_case.py</code>, handbook pages use <code>kebab-case.md</code>.</li>
 <li><strong>Site assets:</strong> use stable project slugs, for example <code>assets/covers/game-slug.webp</code>. Store display names separately from paths.</li>
 </ul>
 <p>Do not invent a source-file split merely to produce a pretty map or increase file counts. Shared headers should have one accepted definition per type/address. Search existing declarations and current main before introducing another layout.</p>
 <h2 id="source-and-partial-reconstruction">Source and partial reconstruction</h2>
-<p>Useful incomplete functions stay in normal source files. Register their measured ranges separately. In NFL, an existing linked file can keep draft bodies behind the fixed <code>DECOMP_COMPARE</code> guard; promotion changes accepted placements and removes the guard, not the file location.</p>
+<p>Useful incomplete functions stay in normal source files. Register their measured ranges separately. When accepted and draft bodies coexist, select draft bodies through a documented comparison configuration or guard. Promotion updates accepted placement and removes obsolete selection metadata while keeping the source in place.</p>
 <p>Keep source comments about intent, invariants and non-obvious relationships. Matching scores, compiler experiments, agent notes and review history belong in metadata or PR records. Unsupported field meanings stay unresolved; unaccessed regions stay opaque.</p>
 <h2 id="public-and-private-material">Public and private material</h2>
 <p>Public Git should contain reviewed source, tools, curated evidence and bounded public reports. Keep original game binaries, generated objects, complete debug exports, private analysis databases and discarded trial variants out. A .gitignore entry does not remove a file already tracked; inspect the index before committing.</p>
 <p>Do not copy absolute paths from another contributor's machine into shared configuration. Commands should accept a local reference path or use a documented owner-approved environment.</p>
 <h2 id="evidence-format">Evidence format</h2>
-<p>NFL uses one claim per TSV row:</p>
+<p>A simple evidence ledger can use one claim per TSV row:</p>
 <pre><code class="language-text">kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 </code></pre>
 <p>The separators are tabs. Addresses are hexadecimal and end-exclusive. Use <code>-</code> where unknown or inapplicable. Origins distinguish <code>target</code>, <code>signature</code>, <code>related</code> and <code>inferred</code>; boundaries independently distinguish <code>exact</code>, <code>provisional</code>, <code>open</code> and no claim. Use separate rows for a name, function extent, field layout and source-unit boundary—one claim must not silently prove another.</p>
-<p>The <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md">NFL evidence specification</a> defines the full vocabulary. Adopt its schema intentionally and provide validators before relying on it in another repository.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/repository-setup/"><small>Previous</small><span>Repository setup</span></a><a href="/wiki/evidence-and-reconstruction/"><small>Next</small><span>Evidence</span></a></nav></div>
+<p>The project’s <code>config/README.md</code> defines the vocabulary, allowed claim types and validation rules. Version that schema and provide a validator before CI relies on it.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/repository-setup/"><small>Previous</small><span>Repository setup</span></a><a href="/wiki/evidence-and-reconstruction/"><small>Next</small><span>Evidence</span></a></nav></div>
 <aside class="wiki-on-page"><nav aria-label="On this page"><a href="#recommended-layout">Recommended layout</a><a href="#naming-rules">Naming rules</a><a href="#source-and-partial-reconstruction">Source and partial reconstruction</a><a href="#public-and-private-material">Public and private material</a><a href="#evidence-format">Evidence format</a></nav></aside></main>

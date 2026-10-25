@@ -37,5 +37,5 @@ Review records identify full revision, reviewer, scope, evidence, findings and r
 - Attribution tracking and joint-credit policy: TO_DECIDE
 - Reporting capabilities, history and artifact retention: TO_IMPLEMENT
 
-Adopt NFL-style record and clearance formats only after implementing and testing the verifier.
+Adopt the review-record and clearance format documented in the wiki, then implement and test its verifier.
 Do not claim these starter documents enforce repository settings or authenticate reviews.

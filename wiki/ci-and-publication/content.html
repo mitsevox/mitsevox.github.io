@@ -5,62 +5,125 @@
 <details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-setup/"><span class="wiki-nav-number">02</span>Repository setup</a><a href="/wiki/layout-and-naming/"><span class="wiki-nav-number">03</span>Layout &amp; naming</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/evidence-and-reconstruction/"><span class="wiki-nav-number">04</span>Evidence</a><a href="/wiki/build-and-validation/"><span class="wiki-nav-number">05</span>Build &amp; validation</a><p class="wiki-nav-group">Delivery</p><a href="/wiki/review-and-approval/"><span class="wiki-nav-number">06</span>Review &amp; approval</a><a href="/wiki/ci-and-publication/" aria-current="page"><span class="wiki-nav-number">07</span>CI &amp; publication</a><a href="/wiki/credits-and-history/"><span class="wiki-nav-number">08</span>Credits &amp; history</a><p class="wiki-nav-group">Integration</p><a href="/wiki/website-integration/"><span class="wiki-nav-number">09</span>Website</a><a href="/wiki/operations/"><span class="wiki-nav-number">10</span>Troubleshooting &amp; upkeep</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">11</span>Starter kit</a></nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>Delivery <span aria-hidden="true">/</span> 07</span><a href="/docs/wiki/ci-and-publication.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="ci-publication">CI &amp; publication</h1>
-<p>Validate once, preserve the evidence and publish only a coherent verified result.</p>
-<h2 id="jobs-and-authority">Jobs and authority</h2>
+<p>Build once, validate the result, then publish an authenticated report.</p>
+<h2 id="workflow-structure">Workflow structure</h2>
+<p>Use separate jobs for the responsibilities below. Map the commands to the repository's documented build tools.</p>
 <div class="wiki-table"><table>
 <thead>
 <tr>
 <th>Job</th>
-<th>Inputs and purpose</th>
-<th>Authority</th>
+<th>Runs when</th>
+<th>Work</th>
+<th>Permissions</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Build/measure</td>
-<td>Approved references and pinned tools; baseline, source and comparisons</td>
-<td>Read source/packages; no source-branch writes</td>
+<td>Configuration and evidence checks</td>
+<td>PRs and main</td>
+<td>Validate target configuration, declarations, evidence and changed dependencies</td>
+<td>Source read</td>
+</tr>
+<tr>
+<td>Build and measure</td>
+<td>PRs and eligible main runs</td>
+<td>Verify inputs; build/compare; generate a candidate report and receipt</td>
+<td>Source/packages read; approved private inputs only</td>
 </tr>
 <tr>
 <td>Review clearance</td>
-<td>Trusted workflow code and PR discussion records</td>
-<td>Read PR records; write the named status</td>
+<td>Relevant PR changes</td>
+<td>Check revision, required review records and owner decision using trusted code</td>
+<td>Read PR records; write its named status</td>
 </tr>
 <tr>
-<td>Data publication</td>
-<td>Authenticated successful measurements and prior history</td>
-<td>Narrowly scoped report-store writes</td>
+<td>Report publication</td>
+<td>Successful eligible main result</td>
+<td>Authenticate the measured tree, validate prior history, export public data</td>
+<td>Read artifacts; narrowly scoped history/report writes if needed</td>
 </tr>
 <tr>
-<td>Website build</td>
-<td>Public verified report packages and site source</td>
-<td>Read packages; produce static artifact</td>
+<td>Website validation</td>
+<td>Site PRs and refreshes</td>
+<td>Authenticate/import reports and assemble a coherent site candidate</td>
+<td>Public source/artifact read</td>
 </tr>
 <tr>
-<td>Pages deployment</td>
-<td>Successful site artifact</td>
-<td>Pages and deployment identity permissions</td>
+<td>Website deployment</td>
+<td>Successful current site main</td>
+<td>Preserve accepted reports, then deploy the exact candidate</td>
+<td>Site data-store writes, Pages and deployment identity</td>
 </tr>
 </tbody>
 </table></div>
-<p>Pin reviewed Actions and shared tools to commits, build images to approved digests, and downloaded compilers/linkers by version and hash. Do not copy mutable image tags into the new archetype. Cache keys include target, environment and relevant configuration/source inputs; caches are acceleration, not validation evidence.</p>
-<h2 id="pr-path">PR path</h2>
-<p>Validate the candidate revision and emit a receipt binding target, tested tree, environment, methodology, inputs and artifact checksums. Produce candidate reports for review without advancing public latest. Keep failures actionable and prevent stale output from an earlier successful run being uploaded after a failed export.</p>
-<p>CI must fail if required inputs or enabled measurements are unavailable. Scope cheap validation separately from expensive reconstruction builds. The owner should enable required statuses only after observing real passing and failing behavior.</p>
-<h2 id="main-path-and-proof-reuse">Main path and proof reuse</h2>
-<p>NFL can reuse the final integrated PR's verified reports when trusted execution, artifact integrity, pinned environment and complete tested tree match the landed tree. Validate contributor provenance against actual landed/squashed history when that policy is enabled. Missing or incompatible proof falls back to full validation; invalid required attribution or history blocks publication.</p>
-<p>An inventory-cache miss does not invalidate otherwise valid source-build proof. Regenerate the affected inventory separately. Do not repeat complete builds solely because review comments changed or an unchanged artifact can be authenticated.</p>
-<p>Keep these guarantees when extracting reusable steps. Do not replace NFL's mature handoff checks with “download the latest artifact.”</p>
-<h2 id="history-and-ordering">History and ordering</h2>
-<p>Restore prior verified history before appending. Fetch or parse failure must not reset an established timeline. Make identical reruns idempotent. Distinguish commit time, measurement time and publication time.</p>
-<p>The implemented website store is its data-only <code>report-data</code> branch, currently accepting NFL packages. It preserves immutable snapshots and a latest-good pointer. A separate data-only branch per game is an optional future producer store, not an onboarding requirement. Preserve existing game archives during migration and extend the site store for multiple projects as specified in the <a href="/docs/reporting/onboarding.md">integration handoff</a>. Git ancestry, immutable identity and an atomic pointer update prevent an older slow run from replacing newer progress; concurrency settings alone are insufficient.</p>
-<p>A timeline records available verified measurements, not a guaranteed build for every commit. Preserve gaps and legacy evidence quality. Do not manufacture measurements by repeating a previous value and labeling it a fresh build.</p>
-<h2 id="privileged-workflows">Privileged workflows</h2>
-<p>Treat PR text and report payloads as data. Never execute scripts from downloaded artifacts or untrusted PR code in a privileged publication/clearance job. Keep private references and build credentials out of the website job. The NFL clearance workflow evaluates trusted logic without checking out a contribution branch.</p>
-<p><a href="https://docs.github.com/en/actions/reference/security/secure-use">GitHub's security guidance</a> covers pinned Actions and untrusted code. <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run">workflow_run guidance</a> explains why an upstream result must be authenticated before privileged follow-up work.</p>
+<p>Game build jobs do not need website deployment permissions. Publishing jobs process report data without executing scripts downloaded from artifacts. Keep private originals, complete debug exports and build credentials out of the website job.</p>
+<h2 id="pr-validation">PR validation</h2>
+<p>Run the project's required baseline, accepted-source and comparison stages for the actual candidate inputs. Cheap checks should fail before expensive work where possible. Delete stale output before export; a failed exporter must not leave an earlier report available for upload.</p>
+<p>Emit a candidate artifact containing public measurements and a receipt binding repository, target/hash, full tested revision/tree, tools, methodology and payload checksums. Candidate artifacts support review; they do not advance public latest or the production timeline.</p>
+<p>Pin Actions/shared tools to reviewed commits, images to approved digests and downloaded tools by version/hash. Cache keys include target, toolchain, relevant configuration and source inputs. Document the cache's scope and invalidation rules.</p>
+<h2 id="main-validation-and-reuse">Main validation and reuse</h2>
+<p>A main publication must have either a successful full validation or authenticated proof for the complete landed tree. Reuse requires matching target, tools/environment, methodology, complete tested inputs and original artifact integrity. Validate landed attribution too when the project's policy enables it.</p>
+<p>A missing or incompatible reusable proof requires the full validation path. An inventory-only change can regenerate inventory separately when source-build proof remains valid. Never combine reports from several independently tested branches into proof of an integrated build.</p>
+<p>Keep original measurement time separate from publication time. Latest repository commit metadata is another input and does not make a previous build newly measured.</p>
+<h2 id="publication-sequence">Publication sequence</h2>
+<ol>
+<li>Select an eligible successful main run and its actual attempt.</li>
+<li>Authenticate repository, workflow revision, job/lane, tested tree and artifact digest.</li>
+<li>Restore validated prior history; an established history must not reset after a fetch/parse failure.</li>
+<li>Generate the public package from measured input and validate schema, arithmetic, extents, capabilities and history continuity.</li>
+<li>Store immutable snapshot files before updating the latest pointer atomically.</li>
+<li>Preserve the accepted package before deploying the matching website artifact.</li>
+</ol>
+<p>An identical rerun is a no-op. Different bytes for an existing immutable identity fail. A correction needs a new version/generation and recorded provenance. Check ancestry before advancing latest; concurrent job ordering alone cannot prevent stale publication.</p>
+<p>The shared website owns a durable data-only report store so accepted measurements outlive temporary CI artifacts. Individual projects can retain their existing history/archive mechanism. A separate data branch in each game repository is optional.</p>
+<h2 id="failure-behavior">Failure behavior</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Required behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Missing or malformed required report</td>
+<td>Fail the refresh and keep the prior accepted package</td>
+</tr>
+<tr>
+<td>Unsupported optional capability</td>
+<td>Declare it unsupported and configure its UI off</td>
+</tr>
+<tr>
+<td>Failed export of a supported capability</td>
+<td>Fail; do not silently change it to unsupported</td>
+</tr>
+<tr>
+<td>Stale or diverged measured revision</td>
+<td>Reject promotion and retain history</td>
+</tr>
+<tr>
+<td>Existing immutable identity with changed content</td>
+<td>Reject the collision</td>
+</tr>
+<tr>
+<td>Concurrent store writer</td>
+<td>Reread and reconcile after a normal push conflict; never force overwrite</td>
+</tr>
+<tr>
+<td>Obsolete site-source workflow</td>
+<td>Reject deployment</td>
+</tr>
+<tr>
+<td>Missing private build access</td>
+<td>Report the missing input; do not change dependency access or substitute tools</td>
+</tr>
+</tbody>
+</table></div>
+<p>Define whether a refresh failure blocks the whole site deployment or allows other validated projects to publish. Test and document that policy explicitly. In either case, a failed project retains its last-good data.</p>
+<h2 id="workflow-security-and-approval">Workflow security and approval</h2>
+<p>Evaluate clearance using trusted base/default-branch logic. PR text, payload JSON and filenames are data, not commands. A privileged follow-up workflow must authenticate its upstream execution before using its artifacts. Declare how fork contributions receive build validation without assuming private secret access.</p>
+<p>See GitHub's <a href="https://docs.github.com/en/actions/reference/security/secure-use">secure workflow guidance</a> and <a href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run">workflow_run behavior</a>. Configure required statuses after real passing, failing and stale cases have been observed; a workflow file alone does not enforce approval.</p>
 <h2 id="website-deployment">Website deployment</h2>
-<p>Use a separate build artifact and deployment job. GitHub Pages deployment needs <code>pages: write</code>, <code>id-token: write</code>, the appropriate environment and a dependency on the artifact-producing job. See <a href="https://docs.github.com/en/enterprise-cloud%40latest/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">custom Pages workflows</a>.</p>
-<p>Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. To roll back UI, have the owner merge a source revert and let the current-main workflow rebuild with the latest verified reports. Old workflow reruns are rejected; measurement history is never rewound.</p>
-<p>The <a href="/docs/reporting/nflstreet2.md">NFL consumer implementation</a> verifies existing artifacts and builds a locked static candidate without adding game CI work. Validation uses read-only permissions. A separate current-main job has site-repository write access for the data-only <code>report-data</code> branch, plus Pages and deployment-identity permissions. It preserves snapshots before deployment, rejects stale site revisions and never writes a game repository or merges main.</p>
-<p>The <a href="/docs/reporting/pipeline-audit.md">pipeline audit</a> records the three current producers. The <a href="/docs/reporting/workflow.md">shared workflow proposal</a> describes the remaining cross-game migration; distinguish it from the implemented site-only workflow.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/review-and-approval/"><small>Previous</small><span>Review &amp; approval</span></a><a href="/wiki/credits-and-history/"><small>Next</small><span>Credits &amp; history</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#jobs-and-authority">Jobs and authority</a><a href="#pr-path">PR path</a><a href="#main-path-and-proof-reuse">Main path and proof reuse</a><a href="#history-and-ordering">History and ordering</a><a href="#privileged-workflows">Privileged workflows</a><a href="#website-deployment">Website deployment</a></nav></aside></main>
+<p>Build one static artifact with fingerprinted assets. The deploy job depends on successful validation and storage and receives only the permissions it needs. GitHub Pages supports <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">custom Actions workflows</a>.</p>
+<p>Verify home, direct project/wiki routes, refresh, back/forward and the selected report identity at the public URL. Use a reviewed site-source revert for a UI rollback while retaining current accepted measurement history. Do not deploy an obsolete workflow or rewrite measured history to roll back styling.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/review-and-approval/"><small>Previous</small><span>Review &amp; approval</span></a><a href="/wiki/credits-and-history/"><small>Next</small><span>Credits &amp; history</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#workflow-structure">Workflow structure</a><a href="#pr-validation">PR validation</a><a href="#main-validation-and-reuse">Main validation and reuse</a><a href="#publication-sequence">Publication sequence</a><a href="#failure-behavior">Failure behavior</a><a href="#workflow-security-and-approval">Workflow security and approval</a><a href="#website-deployment">Website deployment</a></nav></aside></main>

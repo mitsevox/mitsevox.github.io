@@ -4,53 +4,52 @@ Reference snapshot: 2026-10-25. Project repository rules take precedence.
 
 # Start here
 
-From an empty repository to a measured, reviewable decompilation project.
+A reusable structure for a decompilation repository, its CI and its place on the shared site.
 
-This handbook carries forward the practices behind NFL Street 2: reproducible builds, evidence-backed reconstruction, useful partial source, independent reviews and honest reporting. Use it with a new project and a fresh agent, then record the choices in that project's own repository.
+Use this handbook to establish a new project or align an existing one. It defines repository responsibilities, naming conventions, evidence standards, validation stages, review records and the public report contract. Each project supplies its own target facts, tools and build commands.
 
-## Choose the right starting point
+## Follow the template
 
-- **Starting a game:** follow [Repository setup](/wiki/repository-setup/) and [Layout & naming](/wiki/layout-and-naming/), then establish a [verified baseline](/wiki/build-and-validation/).
-- **Starting a task:** read the project's README, CONTRIBUTING and AGENTS files, claim a bounded scope, and use a separate worktree.
-- **Preparing a PR:** follow [Review & approval](/wiki/review-and-approval/). Passing CI and reviewer approval are separate from permission to merge.
-- **Connecting a project:** read [Website](/wiki/website-integration/). NFL is publicly integrated. Give a new game agent both checkouts and the [integration handoff](/docs/reporting/onboarding.md); it specifies the producer, common website extensions, adapter and acceptance evidence.
-- **Handing off to an agent:** use [Starter kit](/wiki/starter-kit/) for repository templates and an agent handoff prompt.
+1. [Repository setup](/wiki/repository-setup/): identify the owner, target, approved inputs and supported environment.
+2. [Layout & naming](/wiki/layout-and-naming/): organize source, declarations, evidence, configuration and generated output.
+3. [Evidence](/wiki/evidence-and-reconstruction/): reconstruct from reproducible observations and preserve uncertainty.
+4. [Build & validation](/wiki/build-and-validation/): distinguish baseline, accepted-source build and partial comparisons.
+5. [Review & approval](/wiki/review-and-approval/): bind review and clearance to the actual revision.
+6. [CI & publication](/wiki/ci-and-publication/): validate candidates, authenticate main results and publish coherent reports.
+7. [Credits & history](/wiki/credits-and-history/): select attribution policy and preserve measured history.
+8. [Website](/wiki/website-integration/): export the shared contract and choose the site's optional modules.
+9. [Starter kit](/wiki/starter-kit/): fill the repository templates and give an agent the assignment.
+
+An existing project can keep its working structure and commands. Map these responsibilities onto it instead of reorganizing source just to match a diagram.
 
 ## What belongs where
 
 | Location | Responsibility |
 | --- | --- |
-| Game repository | Source, evidence, target configuration, build tools, validation, comparison reports and history |
-| Private local research / approved build environment | Original binaries, complete debug exports, analysis databases and discarded experiments |
-| Shared website repository | UI, artwork, project configuration, report contracts and static-site assembly |
-| PR and issue records | Task ownership, reviews, findings, tested revisions and the owner's decision |
+| Game repository | Source, declarations, evidence, target configuration, build/comparison tools and report exports |
+| Approved private inputs | Original executables, restricted tools, complete debug exports and private research |
+| Shared website repository | UI, artwork, project registration, report adapters/validators, durable public reports and site deployment |
+| PR and issue records | Task scope, reviews, tested revisions, findings and owner decisions |
 
-A new game normally needs one source repository and access to this shared website. An additional private tooling repository is only needed when its build inputs require that arrangement; it is not a mandatory extra repository for every game.
+The game produces measurements. The website validates and presents them through the shared design. Visitors need neither private game inputs nor GitHub credentials.
 
-## The first-project sequence
+## Establish the project facts
 
-1. Identify owner, repository slug, platform, region, revision, executable and verified hash.
-2. Inventory authorized evidence before reconstructing anything. Record what was actually inspected and what remains unavailable.
-3. Establish a reproducible original-byte baseline, then an accepted-source build that validates the complete output.
-4. Document compiler profiles, comparison rules, evidence format and project-specific commands.
-5. Put review rules and owner authority in CONTRIBUTING and concise agent instructions in AGENTS.
-6. Add CI that enforces those rules on the actual tested revision. Test its failure paths before making checks required.
-7. Recover a bounded unit with provenance; retain measured partial source where appropriate.
-8. Connect verified reports to the site when the reporting adapter is available. Never substitute layout fixtures for measurements.
+Record the platform, region/revision, executable hash, source objective, approved build tools, supported hosts and exact local commands in README.md. Put contribution and matching-integrity rules in CONTRIBUTING.md, concise agent instructions in AGENTS.md, and evidence/configuration formats next to their tools.
 
-## Defaults, not assumptions
+A faithful matching reconstruction and a nonmatching port have different validation objectives. Declare which one the project promises and label its reports accordingly. Compiler equivalence alone does not establish original names, intent or source-file boundaries.
 
-The recommended process is faithful matching reconstruction. A nonmatching port may adopt the evidence and review practices, but must define a different validation objective and label its measurements accordingly. Copying NFL's target hash, compiler flags or function counts does not establish anything about a new game.
+Attribution tracking, contributor rankings and accepting contributions are three independent choices. Progress reporting can operate without a contributor feed.
 
-Attribution tracking, contributor rankings and accepting contributions are three independent project choices. NFL requires exact-function attribution; the website itself does not require every project to adopt that policy. See [Credits & history](/wiki/credits-and-history/).
+## Use the handbook with an agent
 
-Existing repository rules govern work there. Adopting or changing those rules requires its owner's agreement. This handbook does not override them.
+Give the agent this wiki, the repository and its current instructions. For site integration, also supply the shared site's report contract and registration access. The [starter prompt](/wiki/starter-kit/#prompt-for-an-agent) specifies the work without prescribing a particular game's implementation.
 
-## Source and maintenance
+The agent fills project facts, adapts the template to established tools, implements missing checks and supplies evidence for the acceptance checklist. Unknown inputs remain explicit. A copied template is a starting structure; real successful and failing runs establish that the project works.
 
-The NFL reference is pinned to `d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211`, inspected on October 25, 2026. Links throughout the handbook identify the source policy or implementation. Check current repository instructions before applying a pinned example to live work.
+## Maintain the template
 
-Edit the Markdown under `docs/wiki/`, then run `uv run tools/build_wiki.py` in the website repository to rebuild the pages, search index, Markdown handbook and starter archive. The website serves the generated static files; it needs no documentation backend. Review handbook changes with the workflow or tooling changes they describe.
+Keep this handbook reusable. Project targets, repository names, workflow revisions, run IDs, migration plans and one-off status belong in their project's records. Update the template when a reusable convention or public contract changes, and version any incompatible reporting change.
 
 
 ---
@@ -61,17 +60,17 @@ Establish ownership, target identity and a safe working environment before the f
 
 ## Record the project identity
 
-Choose a stable lowercase repository slug such as `nflstreet2`; use the same slug for its site route and reporting identity. Keep its display title separate. A second platform or revision is a separate target, not a silent replacement for the first one.
+Choose a stable lowercase repository slug such as `game-slug`; use the same slug for its site route and reporting identity. Keep its display title separate. A second platform or revision is a separate target, not a silent replacement for the first one.
 
 The README must identify the game, platform, region/revision, target executable hash, owner, supported host requirements, setup/build entry points and links to CONTRIBUTING and AGENTS. Use a full target hash; a filename or disc label alone is insufficient.
 
-For a GameCube DOL, an initial local hash check can be:
+For an original executable, an initial local hash check can be:
 
 ```sh
 # macOS
-shasum -a 1 /path/to/main.dol
+shasum -a 1 /path/to/original-executable
 # Linux
-sha1sum /path/to/main.dol
+sha1sum /path/to/original-executable
 ```
 
 Compare the result with a verified target identity before using it. This identifies the input; it does not prove source fidelity. Keep the original executable outside public Git.
@@ -106,17 +105,17 @@ Use `codex/<task>` for agent branches by default; a project's own convention tak
 
 ## Active work reservations
 
-NFL distinguishes backlog from active work. Before starting, check open PRs and active branches, then reserve a bounded current batch in an issue or draft PR with the functions/unit action, branch and shared-file dependencies. Do not reserve an entire subsystem or future batches.
+Distinguish backlog from active work. Before starting, check open PRs and active branches, then reserve a bounded current batch in an issue or draft PR with the functions/unit action, branch and shared-file dependencies. Do not reserve an entire subsystem or future batches.
 
-At the pinned NFL revision, a reservation expires after 48 hours without a meaningful update. Renew with pushed work, concrete findings or an explicit handoff; release paused or abandoned scope. Before taking over expired work, inspect existing branches/PRs and preserve useful partial source and credit. An old backlog claim does not own the code. A live overlap needs coordination even when two tasks touch different functions in the same header, file or compilation group.
+Set a documented reservation timeout, such as 48 hours without a meaningful update. Renew with pushed work, concrete findings or an explicit handoff; release paused or abandoned scope. Before taking over expired work, inspect existing branches/PRs and preserve useful partial source and credit. An old backlog claim does not own the code. A live overlap needs coordination even when two tasks touch different functions in the same header, file or compilation group.
 
-A new project should choose and document its reservation policy rather than silently inheriting this timeout. See [NFL work coordination](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md#work-coordination).
+Record the chosen timeout and coordination rules in CONTRIBUTING.md so every contributor uses the same policy.
 
 ## Tool and reference access
 
 Record required tools, versions, hashes, host architecture and installation instructions. Use the owner's approved build image or tool archive. A working compiler is not proof that its version and flags match the original; those claims need unit/library evidence.
 
-NFL's current baseline supports macOS ARM64 and Linux x86-64; its macOS Wibo path requires existing Rosetta support. Those requirements are NFL examples, not universal requirements for every platform.
+List supported host operating systems and architectures. Document any compatibility wrappers or translation layers alongside the exact tool versions that require them.
 
 If access is missing, report exactly which input or tool is unavailable. Do not change private package permissions, rebuild supporting images or substitute a different compiler to make a patch pass. Keep credentials out of scripts, report packages and source control.
 
@@ -170,13 +169,13 @@ game-slug/
   scratch/                 # ignored experiments
 ```
 
-File names above reflect NFL's pattern; their formats must be defined by the new project's tools. Creating an empty `units.json` does not make NFL's builder work on a different game. Optional contributor ledgers and history checkpoints belong in target configuration when the project's policy enables them.
+Use this layout for a new repository. In an existing repository, retain established paths and map these responsibilities onto them. Define and validate the formats of target configuration, accepted placements, comparisons and evidence. Optional contributor ledgers and history checkpoints belong alongside target configuration.
 
 ## Naming rules
 
 - **Original names:** preserve spelling and case when target evidence supports them. Keep the evidence locator.
 - **Descriptive names:** make them readable, but mark them inferred rather than claiming the original name was recovered.
-- **Unknown code/data:** retain stable neutral address labels. NFL uses `fn_XXXXXXXX` and `lbl_XXXXXXXX` with uppercase hexadecimal digits; these receive no named-function credit.
+- **Unknown code/data:** retain stable neutral address labels. Use a documented form such as `fn_XXXXXXXX` and `lbl_XXXXXXXX` with uppercase hexadecimal digits; these receive no named-function credit.
 - **Files:** use recovered source paths when established. A descriptive filename can count as named while its original boundaries remain provisional.
 - **Tools/docs:** use consistent repository conventions; Python tools commonly use `snake_case.py`, handbook pages use `kebab-case.md`.
 - **Site assets:** use stable project slugs, for example `assets/covers/game-slug.webp`. Store display names separately from paths.
@@ -185,7 +184,7 @@ Do not invent a source-file split merely to produce a pretty map or increase fil
 
 ## Source and partial reconstruction
 
-Useful incomplete functions stay in normal source files. Register their measured ranges separately. In NFL, an existing linked file can keep draft bodies behind the fixed `DECOMP_COMPARE` guard; promotion changes accepted placements and removes the guard, not the file location.
+Useful incomplete functions stay in normal source files. Register their measured ranges separately. When accepted and draft bodies coexist, select draft bodies through a documented comparison configuration or guard. Promotion updates accepted placement and removes obsolete selection metadata while keeping the source in place.
 
 Keep source comments about intent, invariants and non-obvious relationships. Matching scores, compiler experiments, agent notes and review history belong in metadata or PR records. Unsupported field meanings stay unresolved; unaccessed regions stay opaque.
 
@@ -197,7 +196,7 @@ Do not copy absolute paths from another contributor's machine into shared config
 
 ## Evidence format
 
-NFL uses one claim per TSV row:
+A simple evidence ledger can use one claim per TSV row:
 
 ```text
 kind  start  end  subject  origin  start_boundary  end_boundary  evidence
@@ -205,7 +204,7 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 
 The separators are tabs. Addresses are hexadecimal and end-exclusive. Use `-` where unknown or inapplicable. Origins distinguish `target`, `signature`, `related` and `inferred`; boundaries independently distinguish `exact`, `provisional`, `open` and no claim. Use separate rows for a name, function extent, field layout and source-unit boundary—one claim must not silently prove another.
 
-The [NFL evidence specification](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md) defines the full vocabulary. Adopt its schema intentionally and provide validators before relying on it in another repository.
+The project’s `config/README.md` defines the vocabulary, allowed claim types and validation rules. Version that schema and provide a validator before CI relies on it.
 
 
 ---
@@ -241,7 +240,7 @@ A byte match establishes compiler equivalence for the measured scope. It does no
 | Uncertainty | Useful investigation |
 | --- | --- |
 | Behavior, references or ownership | Target disassembly and bounded Ghidra/static analysis |
-| Different instruction selection or scheduling | Controlled compiler experiments and relevant ProDG RTL dumps |
+| Different instruction selection or scheduling | Controlled compiler experiments and relevant compiler intermediate output |
 | Competing behavioral interpretations | Bounded debugger/runtime trace with known inputs and conditions |
 | Candidate SDK reuse | Fingerprints followed by calls, globals, types and boundary checks |
 
@@ -251,7 +250,7 @@ Record tested revision, tool version/settings, inputs, conclusion and remaining 
 
 Do not force a match through patched output, embedded instruction bytes, unsupported inline assembly, per-function flag changes, altered comparison boundaries or excluded mismatches. Do not invent helpers, padding, casts, volatile qualifiers or control flow solely for code generation.
 
-Compiler exceptions require original-scope evidence and explicit owner approval under NFL's policy. Originally handwritten assembly needs provenance. Labeling a workaround “fake match” does not make it acceptable.
+Compiler exceptions require original-scope evidence and explicit owner approval under the project's documented policy. Originally handwritten assembly needs provenance. Labeling a workaround “fake match” does not make it acceptable.
 
 When evidence runs out, preserve the useful partial reconstruction and document the gap. Keep original bytes in the verified linked build until replacement is validated. Partial similarity is useful progress; unsupported certainty is not.
 
@@ -259,65 +258,67 @@ When evidence runs out, preserve the useful partial reconstruction and document 
 
 Retain origin, source revision, license/provenance and local modifications. A fingerprint is a candidate, especially for short functions. Inspect target-specific calls, data ownership and compilation boundaries before import. Imported code receives the same relevant fidelity and hostile reviews as new reconstruction.
 
-[NFL investigation, matching integrity and source standards](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md) are the reference for this chapter.
+Record these matching-integrity and investigation rules in CONTRIBUTING.md. Keep evidence-format details and reproducible locators in target configuration.
 
 
 ---
 
 # Build & validation
 
-Separate a working baseline, reconstructed source and independent comparison measurements.
+Define reproducible stages with explicit inputs, outputs and failure conditions.
 
-## Three different results
+## Validation stages
 
-| Result | Establishes | Does not establish |
+| Stage | Required result | Recorded evidence |
 | --- | --- | --- |
-| Original-object relink | Target extraction, placement and relink can reproduce the executable | Recovered source, original compiler identity or progress |
-| Accepted-source build | Selected source replaces its accepted ranges and complete output still matches | Exactness of every original file boundary |
-| Independent comparison | Full registered functions/data have measured exact or fuzzy similarity | Permission to replace their original linked bytes |
+| Input verification | Authorized executable and required references match declared hashes | Target/hash and input inventory |
+| Original-byte baseline | Extraction, placement and relink reproduce the complete target where applicable | Tool identities, geometry and complete-output comparison |
+| Accepted-source build | Accepted source replaces its declared ranges while the complete build satisfies the project's objective | Source/configuration tree, placement and build receipt |
+| Independent comparisons | Registered functions/data receive full-extent exact and fuzzy measurements | Extents, dependencies, method and comparison receipt |
+| Public export | Summaries and supported modules derive from those same measurements | Manifest, checksums and semantic-validation result |
 
-A new project must implement and document these distinctions for its executable format. NFL's DOL section layout and tool profiles cannot simply be copied to another target.
+Implement applicable stages for the target's executable format. Document any stage that cannot be supported and its effect on the claims the project can make.
 
-## NFL command reference
+## Command contract
 
-These commands are executable entry points in NFL Street 2, not commands available in an empty repository. Follow its README host/setup requirements first.
+The README must give a concrete command for each implemented stage. Keep local and CI commands aligned. Names may follow the repository's existing tools; the responsibilities remain consistent.
 
-```sh
-python3 tools/setup_compiler.py
-python3 tools/baseline.py --original /path/to/main.dol
-python3 tools/source_build.py --original /path/to/main.dol
-python3 tools/analyze.py --original /path/to/main.dol
-python3 tools/matching.py --original /path/to/main.dol
-python3 -m unittest discover -s tests -v
-```
+| README entry | Inputs | Expected output |
+| --- | --- | --- |
+| Setup | Approved tool versions and hashes | Usable pinned tools |
+| Baseline | Verified original input and target configuration | Complete baseline comparison and receipt |
+| Build | Accepted source, headers and placement/profile configuration | Reproducible target output and receipt |
+| Compare | Registered source, full target extents and approved profiles | Exact/fuzzy comparison report |
+| Validate | Evidence, configuration, reports and dependencies | Nonzero exit on invalid or stale inputs |
+| Export | Validated measured report and prior history | Public package conforming to the site contract |
 
-NFL additionally validates its SN-linker original-object relink. Run relevant focused checks during iteration and the required final checks before submission; do not repeatedly run the entire suite when nothing affecting it changed.
+The template intentionally does not assume a compiler, executable format or build system. Adapt these entries to the tools already used by the project; do not add duplicate build paths solely to rename commands.
 
-## Establish the new project's baseline
+## Target and tool identity
 
-Record executable identity, section sizes/addresses, entry point and target hash. Verify the complete reconstructed executable against the original, not only selected functions or a summary score. Document all placement, alignment, small-data and relocation handling. Keep unassigned bytes represented.
+Record executable hash, section sizes/addresses, entry point and measurement universe. Preserve unassigned ranges. Document placement, alignment, small-data and relocation rules where applicable.
 
-Pin the usable compiler, linker, wrappers and conversion tools with hashes. Record unit/library compiler-profile evidence separately. A successful diagnostic compile can establish compatibility without uniquely identifying the original compiler version.
+Pin usable compilers, linkers, wrappers and comparison tools by version and hash. Record evidence for unit/library profiles separately. A successful diagnostic compile establishes compatibility under those conditions; it does not uniquely identify the original compiler.
 
-## Register partial comparisons
+## Partial reconstruction
 
-Define source path, profile, full target extents, code/data placement and dependencies. Reject overlaps, missing functions, unresolved references and stale receipts. Compare compiler-produced bodies without truncating mismatches. Weight fuzzy similarity by the target extent, not the size of an expanded draft.
+Keep useful incomplete bodies in normal source files. Register source path, full target extent, profile and dependencies separately. Compare the complete produced body; do not truncate a mismatch or adjust boundaries to improve a score.
 
-Use normal source files for partial work. Where accepted and draft code coexist, a documented comparison guard can select draft bodies for measurement while preserving the accepted build. Keep original bytes linked until promotion; partial mismatch alone is not a reason to reject a well-supported reconstruction.
+When accepted and draft code coexist, use a documented comparison configuration or guard. Preserve original linked bytes until replacement is validated. Fuzzy coverage describes measured similarity and does not grant exact-function credit.
 
 ## Promotion
 
-After review and validation, change the accepted source-placement configuration, remove obsolete guards/registrations and verify the entire executable. Do not move a function into a different source tree merely because it became exact. Preserve its attribution if tracking is enabled, and avoid counting a linked range again through a comparison entry.
+After review and validation, update accepted placement, remove obsolete comparison selection and verify the complete output. Keep source paths and original attribution stable. Prevent accepted ranges from being counted again through independent comparisons.
 
-Uninitialized storage has no speculative fuzzy byte score. Validate its layout and the project's stated accounting rules. Code/data classification follows the declared target measurement universe, including documented data embedded in executable sections; do not silently change denominators for the chart.
+Exact function status requires the complete declared extent to match. Exact file status additionally requires original boundary evidence and exact constituent content. A descriptive filename can count as named while its boundaries remain provisional.
 
-## Bind results to inputs
+## Receipts and stale results
 
-Reports should identify target hash, tested revision/tree, source/header hashes, unit manifest, profile, tool versions and comparison methodology. Reject a stale report after its inputs change. A successful earlier build is not proof of the current tree.
+Bind results to target hash, source revision/tree, relevant source/header/configuration hashes, tools, profiles and comparison method. Reject a receipt when any required input has changed. A build cache can accelerate work but cannot establish correctness.
 
-Validation tools need meaningful failure tests: wrong target, stale dependency, overlapping range, missing symbol, changed compiled extent, unsupported data placement and corrupt report. Do not weaken validators to accept the current patch. Record failures and unresolved questions honestly.
+Validate wrong target, missing dependency, overlapping ranges, missing symbol, changed extent, unsupported placement and corrupt report through meaningful failure cases. Test the code that decides validity rather than reproducing its implementation in assertions.
 
-See [NFL target mechanics and comparison workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md) for concrete formats, constraints and implementation details.
+Run focused checks during iteration and required final checks for the actual integrated inputs. Broaden testing when a changed dependency, failure or coverage gap justifies it.
 
 
 ---
@@ -338,7 +339,7 @@ Review useful partial source for fidelity, evidence and comparison integrity. A 
 
 ## Records tied to a revision
 
-NFL posts the two passes as separate PR discussion comments, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.
+Use two separate PR discussion comments for the reconstruction review passes, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.
 
 ```text
 Revision: FULL_COMMIT_SHA
@@ -372,7 +373,7 @@ When batching contributions, preserve original PRs, author revisions and review 
 
 ## Owner clearance
 
-Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. NFL's current format is:
+Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. Use a machine-readable clearance format such as:
 
 ```text
 <!-- owner-review-clearance -->
@@ -383,70 +384,91 @@ Hostile: https://github.com/OWNER/REPO/pull/NUMBER#issuecomment-ID
 
 The record links must be distinct comments on the same PR, identify the current head and contain passing verdicts. A new commit makes old clearance stale. The check verifies record identity and formatting; it cannot prove reviewer independence or quality of reasoning.
 
-Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. Only the owner performs the merge under the NFL model.
+Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. The repository documents who may perform the merge and any explicit delegation. Agents follow the authorization given for the task.
 
 ## New-project bootstrap
 
 Adapt the owner identity, check names and record rules deliberately. Install the clearance logic using trusted base-branch code before requiring the check. Test missing, malformed, stale and withdrawn clearance plus draft PRs. Do not mark a status successful because a workflow file exists.
 
-The [NFL contribution policy](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md#review-records-and-owner-clearance) and [trusted clearance workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml) are the reference implementations. Their current same-repository contribution policy is a project choice; do not silently claim fork builds have private reference access.
+Put the review record specification in CONTRIBUTING.md and its verifier in trusted workflow code. Declare whether contributions use same-repository branches or forks; fork builds do not automatically have access to private references. Match review effort to scope: source reconstruction needs fidelity review; presentation and documentation changes need relevant checks without unnecessary binary-build or reconstruction-review passes.
 
 
 ---
 
 # CI & publication
 
-Validate once, preserve the evidence and publish only a coherent verified result.
+Build once, validate the result, then publish an authenticated report.
 
-## Jobs and authority
+## Workflow structure
 
-| Job | Inputs and purpose | Authority |
-| --- | --- | --- |
-| Build/measure | Approved references and pinned tools; baseline, source and comparisons | Read source/packages; no source-branch writes |
-| Review clearance | Trusted workflow code and PR discussion records | Read PR records; write the named status |
-| Data publication | Authenticated successful measurements and prior history | Narrowly scoped report-store writes |
-| Website build | Public verified report packages and site source | Read packages; produce static artifact |
-| Pages deployment | Successful site artifact | Pages and deployment identity permissions |
+Use separate jobs for the responsibilities below. Map the commands to the repository's documented build tools.
 
-Pin reviewed Actions and shared tools to commits, build images to approved digests, and downloaded compilers/linkers by version and hash. Do not copy mutable image tags into the new archetype. Cache keys include target, environment and relevant configuration/source inputs; caches are acceleration, not validation evidence.
+| Job | Runs when | Work | Permissions |
+| --- | --- | --- | --- |
+| Configuration and evidence checks | PRs and main | Validate target configuration, declarations, evidence and changed dependencies | Source read |
+| Build and measure | PRs and eligible main runs | Verify inputs; build/compare; generate a candidate report and receipt | Source/packages read; approved private inputs only |
+| Review clearance | Relevant PR changes | Check revision, required review records and owner decision using trusted code | Read PR records; write its named status |
+| Report publication | Successful eligible main result | Authenticate the measured tree, validate prior history, export public data | Read artifacts; narrowly scoped history/report writes if needed |
+| Website validation | Site PRs and refreshes | Authenticate/import reports and assemble a coherent site candidate | Public source/artifact read |
+| Website deployment | Successful current site main | Preserve accepted reports, then deploy the exact candidate | Site data-store writes, Pages and deployment identity |
 
-## PR path
+Game build jobs do not need website deployment permissions. Publishing jobs process report data without executing scripts downloaded from artifacts. Keep private originals, complete debug exports and build credentials out of the website job.
 
-Validate the candidate revision and emit a receipt binding target, tested tree, environment, methodology, inputs and artifact checksums. Produce candidate reports for review without advancing public latest. Keep failures actionable and prevent stale output from an earlier successful run being uploaded after a failed export.
+## PR validation
 
-CI must fail if required inputs or enabled measurements are unavailable. Scope cheap validation separately from expensive reconstruction builds. The owner should enable required statuses only after observing real passing and failing behavior.
+Run the project's required baseline, accepted-source and comparison stages for the actual candidate inputs. Cheap checks should fail before expensive work where possible. Delete stale output before export; a failed exporter must not leave an earlier report available for upload.
 
-## Main path and proof reuse
+Emit a candidate artifact containing public measurements and a receipt binding repository, target/hash, full tested revision/tree, tools, methodology and payload checksums. Candidate artifacts support review; they do not advance public latest or the production timeline.
 
-NFL can reuse the final integrated PR's verified reports when trusted execution, artifact integrity, pinned environment and complete tested tree match the landed tree. Validate contributor provenance against actual landed/squashed history when that policy is enabled. Missing or incompatible proof falls back to full validation; invalid required attribution or history blocks publication.
+Pin Actions/shared tools to reviewed commits, images to approved digests and downloaded tools by version/hash. Cache keys include target, toolchain, relevant configuration and source inputs. Document the cache's scope and invalidation rules.
 
-An inventory-cache miss does not invalidate otherwise valid source-build proof. Regenerate the affected inventory separately. Do not repeat complete builds solely because review comments changed or an unchanged artifact can be authenticated.
+## Main validation and reuse
 
-Keep these guarantees when extracting reusable steps. Do not replace NFL's mature handoff checks with “download the latest artifact.”
+A main publication must have either a successful full validation or authenticated proof for the complete landed tree. Reuse requires matching target, tools/environment, methodology, complete tested inputs and original artifact integrity. Validate landed attribution too when the project's policy enables it.
 
-## History and ordering
+A missing or incompatible reusable proof requires the full validation path. An inventory-only change can regenerate inventory separately when source-build proof remains valid. Never combine reports from several independently tested branches into proof of an integrated build.
 
-Restore prior verified history before appending. Fetch or parse failure must not reset an established timeline. Make identical reruns idempotent. Distinguish commit time, measurement time and publication time.
+Keep original measurement time separate from publication time. Latest repository commit metadata is another input and does not make a previous build newly measured.
 
-The implemented website store is its data-only `report-data` branch, currently accepting NFL packages. It preserves immutable snapshots and a latest-good pointer. A separate data-only branch per game is an optional future producer store, not an onboarding requirement. Preserve existing game archives during migration and extend the site store for multiple projects as specified in the [integration handoff](/docs/reporting/onboarding.md). Git ancestry, immutable identity and an atomic pointer update prevent an older slow run from replacing newer progress; concurrency settings alone are insufficient.
+## Publication sequence
 
-A timeline records available verified measurements, not a guaranteed build for every commit. Preserve gaps and legacy evidence quality. Do not manufacture measurements by repeating a previous value and labeling it a fresh build.
+1. Select an eligible successful main run and its actual attempt.
+2. Authenticate repository, workflow revision, job/lane, tested tree and artifact digest.
+3. Restore validated prior history; an established history must not reset after a fetch/parse failure.
+4. Generate the public package from measured input and validate schema, arithmetic, extents, capabilities and history continuity.
+5. Store immutable snapshot files before updating the latest pointer atomically.
+6. Preserve the accepted package before deploying the matching website artifact.
 
-## Privileged workflows
+An identical rerun is a no-op. Different bytes for an existing immutable identity fail. A correction needs a new version/generation and recorded provenance. Check ancestry before advancing latest; concurrent job ordering alone cannot prevent stale publication.
 
-Treat PR text and report payloads as data. Never execute scripts from downloaded artifacts or untrusted PR code in a privileged publication/clearance job. Keep private references and build credentials out of the website job. The NFL clearance workflow evaluates trusted logic without checking out a contribution branch.
+The shared website owns a durable data-only report store so accepted measurements outlive temporary CI artifacts. Individual projects can retain their existing history/archive mechanism. A separate data branch in each game repository is optional.
 
-[GitHub's security guidance](https://docs.github.com/en/actions/reference/security/secure-use) covers pinned Actions and untrusted code. [workflow_run guidance](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run) explains why an upstream result must be authenticated before privileged follow-up work.
+## Failure behavior
+
+| Failure | Required behavior |
+| --- | --- |
+| Missing or malformed required report | Fail the refresh and keep the prior accepted package |
+| Unsupported optional capability | Declare it unsupported and configure its UI off |
+| Failed export of a supported capability | Fail; do not silently change it to unsupported |
+| Stale or diverged measured revision | Reject promotion and retain history |
+| Existing immutable identity with changed content | Reject the collision |
+| Concurrent store writer | Reread and reconcile after a normal push conflict; never force overwrite |
+| Obsolete site-source workflow | Reject deployment |
+| Missing private build access | Report the missing input; do not change dependency access or substitute tools |
+
+Define whether a refresh failure blocks the whole site deployment or allows other validated projects to publish. Test and document that policy explicitly. In either case, a failed project retains its last-good data.
+
+## Workflow security and approval
+
+Evaluate clearance using trusted base/default-branch logic. PR text, payload JSON and filenames are data, not commands. A privileged follow-up workflow must authenticate its upstream execution before using its artifacts. Declare how fork contributions receive build validation without assuming private secret access.
+
+See GitHub's [secure workflow guidance](https://docs.github.com/en/actions/reference/security/secure-use) and [workflow_run behavior](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run). Configure required statuses after real passing, failing and stale cases have been observed; a workflow file alone does not enforce approval.
 
 ## Website deployment
 
-Use a separate build artifact and deployment job. GitHub Pages deployment needs `pages: write`, `id-token: write`, the appropriate environment and a dependency on the artifact-producing job. See [custom Pages workflows](https://docs.github.com/en/enterprise-cloud%40latest/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
+Build one static artifact with fingerprinted assets. The deploy job depends on successful validation and storage and receives only the permissions it needs. GitHub Pages supports [custom Actions workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages).
 
-Build fingerprinted assets and publish one coherent site artifact, so a browser cannot mix old CSS with new markup. Verify home, direct game/wiki URLs, refresh and back/forward behavior at the deployed base path. To roll back UI, have the owner merge a source revert and let the current-main workflow rebuild with the latest verified reports. Old workflow reruns are rejected; measurement history is never rewound.
-
-The [NFL consumer implementation](/docs/reporting/nflstreet2.md) verifies existing artifacts and builds a locked static candidate without adding game CI work. Validation uses read-only permissions. A separate current-main job has site-repository write access for the data-only `report-data` branch, plus Pages and deployment-identity permissions. It preserves snapshots before deployment, rejects stale site revisions and never writes a game repository or merges main.
-
-The [pipeline audit](/docs/reporting/pipeline-audit.md) records the three current producers. The [shared workflow proposal](/docs/reporting/workflow.md) describes the remaining cross-game migration; distinguish it from the implemented site-only workflow.
+Verify home, direct project/wiki routes, refresh, back/forward and the selected report identity at the public URL. Use a reviewed site-source revert for a UI rollback while retaining current accepted measurement history. Do not deploy an obsolete workflow or rewrite measured history to roll back styling.
 
 
 ---
@@ -465,9 +487,9 @@ Choose attribution policy deliberately, and preserve the meaning of every histor
 
 A game can publish progress without function attribution. Turning rankings off does not inherently turn tracking off. Changing tracking policy is an explicit repository decision; hiding a UI section must not silently delete evidence already recorded.
 
-NFL requires exact-function attribution today. MVP, Tiger Woods and future projects do not acquire that requirement merely by joining the site. If tracking is disabled, mark the contributor capability unavailable and keep rankings off; enabling accurate rankings later may require reconstruction that is not fully possible.
+Choose the tracking policy when the repository is established; site integration does not impose function-level attribution. If tracking is disabled, mark the contributor capability unavailable and keep rankings off; enabling accurate rankings later may require reconstruction that is not fully possible.
 
-## NFL's credit model
+## Function-credit model
 
 Credit follows the original source contributor, not the person who merges or batches the PR. Store stable function extents, original contribution references, original revision/source blob and integration provenance as required by the ledger. Retain the original identity when imports are corrected or squash-merged.
 
@@ -479,7 +501,7 @@ Explicit joint credit is allowed: each person receives that function once. Perso
 
 Open the authorized draft PR to obtain its real number; never guess a future PR number. Record its actual original/integration references and validate the complete ledger against the candidate exact inventory. For a batch, use the actual batch PR as integration metadata while preserving original authorship.
 
-NFL validates the introduced source blob in reachable landed history, including a synthetic squash against the actual PR base. Pinned original commits must be accessible; missing provenance is a validation gap, not a reason to attribute the function to the integrator.
+Validate the introduced source blob in reachable landed history. If squash merging is supported, check the actual landed or predicted squash tree against the PR base. Pinned original commits must be accessible; missing provenance is a validation gap, not a reason to attribute the function to the integrator.
 
 ## Recovering past credit
 
@@ -493,67 +515,75 @@ Keep full commit identity, target, methodology, raw totals/denominators and evid
 
 Restore prior verified history; do not use an unauthenticated live page as automatic recovery evidence. An intentional checkpoint recovery needs a documented audit. Latest repository commit metadata is separate from the latest measured build, even when the header displays both near each other.
 
-See [NFL timeline and contributor rules](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md#timeline-and-contributor-credits) and [history recovery](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md#history-recovery).
+Document the selected credit policy, ledger schema and recovery procedure in the repository. Publish contributor data only when that policy can be validated.
 
 
 ---
 
 # Website
 
-Implement the game export and website adapter, validate one real package, then publish it through the shared renderer.
+Export a versioned public report and register it with the shared renderer.
 
-## Current state
+## Responsibilities
 
-NFL Street 2 is integrated and publicly deployed. Its importer authenticates existing main CI artifacts without adding game build steps. The website preserves accepted reports on `report-data` before publishing Pages. MVP and Tiger Woods remain previews until their producer and website adapters pass the onboarding checks.
+| Game repository | Shared website |
+| --- | --- |
+| Defines target/hash, approved tools and validation objective | Owns the shared layout, navigation, styling and interactions |
+| Produces source-derived measurements and execution evidence | Authenticates imports and validates the public contract |
+| Maintains supported map, inventory, history and credit data | Stores accepted snapshots and selects one exact package per project |
+| Documents build/export commands and capability policy | Registers projects, selects modules and publishes the static site |
 
-The instructions below are an implementation assignment for a new agent. Configuration alone does not integrate a game: the current importer, validator and durable store explicitly support NFL. The [complete integration handoff](/docs/reporting/onboarding.md) names every shared-code extension, payload requirement, command and acceptance result. Read it before starting either repository.
+Use the repository's existing structure and build tools. The integration boundary is the public report contract. A site adapter translates the project's actual export into that contract and the renderer's view model; game code does not need to adopt another project's compiler, source paths or internal ledgers.
 
-## Refresh and build NFL
+## Project identity and presentation
 
-In the website repository, with Python 3.11+, uv and an authenticated GitHub CLI:
+Choose a stable lowercase slug. Use it consistently in report identity, `/games/<slug>/`, project registration and artwork names. Keep display title, console, target ID/hash and repository URL explicit. Different targets must not silently replace each other's histories.
 
-```sh
-uv sync --locked
-uv run --locked python -m unittest discover -s tests -v
-uv run --locked python tools/import_nfl.py
-uv run --locked python tools/build_site.py --output build/site
-python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site
-```
+The shared site renders each project using the same header, gutters, code/data bars, metric rows, map controls, tooltips, timeline and contributor style. Register data and capabilities through the shared renderer rather than copying a standalone page per game.
 
-Use a new output directory for each retained candidate. The [NFL integration reference](/docs/reporting/nflstreet2.md) documents authentication, immutable packages, failure handling and the deployed publication flow.
+Store cover artwork as `assets/covers/<slug>.webp` with the original aspect ratio. Use authorized artwork and retain required license/provenance notes. The latest commit title/time is independent of measured build progress.
 
-## Project identity and artwork
+## Required public contract
 
-Use the same slug for repository identity, `/games/<slug>/` and asset names. Configure title, console, target ID/hash, repository link, cover dimensions and contribution policy. Keep region/revision explicit. A different target must not overwrite another target's report history.
+Use the [manifest schema](/docs/reporting/schema/report-v1.schema.json), [project configuration schema](/docs/reporting/schema/project-v1.schema.json) and [metric definitions](/docs/reporting/contract-v1.md). A producer and its site adapter must agree on schema and methodology versions before registration.
 
-Store covers as `assets/covers/<slug>.webp` with their original aspect ratio. Use owned or authorized presentation artwork; do not export raw game assets through build reports. Console icons and other reused assets retain their provenance/license notes.
+A package contains a manifest, a validated summary, an execution receipt, and JSON assets for each supported module. Paths are package-relative and checksummed. Keep raw public measurement output available for parity checks. A manifest or valid checksum alone does not authenticate a build.
 
-The local prototype's `assets/projects.js` is the current registration point. Adding a fixture there enables a layout preview, not production measurement. Production registration uses `config/projects.json`; `data/reports.lock.json` selects authenticated snapshots.
+| Manifest group | Required content |
+| --- | --- |
+| Identity | Project/repository, platform, target/hash, full measured revision and source tree |
+| Method | Methodology, generation and pinned tool identities |
+| Time | Measurement time and publication time separately |
+| Summary | Raw code/data totals, linked/exact bytes, independently supported fuzzy coverage and optional inventories |
+| Validation | Full/reused mode, run/attempt, workflow revision and checksummed receipt |
+| Modules | Each optional capability declared supported with a typed asset, or unsupported with a reason |
 
-## Report semantics
+Receipts bind the public files to the producing execution. The consumer verifies repository/workflow/job identity, success, attempt, target/tree, artifact digest and main eligibility against its trusted producer policy. Never execute a report package.
+
+## Measurement rules
 
 | Metric | Meaning |
 | --- | --- |
-| Linked | Source incorporated into the verified target build |
-| Matched | Exact measured source bytes, including eligible unlinked functions |
-| Fuzzy | Target-size-weighted similarity; never exact-function credit |
-| Functions exact / named | Complete exact extents / supported descriptive names within the declared inventory |
-| Files exact / named | Exact evidenced file boundaries and contents / descriptive file identities, including provisional ones |
+| Linked | Source-produced bytes incorporated into the validated target build |
+| Matched | Exact measured bytes, including eligible unlinked comparisons |
+| Fuzzy | Target-size-weighted similarity; null when unsupported |
+| Functions exact / named | Complete exact extents / names accepted under the naming policy |
+| Files exact / named | Exact original boundaries and content / descriptive source groups, including provisional groups |
 
-Overlapping progress layers are not additive percentages. A neutral name does not earn naming credit. A complete file claim requires its own boundary evidence. Map groups can be provisional without earning source progress. Preserve unmapped ranges.
+Derive percentages from raw totals. Keep code and data denominators stable and account for all declared ranges. Linked, matched and fuzzy overlap; never add them. Preserve the actual relationship between linked and matched under the project's promotion policy.
 
-Data and code fuzzy measurements need separate support. NFL's decomp.dev scalar is code-only; the website's packaged report carries separately measured code and data fuzzy coverage. Never copy a code score into a data metric to fill a missing field.
+A function fragment cannot earn full-function exactness. A compiled unit marked complete does not establish an original file boundary. Address labels do not count as descriptive names. Support code and data fuzzy independently; never copy one into the other or label a fallback as measured fuzzy progress.
 
-## Modular configuration
+## Choose modules independently
 
-The project configuration independently enables maps, function counts, file counts, timeline and contributor rankings. Core code/data measurements are required by this initial site contract. Producer capabilities describe what actually exists; site preferences select what appears.
+Presentation settings belong in the site's project registration, such as `config/projects.json`:
 
 ```json
 {
   "schemaVersion": 1,
   "slug": "game-slug",
   "title": "Game title",
-  "repository": "owner/game-slug",
+  "repository": "OWNER/REPO",
   "target": "TARGET_ID",
   "modules": {
     "map": true,
@@ -566,103 +596,53 @@ The project configuration independently enables maps, function counts, file coun
 }
 ```
 
-Add a project to `config/projects.json` only after its adapter and first package are validated. This example shows the configuration shape; it does not make an unsupported game ready by itself. Enabling Contribute requires a guide URL. Attribution tracking is a separate game-repository policy; rankings require supported verified attribution data.
+Replace identity placeholders with verified facts. Enable a module only when the producer supplies data validated by its adapter. A disabled module leaves no heading, empty space or section listeners. Shared payloads can still serve another enabled module, but a timeline must not require contributor data and summaries must not require an invented map.
 
-A disabled module creates no empty section or section listeners. NFL shares payloads between map/counts and timeline/rankings; an enabled sibling can still require that shared file. Unsupported data is not zero. If an already-supported enabled module fails to export, retain the last valid package and fail the refresh rather than silently hiding it.
+Attribution tracking, contributor rankings and accepting contributions are independent. `contributions.accepting: true` adds the Contribute button and lower contribution section and requires an HTTPS `guideUrl`. It does not enable tracking or rankings.
 
-## Hand a game to an agent
+Unsupported data remains unavailable. Valid zero stays zero. If a supported export unexpectedly fails, retain last-good data and report the failure instead of silently hiding the capability.
 
-Give the agent the game checkout and `mitsevox/mitsevox.github.io`, each on its own work branch. The game owns builds, comparisons and source-derived reports. The website owns authentication, normalization, durable storage, project registration and rendering. An agent working only in the game repository cannot finish both halves.
+## Producer template
 
-Use this prompt together with the project's current repository instructions:
+1. Run the project's documented validation and comparison commands.
+2. Export raw byte measures and supported modules from the same measured inputs.
+3. Validate ranges, recursive totals, complete function extents and inventory policy.
+4. Restore history and append the measurement without rewriting existing records.
+5. Reconcile contributor evidence only when the selected tracking policy requires it.
+6. Generate the versioned manifest, payload checksums and execution receipt.
+7. Upload only public JSON after all required checks pass.
 
-```text
-Integrate this game with https://mitsevox.github.io/.
-Read the wiki and https://mitsevox.github.io/docs/reporting/onboarding.md.
-Work in separate game and website branches/worktrees; preserve unrelated work.
+Do not upload original binaries, object code, complete debug exports, credentials or private experiment files. Retain the existing decomp.dev feed where used; compare fields supported by that format against the same raw measurements.
 
-Inspect the real target, approved tools, build/report workflows and history.
-Record supported measurements and optional modules. Do not infer credits from
-merger identity or populate unsupported metrics from the layout fixtures.
+## Consumer template
 
-Implement both the game report export and its website adapter. Account for
-all NFL-specific assumptions listed in the handoff, including authentication,
-package validation, multi-project storage, renderer inputs and CI refresh.
-Keep contribution acceptance, attribution tracking and rankings independent.
+1. Register a trusted producer policy and an adapter for the export format.
+2. Select a successful eligible main execution and authenticate its actual artifact.
+3. Parse a bounded, exact allowlist of public files; reject unsafe paths, links and malformed values.
+4. Validate schema, target/revision, arithmetic, optional modules and raw-report parity.
+5. Check the new package against prior accepted history and Git ancestry.
+6. Install immutable files and atomically update only this project's lock entry.
+7. Build one coherent static site from the selected locked packages.
+8. Preserve accepted snapshots in durable storage before deployment.
 
-Use a real successful main report for parity. Test absent optional data,
-failed refreshes, unchanged reruns, stale runs, immutable collisions and
-NFL-plus-this-game storage. Preserve previous history and decomp.dev output.
+Keep project-specific field translation inside the adapter. The website owns shared contract validation, storage and rendering. An import must preserve every other project's lock and snapshots. A report's strings must not select arbitrary executable code.
 
-Deliver the two coordinated changes with exact revisions, commands, run and
-artifact evidence, capability settings and the onboarding acceptance results.
-Follow existing task authorization for pushes, PRs, publication and merges.
-Do not call integration complete until the public page and its next refresh
-have been verified against the accepted package.
-```
+Consumers may reuse an identical previously authenticated package after temporary upstream artifacts expire. A changed or previously unaccepted package still needs original execution proof. Latest commit metadata never changes the selected measurement identity.
 
-The [starter archive](/wiki/downloads/repository-starter.zip) includes this prompt and the complete technical handoff. Agents should read the linked schemas and actual source rather than treat the starter files as a working compiler or generic CI pipeline.
+## Integration acceptance
 
-If separate game agents work concurrently, assign one website integration owner for shared validation, storage, renderer and workflow changes. Implement that common extension once. Each game then supplies its own producer policy, adapter, tests and registration through it.
-
-## Implementation sequence
-
-| Step | Game repository | Website repository | Evidence before moving on |
-| --- | --- | --- | --- |
-| Inventory | Identify target/hash, build tools, raw report and history | Read the current NFL path and shared extension map | Verified facts and a capability matrix |
-| Common foundation | Preserve the current build | Add trusted adapter dispatch, per-project storage and optional renderer inputs | NFL plus a second-project test; existing NFL data intact |
-| Producer | Export supported public JSON and execution evidence from the existing measured build | Keep the new project disabled | Successful main artifact under a reviewed workflow/tool policy |
-| Adapter | Retain original report, history and supported decomp.dev output | Authenticate the run; normalize, validate and lock the real package | Same-revision raw metric and module parity |
-| Registration | Document the new export | Configure modules, contribution policy and production route | Build and browser checks with no fixtures |
-| Publication | Keep the old feed until cutover is approved | Preserve the package, deploy and exercise the next refresh | Public manifest/route and durable lock agree |
-
-The technical handoff gives MVP and TW's current target/report identities and build commands. It also explains their specific migration work: preserve MVP's separate publisher; preserve TW's stale-object pruning and audit checks while separating history writes from build permissions. Verify current revisions before implementation.
-
-## Required public data
-
-Use the [manifest](/docs/reporting/schema/report-v1.schema.json), [project configuration](/docs/reporting/schema/project-v1.schema.json) and [semantic contract](/docs/reporting/contract-v1.md). Each adapter adds payload schemas and a trusted producer policy for its actual workflow. Copying NFL's receipt type, job names or step names does not authenticate another game.
-
-A package binds full source revision/tree, target/hash, methodology/generation, tool identities, measurement/publication times and file checksums to GitHub-verified run/artifact evidence. Raw byte totals remain authoritative; percentages are derived. Code/data fuzzy support is independent. Larger map/history/credit payloads are optional and referenced by checksum. The original public report remains available for parity checks.
-
-A game with no contributor feed declares contributors unsupported and disables its rankings. A timeline must work without a contributor field. A summary-only game must display bars without inventing maps or inventory. The existing NFL readers still require common-code changes for these combinations; the [renderer compatibility checklist](/docs/reporting/onboarding.md#renderer-compatibility-work) names them explicitly.
-
-A newly failed supported report is an error, not a new unsupported capability. Keep last-good data and report the failure. Preserve history evidence quality; do not manufacture historical measurements or contributor ownership to fill gaps.
-
-## Website changes an agent must implement
-
-| Area | Existing implementation to extend |
+| Area | Required evidence |
 | --- | --- |
-| Artifact selection and execution proof | `tools/import_nfl.py`, `tools/reporting/github.py` |
-| Trusted adapter selection and payload validation | `tools/reporting/validation.py`, per-game producer policy and payload schemas |
-| Multiple projects in the permanent archive | `tools/report_store.py` |
-| Verified data bindings and static routes | `tools/build_site.py`, `assets/projects.js`, `assets/report-projects.js` |
-| Optional map/count/history/credit data and fuzzy layers | `assets/progress.js`, `assets/activity.js`, `assets/reports.js`, homepage bars |
-| Refresh all registered games | `.github/workflows/site.yml` |
-| Regression and isolation coverage | Existing reporting/store tests plus the new adapter's tests |
+| Producer | Successful validated main result with target, source/tree, tool and artifact identities |
+| Summary | Raw total/linked/exact parity; correct independent fuzzy support |
+| Optional modules | Enabled modules work; absent map/count/history/credits do not create empty sections or fake data |
+| History and storage | Existing records survive, identical reruns are no-ops, stale/diverged updates and immutable collisions fail |
+| Isolation | Updating or failing one project preserves the other projects' accepted data |
+| Build | No fixtures or private files; exact lock selection and fingerprinted assets |
+| Browser | Shared styling, direct route/refresh, navigation, hover and map behavior |
+| Publication | Public page and manifest agree; the next refresh preserves the same accepted state |
 
-The handoff specifies a project-selecting `tools/import_reports.py` interface for agents to implement. It does **not** exist yet. Keep the current NFL CLI working during that extension. The current Pages workflow blocks deployment if any refresh fails; independently preserving a successful project's import does not change that deployment policy.
-
-## Acceptance and completion
-
-Use the [full acceptance matrix](/docs/reporting/onboarding.md#6-commands-and-acceptance-evidence). It requires authentic execution, raw metric parity, optional-module behavior, honest maps/inventories, history continuity, multi-project storage, failure isolation and browser/live checks.
-
-Website validation needs no game compiler:
-
-```sh
-uv sync --locked
-uv run --locked python -m unittest discover -s tests -v
-uv run --locked python tools/build_wiki.py
-uv run --locked python tools/build_site.py --output build/onboarding-candidate
-python3 -m http.server 54876 --bind 127.0.0.1 --directory build/onboarding-candidate
-```
-
-Use a new build output directory. Offline validation cannot authenticate a new upstream package; separately run the implemented adapter against a real successful main run. Test corruption and races in isolated fixtures/remotes, not by damaging public history. Reuse adequate existing coverage and required game build evidence instead of repeating unrelated full builds.
-
-The final handoff supplies both PRs/revisions, target/tools, producing run/attempt/artifact, import/build commands, manifest digest/lock, capability/policy matrix, parity/failure results and live refresh verification. A second game is integrated when its public route and the next scheduled/manual refresh preserve the accepted data alongside NFL. Any blocker gets a concrete next action; it is not checked off as complete.
-
-## Current publication boundary
-
-Site CI validates PRs and produces candidates. Push/manual/scheduled refreshes restore the durable last-good package and use read-only access to NFL. A failed refresh fails CI and leaves the live site unchanged. Only current-main publication jobs can append verified snapshots to this site repository’s `report-data` branch and deploy the validated Pages artifact. Historical snapshots remain in Git when candidate artifacts expire after 90 days. No workflow writes game source branches or changes NFL’s existing publication.
+Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The [integration checklist](/docs/reporting/onboarding.md) and [starter files](/wiki/starter-kit/) provide a reusable handoff. Each repository supplies its own implementation details.
 
 
 ---
@@ -710,61 +690,55 @@ A new agent should finish each handoff with changed files, evidence, checked rev
 
 # Starter kit
 
-A clean handoff for a new project, without pretending the game-specific build already exists.
+Repository scaffolding and an agent prompt for applying this handbook.
 
-## Download and read
+## Files
 
-- [Repository starter files](/wiki/downloads/repository-starter.zip) — README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, integration prompt and complete integration handoff.
-- [Report schema](/docs/reporting/schema/report-v1.schema.json) and [project configuration schema](/docs/reporting/schema/project-v1.schema.json).
+Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It contains README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, an integration checklist and an agent prompt.
 
-The starter files contain visible placeholders. Fill them and review them with the owner before adoption. They do not contain a compiler, original game data, a functioning generic CI pipeline, or working multi-game reporting adapters. Do not claim setup is complete because the files were copied.
+Fill visible placeholders from verified project facts. The files define responsibilities and conventions; the project supplies its own compiler, build system, evidence formats, CI commands and report adapter. Existing repositories keep their established paths where those responsibilities are already implemented.
 
-## Prompt for a fresh agent
+## Prompt for an agent
 
 ```text
-Read this handbook and this project's README, CONTRIBUTING and AGENTS files.
-Inspect the existing repository before editing; preserve unrelated work.
+Read this wiki and the project's current README, CONTRIBUTING and AGENTS.
+Use its structure as the template for repository layout, naming, evidence,
+validation, review, CI, public reporting and shared-site integration.
+Inspect the existing project before editing and preserve unrelated work.
 Use a dedicated branch and checkout/worktree.
 
-First establish:
-- Owner, repository slug, target platform/region/revision and executable hash.
-- Authorized reference inventory and missing evidence/tool access.
-- Approved build environment, compiler/linker profiles and baseline status.
-- Existing CI, review rules, attribution policy and public reporting capability.
+Record the actual target/hash, approved toolchain, build commands, source
+objective, current validation and supported report capabilities. Adapt the
+handbook's responsibilities to this project's established structure.
 
-Adapt the starter files to verified project facts. Keep placeholders explicit.
-Build a bounded implementation plan with acceptance evidence for each stage.
-Do not assume NFL's compiler flags, layout, source boundaries or target IDs apply.
-Retain useful partial source and measure it honestly.
-Keep original binaries, bulk debug exports and experiments out of public Git.
-Do not change private dependency access, push, open PRs, publish, or merge without
-appropriate authorization. Only the documented project owner merges main.
-Distinguish implemented behavior, verified results, proposed work and blockers.
+Implement missing pieces needed for a reproducible build, honest exact/fuzzy
+measurements, versioned public reports, preserved history and site integration.
+Keep contribution acceptance, attribution tracking and rankings independent.
+Use the shared report contract and renderer rather than a separate game UI.
+
+Validate real inputs and both success/failure paths. Retain useful partial
+source. Do not invent metrics, evidence, authorship, approval or test results.
+Follow the project's task authorization for pushes, PRs, publication and merge.
+
+Deliver the changes with commands, tested revisions, artifacts, capability
+settings and remaining limitations. Verify the public route and next refresh
+before declaring the site integration complete.
 ```
 
-## Integrating an existing game
+## Acceptance checklist
 
-Use [Website](/wiki/website-integration/) and the [complete technical handoff](/docs/reporting/onboarding.md). The archive includes `INTEGRATION-PROMPT.md` and `INTEGRATION.md`; give the agent both game and website checkouts. The handoff identifies current NFL-specific code, required common extensions, optional-data behavior, producer requirements, exact commands and the acceptance evidence. Implementing an adapter is part of the assignment; a generic multi-game importer is not already supplied.
-
-## New-project acceptance record
-
-| Stage | Evidence to record |
+| Stage | Evidence |
 | --- | --- |
-| Identity | Owner, platform/region/revision, original executable hash |
-| References | Parsed input inventory, reference hashes, missing evidence |
-| Baseline | Pinned tools, command, full-output comparison and tested revision |
-| Source build | Accepted ranges/profiles and complete-target validation |
-| Comparisons | Registered partial/exact functions, method, extent and receipt checks |
-| Reviews | Independent coverage, final revision, resolved findings |
-| CI | Real successful and intentionally failing runs; required check configuration |
-| Optional credits | Declared policy, provenance coverage, exact-inventory reconciliation |
-| Reports | Supported fields/modules, semantic validation and decomp.dev parity |
-| Site | Verified package, no fixtures, direct routes, freshness and rollback |
+| Identity | Owner, source objective, platform/region/revision and executable hash |
+| Structure | Source, declarations, configuration, evidence, tools and generated output are discoverable |
+| Tools | Approved versions/hashes, supported hosts and reproducible setup |
+| Baseline and build | Applicable complete-target checks and accepted-source result |
+| Comparisons | Full extents, profiles, dependencies and exact/fuzzy measurements |
+| Review | Scope-appropriate independent coverage, actual revision and resolved findings |
+| CI | Documented command mapping; real passing/failing/stale cases; appropriately scoped permissions |
+| Credits | Explicit policy, with evidence reconciliation when enabled |
+| Reports | Validated shared manifest, raw parity, supported modules and execution proof |
+| History | Durable continuity, idempotence, ordering and recovery |
+| Website | Shared presentation, configured modules, direct route, deployment and subsequent refresh |
 
-Do not prefill results or sign off another person's review. A missing stage remains pending with an owner and next action. Establish the first valid baseline before taking on broad reconstruction.
-
-## Reference implementation
-
-Start from the [NFL README](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/README.md), [contribution policy](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md), [agent instructions](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/AGENTS.md), [evidence specification](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/README.md), [target mechanics](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/config/GN7E69/README.md), [build workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/baseline.yml) and [review workflow](https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml). These are pinned examples of a working project's architecture, not permission to copy its assumptions into another game.
-
-The website-side NFL adapter is documented in [Website](/wiki/website-integration/) and the [NFL integration reference](/docs/reporting/nflstreet2.md). The integration handoff turns this into an explicit two-repository implementation assignment, including the common website work required before a second project can register.
+The [integration checklist](/docs/reporting/onboarding.md) repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.
