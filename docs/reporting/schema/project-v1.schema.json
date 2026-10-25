@@ -1,0 +1,98 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "target": {
+      "type": "string",
+      "minLength": 1
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "map": {
+          "type": "boolean"
+        },
+        "functionCounts": {
+          "type": "boolean"
+        },
+        "fileCounts": {
+          "type": "boolean"
+        },
+        "timeline": {
+          "type": "boolean"
+        },
+        "contributors": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "map",
+        "functionCounts",
+        "fileCounts",
+        "timeline",
+        "contributors"
+      ]
+    },
+    "contributions": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accepting": {
+              "const": false
+            }
+          },
+          "required": [
+            "accepting"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accepting": {
+              "const": true
+            },
+            "guideUrl": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://"
+            }
+          },
+          "required": [
+            "accepting",
+            "guideUrl"
+          ]
+        }
+      ]
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "slug",
+    "title",
+    "repository",
+    "target",
+    "modules",
+    "contributions"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Proposed site project configuration v1"
+}

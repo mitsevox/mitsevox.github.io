@@ -1,0 +1,67 @@
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["Markdown==3.9"]
+# ///
+"""Build the public wiki from reviewed Markdown; no game data or runtime service."""
+from pathlib import Path
+from html import escape
+import json
+import re
+import zipfile
+import markdown
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE = ROOT / "docs/wiki"
+chapters = json.loads((SOURCE / "chapters.json").read_text())
+entry = (ROOT / "index.html").read_text()
+index, handbook = [], []
+for i, chapter in enumerate(chapters):
+    slug, title = chapter["slug"], chapter["title"]
+    route = "/wiki/" if i == 0 else f"/wiki/{slug}/"
+    source = (SOURCE / f"{slug}.md").read_text()
+    md = markdown.Markdown(extensions=["fenced_code", "tables", "toc"], extension_configs={"toc":{"permalink":False}})
+    article = md.convert(source)
+    # Keep wide code and tables contained, including on small screens.
+    article = article.replace("<table>", '<div class="wiki-table"><table>').replace("</table>", "</table></div>")
+    toc = "".join(f'<a href="#{escape(t["id"])}">{escape(t["name"])}</a>' for t in md.toc_tokens[0].get("children", []))
+    nav, group = [], None
+    for n, item in enumerate(chapters):
+        if item["group"] != group:
+            group = item["group"]
+            nav.append(f'<p class="wiki-nav-group">{escape(group)}</p>')
+        href = "/wiki/" if n == 0 else f'/wiki/{item["slug"]}/'
+        current = ' aria-current="page"' if n == i else ""
+        nav.append(f'<a href="{href}"{current}><span class="wiki-nav-number">{n+1:02}</span>{escape(item["title"])}</a>')
+    paging = []
+    for n, label in ((i-1,"Previous"),(i+1,"Next")):
+        if 0 <= n < len(chapters):
+            href = "/wiki/" if n == 0 else f'/wiki/{chapters[n]["slug"]}/'
+            paging.append(f'<a href="{href}"><small>{label}</small><span>{escape(chapters[n]["title"])}</span></a>')
+    main = f'''<main class="wiki-layout" data-chapter="{slug}">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters">{''.join(nav)}</nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>{escape(chapter["group"])} <span aria-hidden="true">/</span> {i+1:02}</span><a href="/docs/wiki/{slug}.md" download>Markdown ↓</a></div>
+<article class="wiki-article">{article}</article><nav class="wiki-pagination" aria-label="Handbook pagination">{''.join(paging)}</nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page">{toc}</nav></aside></main>'''
+    dest = ROOT / route.strip("/")
+    dest.mkdir(parents=True, exist_ok=True)
+    (dest / "content.html").write_text(main)
+    html = re.sub(r"<title>.*?</title>", f"<title>{escape(title)} · Wiki · mitsevox</title>", entry)
+    html = html.replace('content="GameCube decompilation projects by mitsevox."', f'content="{escape(chapter["summary"], quote=True)}"')
+    (dest / "index.html").write_text(html)
+    plain = re.sub(r"<[^>]+>", " ", article)
+    index.append({"title":title,"href":route,"summary":chapter["summary"],"text":re.sub(r"\s+", " ", plain)})
+    handbook.append(source)
+(ROOT / "assets/wiki-index.json").write_text(json.dumps(index, ensure_ascii=False, indent=2)+"\n")
+downloads = ROOT / "wiki/downloads"
+downloads.mkdir(exist_ok=True)
+(downloads / "handbook.md").write_text("# mitsevox project handbook\n\nReference snapshot: 2026-10-25. Project repository rules take precedence.\n\n"+"\n\n---\n\n".join(handbook))
+with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+    for path in sorted((SOURCE / "starter").rglob("*")):
+        if path.is_file():
+            info = zipfile.ZipInfo("repository-starter/"+str(path.relative_to(SOURCE / "starter")), date_time=(2026,10,25,0,0,0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, path.read_bytes())
+print(f"Built {len(chapters)} wiki routes, search index and starter downloads.")

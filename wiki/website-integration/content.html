@@ -1,0 +1,82 @@
+<main class="wiki-layout" data-chapter="website-integration">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-setup/"><span class="wiki-nav-number">02</span>Repository setup</a><a href="/wiki/layout-and-naming/"><span class="wiki-nav-number">03</span>Layout &amp; naming</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/evidence-and-reconstruction/"><span class="wiki-nav-number">04</span>Evidence</a><a href="/wiki/build-and-validation/"><span class="wiki-nav-number">05</span>Build &amp; validation</a><p class="wiki-nav-group">Delivery</p><a href="/wiki/review-and-approval/"><span class="wiki-nav-number">06</span>Review &amp; approval</a><a href="/wiki/ci-and-publication/"><span class="wiki-nav-number">07</span>CI &amp; publication</a><a href="/wiki/credits-and-history/"><span class="wiki-nav-number">08</span>Credits &amp; history</a><p class="wiki-nav-group">Integration</p><a href="/wiki/website-integration/" aria-current="page"><span class="wiki-nav-number">09</span>Website</a><a href="/wiki/operations/"><span class="wiki-nav-number">10</span>Troubleshooting &amp; upkeep</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">11</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Integration <span aria-hidden="true">/</span> 09</span><a href="/docs/wiki/website-integration.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="website">Website</h1>
+<p>One shared renderer, game-owned measurements and modules selected per project.</p>
+<h2 id="current-state">Current state</h2>
+<p>The shared UI is a local prototype with persistent navigation and individual game routes. NFL uses a frozen real report; MVP and Tiger Woods use synthetic layout measurements. The common reporting contract and CI migration are proposals. This chapter explains the integration target and the concrete remaining work; it is not a claim that a new game's CI can already plug in automatically.</p>
+<h2 id="project-identity-and-artwork">Project identity and artwork</h2>
+<p>Use the same slug for repository identity, <code>/games/&lt;slug&gt;/</code> and asset names. Configure title, console, target ID/hash, repository link, cover dimensions and contribution policy. Keep region/revision explicit. A different target must not overwrite another target's report history.</p>
+<p>Store covers as <code>assets/covers/&lt;slug&gt;.webp</code> with their original aspect ratio. Use owned or authorized presentation artwork; do not export raw game assets through build reports. Console icons and other reused assets retain their provenance/license notes.</p>
+<p>The local prototype's <code>assets/projects.js</code> is the current registration point. Adding a fixture there enables a layout preview, not production measurement. Production registration will use the versioned configuration and verified report locations described below.</p>
+<h2 id="report-semantics">Report semantics</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Linked</td>
+<td>Source incorporated into the verified target build</td>
+</tr>
+<tr>
+<td>Matched</td>
+<td>Exact measured source bytes, including eligible unlinked functions</td>
+</tr>
+<tr>
+<td>Fuzzy</td>
+<td>Target-size-weighted similarity; never exact-function credit</td>
+</tr>
+<tr>
+<td>Functions exact / named</td>
+<td>Complete exact extents / supported descriptive names within the declared inventory</td>
+</tr>
+<tr>
+<td>Files exact / named</td>
+<td>Exact evidenced file boundaries and contents / descriptive file identities, including provisional ones</td>
+</tr>
+</tbody>
+</table></div>
+<p>Overlapping progress layers are not additive percentages. A neutral name does not earn naming credit. A complete file claim requires its own boundary evidence. Map groups can be provisional without earning source progress. Preserve unmapped ranges.</p>
+<p>Data and code fuzzy measurements need separate support. NFL's decomp.dev scalar is code-only; data similarity is in sections while its current data bar exposes linked/exact progress. Never copy a code score into a data metric to fill a missing field.</p>
+<h2 id="modular-configuration">Modular configuration</h2>
+<p>The proposed project configuration independently enables maps, function counts, file counts, timeline and contributor rankings. Core code/data measurements are required by this initial site contract. Producer capabilities describe what actually exists; site preferences select what appears.</p>
+<pre><code class="language-json">{
+  &quot;schemaVersion&quot;: 1,
+  &quot;slug&quot;: &quot;game-slug&quot;,
+  &quot;title&quot;: &quot;Game title&quot;,
+  &quot;repository&quot;: &quot;owner/game-slug&quot;,
+  &quot;target&quot;: &quot;TARGET_ID&quot;,
+  &quot;modules&quot;: {
+    &quot;map&quot;: true,
+    &quot;functionCounts&quot;: true,
+    &quot;fileCounts&quot;: false,
+    &quot;timeline&quot;: true,
+    &quot;contributors&quot;: false
+  },
+  &quot;contributions&quot;: { &quot;accepting&quot;: false }
+}
+</code></pre>
+<p>This is a draft configuration example. It does not modify the live prototype by itself. Enabling Contribute requires a guide URL. Attribution tracking is a separate game-repository policy; rankings require supported verified attribution data.</p>
+<p>A disabled module creates no empty space, fetches or event listeners. Unsupported data is not zero. If an already-supported enabled module fails to export, retain the last valid package and fail the refresh rather than silently hiding it.</p>
+<h2 id="producer-adapter-checklist">Producer adapter checklist</h2>
+<ol>
+<li>Establish target and tool identity; verify build/comparison inputs.</li>
+<li>Translate raw measurements into the common manifest without changing denominators or losing partial progress.</li>
+<li>Supply typed map/history/credit payloads for supported modules; attach checksums and provenance.</li>
+<li>Validate ranges, inventory, arithmetic, target identity, history continuity and the project's attribution policy.</li>
+<li>Produce website and decomp.dev outputs from the same verified computation where possible.</li>
+<li>Publish immutable snapshots and advance latest only after success.</li>
+</ol>
+<p>The <a href="/docs/reporting/schema/report-v1.schema.json">draft manifest schema</a>, <a href="/docs/reporting/schema/project-v1.schema.json">configuration schema</a> and <a href="/docs/reporting/contract-v1.md">semantic contract</a> are available. Full payload schemas, semantic validators and producer adapters remain implementation gates. JSON-schema validation alone does not authenticate CI.</p>
+<h2 id="consumer-and-rollout-checklist">Consumer and rollout checklist</h2>
+<p>Fetch packages during the site build, pin exact identities in a lockfile, validate provenance/checksums, reject fixture origins and copy the selected data into the static output. Browser visitors need no GitHub credentials. Load heavy map/history payloads only when their module needs them.</p>
+<p>If one game's refresh fails, keep its last verified package; another game's valid update can still publish. Never present newest-commit metadata as a newly measured build. Test direct routes, custom menus, keyboard navigation, disabled modules, cached assets and rollback before deployment.</p>
+<p>Migrate NFL first, compare both consumers at the same revision, then add MVP and Tiger Woods. Preserve their current decomp.dev artifact feeds and histories throughout. Redirect existing game Pages only after owner-approved live parity. The <a href="/docs/reporting/migration.md">migration plan</a> lists the acceptance gates.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#current-state">Current state</a><a href="#project-identity-and-artwork">Project identity and artwork</a><a href="#report-semantics">Report semantics</a><a href="#modular-configuration">Modular configuration</a><a href="#producer-adapter-checklist">Producer adapter checklist</a><a href="#consumer-and-rollout-checklist">Consumer and rollout checklist</a></nav></aside></main>

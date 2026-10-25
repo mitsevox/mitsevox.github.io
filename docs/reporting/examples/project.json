@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "slug": "nflstreet2",
+  "title": "NFL Street 2",
+  "repository": "mitsevox/nflstreet2",
+  "target": "GN7E69",
+  "modules": {
+    "map": true,
+    "functionCounts": true,
+    "fileCounts": true,
+    "timeline": true,
+    "contributors": true
+  },
+  "contributions": {
+    "accepting": true,
+    "guideUrl": "https://github.com/mitsevox/nflstreet2/blob/main/CONTRIBUTING.md"
+  }
+}

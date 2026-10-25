@@ -1,0 +1,11 @@
+# Generated and private local inputs; review project-specific additions.
+/build/
+/scratch/
+/orig/
+/research/private/
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.DS_Store

@@ -1,0 +1,49 @@
+<main class="wiki-layout" data-chapter="review-and-approval">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-setup/"><span class="wiki-nav-number">02</span>Repository setup</a><a href="/wiki/layout-and-naming/"><span class="wiki-nav-number">03</span>Layout &amp; naming</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/evidence-and-reconstruction/"><span class="wiki-nav-number">04</span>Evidence</a><a href="/wiki/build-and-validation/"><span class="wiki-nav-number">05</span>Build &amp; validation</a><p class="wiki-nav-group">Delivery</p><a href="/wiki/review-and-approval/" aria-current="page"><span class="wiki-nav-number">06</span>Review &amp; approval</a><a href="/wiki/ci-and-publication/"><span class="wiki-nav-number">07</span>CI &amp; publication</a><a href="/wiki/credits-and-history/"><span class="wiki-nav-number">08</span>Credits &amp; history</a><p class="wiki-nav-group">Integration</p><a href="/wiki/website-integration/"><span class="wiki-nav-number">09</span>Website</a><a href="/wiki/operations/"><span class="wiki-nav-number">10</span>Troubleshooting &amp; upkeep</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">11</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Delivery <span aria-hidden="true">/</span> 06</span><a href="/docs/wiki/review-and-approval.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="review-approval">Review &amp; approval</h1>
+<p>Independent evidence, exact revisions and an owner-controlled merge decision.</p>
+<h2 id="contribution-sequence">Contribution sequence</h2>
+<p>Claim scope → establish evidence → reconstruct and measure → self-check → blind accuracy review → hostile review → resolve findings → final-revision CI → owner clearance → owner merge → verified publication.</p>
+<p>A source author cannot supply its own independent review. For reconstruction, the accuracy reviewer first examines the scoped target with proposed names/comments withheld, then reconciles its interpretation. The hostile reviewer checks fidelity, compiler settings, layouts, names, comments, boundaries, comparisons and validation. A documentation-only change can justify accuracy N/A; it cannot claim binary checks it did not run.</p>
+<h2 id="review-partial-source-fairly">Review partial source fairly</h2>
+<p>Review useful partial source for fidelity, evidence and comparison integrity. A measured mismatch is not automatically a review failure. A reviewer may return SHIP with documented matching incompleteness when the applicable checks pass. Original bytes remain linked until promotion is validated.</p>
+<h2 id="records-tied-to-a-revision">Records tied to a revision</h2>
+<p>NFL posts the two passes as separate PR discussion comments, with each header field appearing once at the start. Replace placeholders only after the review actually occurs.</p>
+<pre><code class="language-text">Revision: FULL_COMMIT_SHA
+Accuracy: PASS
+
+Reviewer: identity and independence
+Scope: functions, files and configuration checked
+Evidence: reproducible references and validation artifacts
+Findings: results, uncertainties and resolutions
+</code></pre>
+<pre><code class="language-text">Revision: FULL_COMMIT_SHA
+Hostile: SHIP
+
+Reviewer: identity and independence
+Checklist: PASS / FAIL / BLOCKED / justified N/A per category
+Findings: location, evidence and required correction
+Coverage: earlier records carried forward and delta checked
+</code></pre>
+<p>Hostile verdicts are SHIP, FIX, REDO or BLOCKED. SHIP means that review passed; it does not authorize a merge. Missing essential evidence is a blocked check, not permission to infer success.</p>
+<h2 id="rechecks-and-integration">Rechecks and integration</h2>
+<p>After a localized fix, recheck the finding and affected behavior, declarations, callers, boundaries, compiler/comparison configuration and evidence. Carry forward adequate independent coverage with its revision and links. Do not restart an entire review without a concrete coverage gap.</p>
+<p>After bringing in main, inspect the delta, conflict resolutions and shared dependencies. Produce final-head review records explaining what was rechecked and why earlier coverage still applies. Run required CI on the final integrated inputs. Constituent PR reports cannot be combined into proof of a batch build.</p>
+<p>When batching contributions, preserve original PRs, author revisions and review coverage. Close originals as incorporated after the batch merges. Compiler-profile and comparison changes need their own appropriate review; do not bury them inside unrelated source work.</p>
+<h2 id="owner-clearance">Owner clearance</h2>
+<p>Only the configured owner posts clearance after checking reviewer independence, coverage, findings and final CI. NFL's current format is:</p>
+<pre><code class="language-text">&lt;!-- owner-review-clearance --&gt;
+Revision: FULL_COMMIT_SHA
+Accuracy: https://github.com/OWNER/REPO/pull/NUMBER#issuecomment-ID
+Hostile: https://github.com/OWNER/REPO/pull/NUMBER#issuecomment-ID
+</code></pre>
+<p>The record links must be distinct comments on the same PR, identify the current head and contain passing verdicts. A new commit makes old clearance stale. The check verifies record identity and formatting; it cannot prove reviewer independence or quality of reasoning.</p>
+<p>Agents may prepare a clearance draft when asked, but must not impersonate the owner or post it without explicit authorization. Clearance never gives an agent merge authority. Only the owner performs the merge under the NFL model.</p>
+<h2 id="new-project-bootstrap">New-project bootstrap</h2>
+<p>Adapt the owner identity, check names and record rules deliberately. Install the clearance logic using trusted base-branch code before requiring the check. Test missing, malformed, stale and withdrawn clearance plus draft PRs. Do not mark a status successful because a workflow file exists.</p>
+<p>The <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/CONTRIBUTING.md#review-records-and-owner-clearance">NFL contribution policy</a> and <a href="https://github.com/mitsevox/nflstreet2/blob/d7a6f8e830baf4ac083dc52c2ad3e80cfbf13211/.github/workflows/review.yml">trusted clearance workflow</a> are the reference implementations. Their current same-repository contribution policy is a project choice; do not silently claim fork builds have private reference access.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/build-and-validation/"><small>Previous</small><span>Build &amp; validation</span></a><a href="/wiki/ci-and-publication/"><small>Next</small><span>CI &amp; publication</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#contribution-sequence">Contribution sequence</a><a href="#review-partial-source-fairly">Review partial source fairly</a><a href="#records-tied-to-a-revision">Records tied to a revision</a><a href="#rechecks-and-integration">Rechecks and integration</a><a href="#owner-clearance">Owner clearance</a><a href="#new-project-bootstrap">New-project bootstrap</a></nav></aside></main>

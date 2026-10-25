@@ -1,0 +1,25 @@
+{
+  "measures": {
+    "code": {
+      "total": 358568,
+      "linked": 229296,
+      "matched": 293848,
+      "fuzzy": 319792.39720298804
+    },
+    "data": {
+      "total": 112208,
+      "linked": 72452,
+      "matched": 93884,
+      "fuzzy": 105199.688164316
+    }
+  },
+  "built_at": "2026-10-25T12:00:00+00:00",
+  "revision": "2e5c6ab12cc747ff98cf4c862758a50b0ccce109",
+  "latest_commit": {
+    "revision": "1fd6468d341d4c51c279f2237dac1b78f9569ac0",
+    "url": "https://github.com/mitsevox/tw2004/commit/1fd6468d341d4c51c279f2237dac1b78f9569ac0",
+    "date": "2026-10-25T13:16:01Z",
+    "title": "Merge pull request #87 from mitsevox/claude/project-thread-uf3xrs",
+    "description": "GoTerrainCollision.c: audit chunk 3 of 3, last function moved to MaterialTypes.c"
+  }
+}

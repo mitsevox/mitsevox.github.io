@@ -1,0 +1,68 @@
+[
+  {
+    "slug": "start-here",
+    "title": "Start here",
+    "summary": "From an empty repository to a measured, reviewable decompilation project.",
+    "group": "Foundation"
+  },
+  {
+    "slug": "repository-setup",
+    "title": "Repository setup",
+    "summary": "Establish ownership, target identity and a safe working environment before the first reconstruction.",
+    "group": "Foundation"
+  },
+  {
+    "slug": "layout-and-naming",
+    "title": "Layout & naming",
+    "summary": "Keep source readable, evidence discoverable and generated material disposable.",
+    "group": "Foundation"
+  },
+  {
+    "slug": "evidence-and-reconstruction",
+    "title": "Evidence",
+    "summary": "Recover what the target supports, and keep uncertainty explicit.",
+    "group": "Reconstruction"
+  },
+  {
+    "slug": "build-and-validation",
+    "title": "Build & validation",
+    "summary": "Separate a working baseline, reconstructed source and independent comparison measurements.",
+    "group": "Reconstruction"
+  },
+  {
+    "slug": "review-and-approval",
+    "title": "Review & approval",
+    "summary": "Independent evidence, exact revisions and an owner-controlled merge decision.",
+    "group": "Delivery"
+  },
+  {
+    "slug": "ci-and-publication",
+    "title": "CI & publication",
+    "summary": "Validate once, preserve the evidence and publish only a coherent verified result.",
+    "group": "Delivery"
+  },
+  {
+    "slug": "credits-and-history",
+    "title": "Credits & history",
+    "summary": "Choose attribution policy deliberately, and preserve the meaning of every historical measurement.",
+    "group": "Delivery"
+  },
+  {
+    "slug": "website-integration",
+    "title": "Website",
+    "summary": "One shared renderer, game-owned measurements and modules selected per project.",
+    "group": "Integration"
+  },
+  {
+    "slug": "operations",
+    "title": "Troubleshooting & upkeep",
+    "summary": "Diagnose the failing layer before changing source, configuration or publication.",
+    "group": "Integration"
+  },
+  {
+    "slug": "starter-kit",
+    "title": "Starter kit",
+    "summary": "A clean handoff for a new project, without pretending the game-specific build already exists.",
+    "group": "Integration"
+  }
+]
