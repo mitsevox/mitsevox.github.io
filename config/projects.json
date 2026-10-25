@@ -33,7 +33,7 @@
     "repository": "mitsevox/mvp2005",
     "target": "GV4E69",
     "modules": {
-      "map": false,
+      "map": true,
       "functionCounts": true,
       "fileCounts": false,
       "timeline": false,
