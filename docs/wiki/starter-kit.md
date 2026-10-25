@@ -14,6 +14,7 @@ Download the [repository starter archive](/wiki/downloads/repository-starter.zip
 | `CI.md` | Exact adapter operations, GitHub outputs, state/paths, packaging and producer-step policy |
 | `reporting/platform.md` and `contract-v1.md` | Implemented shared interface, command usage and metric definitions |
 | `reporting/schema/` and `reporting/examples/` | Generic public schemas and unregistered configuration/report examples |
+| `OPTIONAL-ADOPTION.md` | Optional existing-workflow and legacy-data guidance; outside the new-project checklist |
 
 Fill visible placeholders from verified project facts. The project supplies its own compiler, build/comparison engines and internal evidence formats. Implement `tools/project_ci.py` as the documented thin adapter to those real tools; the kit does not include a fake success-producing adapter. Existing repositories keep established paths where those responsibilities are implemented.
 

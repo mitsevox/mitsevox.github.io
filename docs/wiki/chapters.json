@@ -76,5 +76,11 @@
     "title": "Starter kit",
     "summary": "Repository scaffolding and an agent prompt for applying the project template.",
     "group": "Integration"
+  },
+  {
+    "slug": "existing-projects",
+    "title": "Existing projects",
+    "summary": "Optional guidance for adopting the template with existing workflows or legacy data. New projects can skip this appendix.",
+    "group": "Optional appendix"
   }
 ]

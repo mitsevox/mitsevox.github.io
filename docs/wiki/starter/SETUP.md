@@ -16,16 +16,17 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 ## Implement fresh validation first
 
 - [ ] config/ci.json filled from example; no unresolved identity/tool/command placeholders; acceleration disabled.
-- [ ] Every CI.md operation mapped to real existing engines or implemented with meaningful failure behavior.
+- [ ] Every CI.md operation mapped to real engines or implemented with meaningful failure behavior.
 - [ ] Target verification and applicable original-byte baseline reproduced.
 - [ ] Accepted-source complete-output build and full-extent partial comparisons remain separate.
 - [ ] Source/header/profile/symbol/range/overlap/stale-receipt failures exercised.
-- [ ] Existing ledger provenance checked early if enabled; measured exact inventory and squash credit reconciled later.
+- [ ] Declared ledger provenance checked early if enabled; measured exact inventory and squash credit reconciled later.
 - [ ] Outputs cleared before export; a failing exporter cannot upload stale success.
 - [ ] Canonical report-v1 inputs, approved pinned packager, metadata and public allowlist implemented.
 - [ ] Matching objective and unsupported capabilities reported honestly; no invented map/credit/history data.
 - [ ] Fresh PR and main CI passed with actual checkout/tree/run/attempt/artifact evidence.
 - [ ] Selected review verifier exercised for passing, failing, draft, stale, edited/deleted and withdrawn records.
+- [ ] Reviewer independence records identify authorship, prior involvement, supplied context and blind interpretation where required; verdict vocabulary matches the adopted verifier.
 - [ ] Owner configured required statuses and verified bypass/merge authority after bootstrap.
 
 ## Optional acceleration, separately enabled
@@ -44,11 +45,13 @@ item. The wiki/CI.md are the contract; these files do not provide a target's bui
 
 - [ ] Read INTEGRATION.md and INTEGRATION-PROMPT.md; assign producer/site scope and authorization.
 - [ ] Approved producer policy binds actual workflow blob, job, artifact, required common and selected-lane steps.
+- [ ] Exact API display names, including matrix suffixes, verified on the actual run attempt.
 - [ ] Site configuration/artwork supplied; a conforming report uses the shared importer, not a new game-specific pipeline.
 - [ ] Full/audit/reused step outcomes authenticate correctly; old policies remain readable for historical reports.
 - [ ] Raw totals, linked/exact/fuzzy, full-function inventories and enabled modules agree.
+- [ ] Section/file map address unions and both sets of aggregates match; gaps, child extents and full functions reconcile.
 - [ ] Optional modules work independently, including timeline without contributor payload.
-- [ ] History continuity, identical reruns, stale/diverged updates and immutable collisions exercised.
+- [ ] Timeline, if enabled, starts with the first verified main measurement; future append/continuity, identical reruns, stale updates and immutable collisions exercised.
 - [ ] Multi-project restoration/publication and failure isolation preserve all accepted data.
 - [ ] Real main-run import, public direct route, manifest identity and subsequent refresh verified.
 - [ ] Rollback preserves accepted history; no private input or synthetic fixture enters production.

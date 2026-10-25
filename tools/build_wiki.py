@@ -77,6 +77,9 @@ with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFL
                          lambda match: "](" + urljoin("https://mitsevox.github.io/docs/reporting/", match[1]) + ")",
                          integration)
     archive.writestr(info, integration.encode())
+    info = zipfile.ZipInfo('repository-starter/OPTIONAL-ADOPTION.md', date_time=(2026,10,25,0,0,0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    archive.writestr(info, (SOURCE / 'existing-projects.md').read_bytes())
     # Ship the actual generic interface with the offline starter, not per-game adapters.
     references = [ROOT / 'docs/reporting/platform.md', ROOT / 'docs/reporting/contract-v1.md']
     references += [ROOT / 'docs/reporting/schema' / name for name in (

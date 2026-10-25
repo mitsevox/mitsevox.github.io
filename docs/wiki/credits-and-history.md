@@ -36,11 +36,11 @@ After measurement, build the complete exact-function inventory and reconcile it 
 
 Tracking-disabled projects omit these ledger stages under their explicit policy and publish no contributor payload. They can still build, compare, keep a timeline and integrate with the common site. Never infer tracking requirements from whether contribution links or rankings are shown.
 
-## Recovering past credit
+## Start a measured timeline
 
-Use surviving original PRs, commit authorship, pinned source blobs, integration records and reviewed evidence. A closed PR or deleted branch may still leave useful records; do not assume they are available indefinitely. Distinguish supported attribution, explicit joint work and unresolved ownership.
+At the first verified main build, create one row with that measured revision, timestamp and actual raw code/data totals and linked bytes. Record `measured` provenance pointing to its real execution. No prior history is required. If this capability is not implemented yet, declare it unsupported instead of creating placeholder data.
 
-Keep a bounded recovery record explaining each decision and uncertainty. Do not give every function to the current file author or merger. If a project promises complete exact-function attribution, unresolved gaps block that capability's publication until resolved or the owner explicitly changes the policy.
+Future verified publications append supported measurements to preserved prior rows. Never invent points for unbuilt commits, interpolate gaps or treat a repository commit as evidence of a measured build. The current row agrees with the report summary; repeated publication remains idempotent.
 
 ## Timeline continuity
 
@@ -49,3 +49,6 @@ Keep full commit identity, target, methodology, raw totals/denominators and evid
 Restore prior verified history; do not use an unauthenticated live page as automatic recovery evidence. An intentional checkpoint recovery needs a documented audit. Latest repository commit metadata is separate from the latest measured build, even when the header displays both near each other.
 
 Document the selected credit policy, ledger schema and recovery procedure in the repository. Publish contributor data only when that policy can be validated.
+
+
+Legacy history and past-credit recovery belong to the [optional existing-project appendix](/wiki/existing-projects/). New repositories can skip it.

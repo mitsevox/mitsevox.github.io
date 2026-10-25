@@ -4,7 +4,7 @@ A repeatable assignment, reconstruction and delivery process, with project polic
 
 ## Adopt the project policy first
 
-The default is an isolated author branch, independent blind accuracy review, a fresh hostile reviewer, final-revision CI and owner-only merge authority. These are defaults for a new project, not assumptions an agent may silently impose on an existing one. The owner records any alternative in CONTRIBUTING.md before work begins. The site contract does not enforce a reconstruction review model.
+The default is an isolated author branch, independent blind accuracy review, a fresh hostile reviewer, final-revision CI and owner-only merge authority. These are defaults for a new project, not assumptions an agent may silently impose on an existing one. Explicit project/task authorization governs actual merge authority; record persistent alternatives in CONTRIBUTING.md so future agents see them. The site contract does not enforce a reconstruction review model.
 
 Record who can assign work, push, open PRs, review, clear and merge. Permission to implement does not automatically authorize publishing or changing repository settings. Attribution tracking, rankings and accepting contributions remain separate decisions.
 
@@ -39,6 +39,10 @@ Keep pushes coherent. A new PR push normally cancels that PR's older CI. Tooling
 For the default policy, supply the full revision, scoped source/headers, target evidence, extents, profiles, comparisons and existing validation artifacts. The accuracy reviewer first interprets target behavior without the author's proposed names/comments; then reconciles the interpretation. The hostile reviewer checks the evidence and integrity checklist independently.
 
 Reviewer independence is about authorship and prior reasoning, not a different display name. Creating another agent does not automatically make its work independent. Do not fabricate a review record when no reviewer or evidence was available. Use the project's accepted reviewer arrangement and document limitations.
+
+For the default all-agent arrangement, use reviewers that did not author/edit the scoped reconstruction or participate in its implementation decisions. Give them a fresh context containing the task, target evidence, relevant configuration and validation artifacts rather than the author's conversation/chain of reasoning. An accuracy reviewer first records its target interpretation without proposed names/comments or author conclusions, then compares that result with the submission. A fresh hostile reviewer examines the submitted source and evidence without inheriting the author's or accuracy reviewer's conclusions as its starting verdict.
+
+Each review record declares reviewer identity/session, scoped authorship or prior involvement, supplied inputs, context isolation/blinding method, reviewed revision and independently reached findings. Reusing a model is allowed; changing models or logins is not proof of independence. An author fork carrying its full reasoning does not qualify merely because it has another agent ID. Focused rechecks by the original independent reviewer remain valid under the delta rules. If isolation is impossible or prior involvement exists, disclose it and follow the owner's adopted alternative; never assert an independent pass that did not occur. CI can check record fields and revisions, but cannot mechanically prove what context an agent saw or the quality of its reasoning.
 
 Report findings with a location, evidence and required correction. Measured incompleteness alone is not a failed fidelity review. A useful partial may pass while its original bytes remain linked.
 

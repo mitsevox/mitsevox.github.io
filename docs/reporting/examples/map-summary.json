@@ -1,0 +1,16 @@
+{
+  "code": {
+    "totalBytes": 100,
+    "linkedBytes": 20,
+    "matchedBytes": 40,
+    "fuzzyEquivalentBytes": 50
+  },
+  "data": {
+    "totalBytes": 10,
+    "linkedBytes": 2,
+    "matchedBytes": 3,
+    "fuzzyEquivalentBytes": 4
+  },
+  "functions": null,
+  "files": null
+}
