@@ -35,8 +35,13 @@ def producer(root,slug):
     require(isinstance(slug,str) and SLUG.fullmatch(slug),'Invalid project slug')
     item=registrations(root).get(slug)
     require(item is not None,'Unregistered project: '+slug)
-    require(set(item)<= {'format','policy','archives'} and {'format','policy'}<=set(item),'Invalid producer registration')
-    return load_policy(root,slug,{k:item[k] for k in ('format','policy')})
+    require(set(item)<= {'format','policy','archives','pending'} and {'format','policy'}<=set(item),'Invalid producer registration')
+    active=load_policy(root,slug,{k:item[k] for k in ('format','policy')})
+    if 'pending' in item:
+        pending=load_policy(root,slug,item['pending'])
+        require(pending['repository']==active['repository'] and pending['target']==active['target'],
+                'Pending producer changes project identity')
+    return active
 
 
 def package_policy(root,manifest,workflow_blob):

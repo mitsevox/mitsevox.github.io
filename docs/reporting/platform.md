@@ -14,6 +14,12 @@ A new producer using `report-v1` needs configuration, artwork and a conforming a
 
 New producers use the shared report-v1 contract. Approved historical formats can remain readable through isolated compatibility adapters. Common installation, locks, storage, registration, rendering and deployment serve all registered projects; fresh integrations use the standard interface.
 
+A registration may declare a `pending: {"format": "report-v1", "policy": "next-producer.json"}`
+for a staged migration. Its policy is checked for the same repository/target, but it is
+**not** an active importer or an approved historical format. Neither automatic refresh nor
+package acceptance consults it. Activate it only after parity and the history cutover are
+ready; archive just the previous `{format, policy}` pair, not the entire registration.
+
 The [producer configuration example](examples/producer.json) and [presentation example](examples/project.json) are unregistered templates with explicit example identities. Replace their target/tool/workflow facts before use; structural validity alone is not execution proof.
 
 ## report-v1 input
@@ -108,6 +114,20 @@ With a matrix, publish each target under its own registration/artifact policy an
 For reuse, metadata sets `mode: reused` and `source` as defined in the execution schema: original revision/tree, run/attempt, artifact ID/digest and original measurement time. The original artifact is a full report-v1 package. The consumer checks its same-repository execution, approved workflow, successful full lane, artifact digest, complete tree, target, tools, methodology, generation, summary, map and credits. A timeline can append the new publication without changing the source measurements. Original proof cannot be replaced by a set of constituent reports.
 
 A newly imported package requires accessible proof. An identical package already authenticated into owner-controlled site main or `report-data` can outlive upstream artifact retention; the consumer rechecks integrity and current run/main eligibility. Local checksums or a real run ID alone do not establish that cache exemption.
+
+For a PR proof, GitHub's run/job/artifact head is the PR head, while the report may identify
+the tested merge. The consumer requires the tested merge's ordered parents `[base, head]`,
+a matching merged same-repository PR targeting the publication branch, and equality of
+the tested/head/published trees. The workflow blob is read from the durable head. Original
+full-lane execution, artifact binding, receipt, metrics/modules and times remain checked.
+
+The consumer captures tested-merge evidence once in a versioned `sourceProof` record and
+retains authenticated records by artifact digest in the lock entry's `sourceProofs` cache.
+The owner-controlled data store preserves that cache across later publications and full
+builds. Using a retained record requires an exact match to an accepted site lock, including
+the evidence fields. Subsequent imports still verify the durable head/tree and original
+artifact; they do not look up the temporary merge SHA again. This consumer-owned evidence
+is not an extra producer payload or permission to trust a local unaccepted cache.
 
 ## Import and preview
 

@@ -73,3 +73,22 @@ Pages is configured for Actions publication. The owner merges the reviewed sourc
 ## New producers
 
 Use the common report-v1 packager, producer policy and importer described in [the platform interface](platform.md). Register metadata and artwork through configuration. Keep this compatibility reader and its approved policy in the registry archives when the existing source moves to the standard format, so accepted reports and history remain readable.
+
+## Standard-report migration
+
+Phase A stages `nflstreet2-report-v1-producer.json` as the pending policy while the active
+registration stays `nfl-legacy-v1`. Workflow `98a97409baceb8d8d9f9bf5706507b91331e8e4d` is
+approved for both policies. The report-v1 policy derives from the producer-owned template;
+its artifact is `report-v1`, job `Toolchain baseline`, with map-v2 evidence.
+
+A real-run parity check at run `40253689256`, revision `caec9316e808e72ccbaf79c5ec108d1ac9fa08d0`,
+authenticated both formats and found equal summaries, geometry/metrics/evidence, 14,157
+functions, 12,119 exact IDs/unique credits, three contributors and 160 history values.
+With the cutover unset, the standard package currently labels those rows measured; it
+must not replace the accepted legacy rows yet.
+
+After phase A merges, freeze the legacy selection and copy the **last durable stored**
+legacy row's revision and built_at verbatim to the game owner. The producer pins that
+cutover and publishes a new main report. Only then may phase C activate the pending
+standard policy, archive the compatibility reader and validate that every frozen row
+survives through an exact inherited record. Retire game Pages/artifacts after that switch.

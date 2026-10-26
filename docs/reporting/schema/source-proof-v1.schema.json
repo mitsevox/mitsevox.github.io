@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Consumer-authenticated tested-merge proof v1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "event": {
+      "const": "pull_request"
+    },
+    "runId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifactId": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifactSha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "measuredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "tree": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "head": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "base": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "workflowBlob": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "parents": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{40}$"
+      }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "repository",
+    "event",
+    "runId",
+    "attempt",
+    "artifactId",
+    "artifactSha256",
+    "measuredAt",
+    "revision",
+    "tree",
+    "head",
+    "base",
+    "workflowBlob",
+    "parents"
+  ]
+}
