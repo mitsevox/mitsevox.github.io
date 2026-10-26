@@ -75,5 +75,30 @@
       "width": 640,
       "height": 908
     }
+  },
+  {
+    "schemaVersion": 1,
+    "slug": "n100f",
+    "title": "Scooby-Doo! Night of 100 Frights",
+    "repository": "mitsevox/n100f",
+    "target": "GIHE78",
+    "modules": {
+      "map": true,
+      "functionCounts": true,
+      "fileCounts": true,
+      "timeline": true,
+      "contributors": false
+    },
+    "contributions": {
+      "accepting": false
+    },
+    "shortTitle": "Night of 100 Frights",
+    "console": "GameCube",
+    "year": "2002",
+    "artwork": {
+      "cover": "/assets/covers/n100f.webp",
+      "width": 1112,
+      "height": 1600
+    }
   }
 ]

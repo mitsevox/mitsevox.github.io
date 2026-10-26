@@ -2,7 +2,7 @@
 
 Shared portfolio frontend and project wiki for mitsevox’s decompilation projects.
 
-This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2, MVP Baseball 2005 and Tiger Woods PGA Tour 2004 data (standard report-v1 producers); other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
+This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2, MVP Baseball 2005, Tiger Woods PGA Tour 2004 and Scooby-Doo! Night of 100 Frights data (standard report-v1 producers); other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
 
 Build with `uv run --locked python tools/build_site.py --output build/site`, then serve that directory with `python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site`. Use a fresh output path for each retained candidate.
 
@@ -11,7 +11,7 @@ Build with `uv run --locked python tools/build_site.py --output build/site`, the
 - `/`: project hub.
 - `/wiki/`: searchable project handbook, shared shell, deep-linked chapters and starter downloads.
 - `docs/wiki/`: handbook Markdown and editable starter files; rebuild with `uv run tools/build_wiki.py`.
-- `/games/nflstreet2/`, `/games/mvp2005/`, `/games/tw2004/`: static entry points to one shared renderer.
+- `/games/nflstreet2/`, `/games/mvp2005/`, `/games/tw2004/`, `/games/n100f/`: static entry points to one shared renderer.
 - `assets/app.js`: History API routing; the header/footer stay mounted while page content changes. Normal links, deep-link refresh, and browser back/forward keep working.
 - `assets/hub.html` and `assets/game.html`: shared page layouts.
 - `redirects/`: static aliases for retired project URLs.
@@ -46,13 +46,14 @@ The [generic handbook](docs/wiki/start-here.md) and [integration template](docs/
 
 ## Artwork
 
-Game covers are owner-supplied files, organized as `assets/covers/<project-slug>.webp`. All retain the original pixel dimensions. JPEG inputs were encoded to lossless WebP to avoid additional compression loss; the existing Tiger Woods WebP was copied unchanged.
+Game covers are owner-supplied files, organized as `assets/covers/<project-slug>.webp`. All retain the original pixel dimensions. JPEG and PNG inputs were encoded to lossless WebP to avoid additional compression loss; the existing Tiger Woods WebP was copied unchanged.
 
 | Project | Asset | Dimensions |
 | --- | --- | --- |
 | NFL Street 2 | `assets/covers/nflstreet2.webp` | 630 × 908 |
 | MVP Baseball 2005 | `assets/covers/mvp2005.webp` | 640 × 905 |
 | Tiger Woods PGA Tour 2004 | `assets/covers/tw2004.webp` | 640 × 908 |
+| Scooby-Doo! Night of 100 Frights | `assets/covers/n100f.webp` | 1112 × 1600 |
 
 NFL Street 2 logo: existing public project website asset.
 

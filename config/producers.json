@@ -16,5 +16,9 @@
   "tw2004": {
     "format": "report-v1",
     "policy": "tw2004-producer.json"
+  },
+  "n100f": {
+    "format": "report-v1",
+    "policy": "n100f-producer.json"
   }
 }
