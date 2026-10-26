@@ -5,7 +5,8 @@
   "workflowBlobs": [
     "35d1c4cf00baeb80d7893b15d50b3927f0d59e0e",
     "e6ae8f634068c6acc079aa55322aa9e35b78a778",
-    "445ddeac5b1172284e8142e5a80b6c55949261ea"
+    "445ddeac5b1172284e8142e5a80b6c55949261ea",
+    "98a97409baceb8d8d9f9bf5706507b91331e8e4d"
   ],
   "environment": "ghcr.io/mitsevox/nflstreet2-build@sha256:2b4967b77a5d74fb4575ec522ca0a60d8769605e7f5c9c162fb4e55959250aae",
   "target": {

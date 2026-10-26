@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import tempfile
 from urllib.parse import quote
-from .validation import ROOT, decode, digest, encoded, require, validate_package
+from .validation import ROOT, decode, digest, encoded, require, schema, validate_package
 from .registry import snapshot_path, snapshot_directory, site_config
 from .github import GitHub
 
@@ -20,7 +20,17 @@ def read_lock(root):
     path=root/LOCK
     lock=decode(path.read_bytes()) if path.exists() else {'schemaVersion':1,'projects':{}}
     require(set(lock)=={'schemaVersion','projects'} and lock['schemaVersion']==1 and isinstance(lock['projects'],dict),'Invalid report lock')
-    for slug,entry in lock['projects'].items():snapshot_path(slug,entry)
+    for slug,entry in lock['projects'].items():
+        snapshot_path(slug,entry)
+        if 'sourceProof' in entry:
+            proof=entry['sourceProof'];schema(proof,'source-proof-v1.schema.json')
+            require(proof['parents']==[proof['base'],proof['head']],'Retained tested merge parents differ')
+        if 'sourceProofs' in entry:
+            require(isinstance(entry['sourceProofs'],dict),'Invalid retained proof cache')
+            for key,proof in entry['sourceProofs'].items():
+                schema(proof,'source-proof-v1.schema.json')
+                require(key==proof['artifactSha256'] and proof['parents']==[proof['base'],proof['head']],
+                        'Retained proof cache identity differs')
     return lock
 
 
@@ -44,7 +54,7 @@ def atomic_write(path,raw):
     os.replace(name,path)
 
 
-def install(root,api,manifest,payloads,latest):
+def install(root,api,manifest,payloads,latest,source_proof=None,source_proofs=None):
     root=Path(root).resolve()
     require((root/'data').resolve()==root/'data','Unsafe report data directory')
     (root/'data').mkdir(parents=True,exist_ok=True)
@@ -78,6 +88,25 @@ def install(root,api,manifest,payloads,latest):
             else:shutil.copytree(stage,destination)
             lock['projects'][slug]={'path':destination.relative_to(root).as_posix(),
                 'manifestSha256':digest(payloads['manifest.json']),'revision':manifest['revision'],'latestCommit':latest}
+            retained=dict(old.get('sourceProofs',{})) if old else {}
+            for key,proof in (source_proofs or {}).items():
+                schema(proof,'source-proof-v1.schema.json')
+                require(key==proof['artifactSha256'] and proof['parents']==[proof['base'],proof['head']]
+                        and (key not in retained or retained[key]==proof),'Retained proof cache conflicts')
+                retained[key]=proof
+            if source_proof is not None:
+                schema(source_proof,'source-proof-v1.schema.json')
+                original=decode(payloads['receipt.json']).get('source')
+                require(manifest['validation']['mode']=='reused' and isinstance(original,dict)
+                        and all(source_proof.get(k)==v for k,v in original.items())
+                        and source_proof['repository']==manifest['repository']
+                        and source_proof['parents']==[source_proof['base'],source_proof['head']],
+                        'Consumer proof differs from report source')
+                lock['projects'][slug]['sourceProof']=source_proof
+                key=source_proof['artifactSha256']
+                require(key not in retained or retained[key]==source_proof,'Retained proof cache conflicts')
+                retained[key]=source_proof
+            if retained:lock['projects'][slug]['sourceProofs']=retained
             atomic_write(root/LOCK,encoded(lock))
         return destination
 
@@ -91,7 +120,7 @@ def accepted_package(root,slug,entry):
         lock=decode(base64.b64decode(file['content']))
         require(lock.get('schemaVersion')==1 and isinstance(lock.get('projects'),dict),'Invalid accepted report lock')
         trusted=lock['projects'].get(slug,{})
-        if all(trusted.get(k)==entry.get(k) for k in ('path','manifestSha256','revision')):return True
+        if all(trusted.get(k)==entry.get(k) for k in ('path','manifestSha256','revision','sourceProof','sourceProofs')):return True
     return False
 
 

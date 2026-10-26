@@ -125,7 +125,7 @@ class PlatformTests(unittest.TestCase):
 
     def test_approved_historical_policy_survives_producer_format_cutover(self):
         registry=decode((self.root/'config/producers.json').read_bytes())
-        old=copy.deepcopy(registry['nflstreet2'])
+        old={k:registry['nflstreet2'][k] for k in ('format','policy')}
         next_policy=copy.deepcopy(POLICY)
         current_policy=decode((self.root/'config/nflstreet2-producer.json').read_bytes())
         next_policy.update(repository=current_policy['repository'],target=current_policy['target'])

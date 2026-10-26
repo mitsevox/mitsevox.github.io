@@ -87,7 +87,8 @@ def restore(root):
                     print('Retaining newer reviewed local package:',slug)
                     continue
                 require(relation=='behind','Local and stored reports diverge')
-        install(root,api,manifest,payloads,entry['latestCommit'])
+        install(root,api,manifest,payloads,entry['latestCommit'],source_proof=entry.get('sourceProof'),
+                source_proofs=entry.get('sourceProofs'))
     print('Restored durable report store at',head)
 
 

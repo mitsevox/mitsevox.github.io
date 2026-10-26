@@ -6,7 +6,7 @@ import sys
 import tempfile
 from urllib.parse import quote
 
-from reporting.validation import ROOT, decode, digest, require, validate_package, timestamp
+from reporting.validation import ROOT, decode, digest, require, schema, validate_package, timestamp
 from reporting.registry import producer, registrations, snapshot_path, snapshot_directory
 from reporting.github import GitHub, artifact_bytes, select_artifact, zip_members
 from reporting.state import read_lock, accepted_package, install, latest_commit
@@ -33,16 +33,17 @@ def execution_mode(policy,job):
     return modes[0]
 
 
-def verify_reuse(root,api,policy,manifest,receipt):
+def verify_reuse(root,api,policy,manifest,receipt,trusted_proof=None):
     proof=receipt['source']
     run=api.get(f"actions/runs/{proof['runId']}/attempts/{proof['attempt']}")
-    require(run['run_attempt']==proof['attempt'] and run['head_sha']==proof['revision'],'Originating proof execution differs')
+    require(run['run_attempt']==proof['attempt'],'Originating proof execution differs')
     jobs=api.pages(f"actions/runs/{proof['runId']}/attempts/{proof['attempt']}/jobs",'jobs')
-    blob=api.get(f"contents/{policy['workflow']}?ref={proof['revision']}")['sha']
+    # PR workflow/job/artifact identity is the durable head, not its temporary tested merge.
+    blob=api.get(f"contents/{policy['workflow']}?ref={run['head_sha']}")['sha']
     job=authenticate(policy,run,jobs,blob,candidate=True)
     require(execution_mode(policy,job)=='full','Originating proof is not full validation')
     artifact=api.get(f"actions/artifacts/{proof['artifactId']}")
-    require(artifact['workflow_run']['id']==proof['runId'] and artifact['workflow_run']['head_sha']==proof['revision']
+    require(artifact['workflow_run']['id']==proof['runId'] and artifact['workflow_run']['head_sha']==run['head_sha']
             and artifact['digest']=='sha256:'+proof['artifactSha256'] and artifact['name']==policy['artifact'],
             'Originating proof artifact differs')
     select_artifact([artifact],policy['artifact'],run,job)
@@ -50,16 +51,45 @@ def verify_reuse(root,api,policy,manifest,receipt):
     with tempfile.TemporaryDirectory() as temp:
         for name,raw in payloads.items():(Path(temp)/name).write_bytes(raw)
         original,_,_=validate_package(temp,root)
+    original_receipt=decode(payloads['receipt.json'])
     require(original['validation']['mode']=='full' and original['validation']['runId']==proof['runId']
-            and original['validation']['attempt']==proof['attempt'] and original['revision']==proof['revision'],
+            and original['validation']['attempt']==proof['attempt'] and original['revision']==proof['revision']
+            and original_receipt['workflowBlob']==blob,
             'Original report differs from proof')
     for key in ('project','repository','target','tree','methodology','generation','tools','summary','measuredAt'):
         require(original[key]==manifest[key],'Reused measurements differ from original: '+key)
     for module in ('map','contributors'):
         require(original['modules'][module]==manifest['modules'][module],'Reused module differs from original: '+module)
-    require(api.get('git/commits/'+proof['revision'])['tree']['sha']==manifest['tree'], 'Original tested tree differs')
+    head_tree=api.get('git/commits/'+run['head_sha'])['tree']['sha']
+    require(head_tree==proof['tree']==manifest['tree'],'Original tested tree differs')
+    captured=None
+    if proof['revision']!=run['head_sha']:
+        require(run['event']=='pull_request','Originating revision is not its run head or a PR merge')
+        binding={**proof,'schemaVersion':1,'repository':policy['repository'],'event':'pull_request',
+                 'head':run['head_sha'],'workflowBlob':blob}
+        if trusted_proof is not None and all(trusted_proof.get(k)==v for k,v in binding.items()):
+            schema(trusted_proof,'source-proof-v1.schema.json')
+            require(trusted_proof['parents']==[trusted_proof['base'],run['head_sha']], 'Retained tested merge parents differ')
+            captured=trusted_proof
+        else:
+            prs=api.pages('commits/'+run['head_sha']+'/pulls')
+            eligible=[pr for pr in prs if pr['head']['sha']==run['head_sha']
+                      and pr['head']['repo']['full_name']==policy['repository']
+                      and pr['base']['repo']['full_name']==policy['repository']
+                      and pr['base']['ref']==policy['branch'] and pr['state']=='closed' and pr.get('merged_at')]
+            require(len(eligible)==1,'Missing or ambiguous merged source PR')
+            base=eligible[0]['base']['sha']
+            # Capture this once. A later publication uses accepted consumer evidence;
+            # it never needs to retrieve this unreferenced merge commit again.
+            tested=api.get('git/commits/'+proof['revision'])
+            parents=[p['sha'] for p in tested['parents']]
+            require(tested['sha']==proof['revision'] and parents==[base,run['head_sha']]
+                    and tested['tree']['sha']==head_tree,'Tested merge tree or parents differ')
+            captured={**binding,'base':base,'parents':parents}
+            schema(captured,'source-proof-v1.schema.json')
     require(timestamp(run['run_started_at'])<=timestamp(original['measuredAt'])<=timestamp(original['publishedAt'])<=timestamp(job['completed_at'])+1,
             'Originating measurement time differs')
+    return captured
 
 
 def refresh(root,slug,run_id=None):
@@ -105,8 +135,13 @@ def refresh(root,slug,run_id=None):
     require(timestamp(run['run_started_at'])<=timestamp(manifest['publishedAt'])<=timestamp(job['completed_at'])+1,'Report timestamps differ from producing execution')
     if manifest['validation']['mode']=='full':
         require(timestamp(run['run_started_at'])<=timestamp(manifest['measuredAt']),'Full measurement predates producing execution')
-    elif not cached:verify_reuse(root,api,policy,manifest,receipt)
-    destination=install(root,api,manifest,payloads,latest_commit(api,policy['branch']))
+    source_proof=entry.get('sourceProof') if cached and entry else None
+    if manifest['validation']['mode']=='reused' and not cached:
+        trusted=None
+        if entry and (entry.get('sourceProofs') or entry.get('sourceProof')) and accepted_package(root,slug,entry):
+            trusted=entry.get('sourceProofs',{}).get(receipt['source']['artifactSha256'],entry.get('sourceProof'))
+        source_proof=verify_reuse(root,api,policy,manifest,receipt,trusted)
+    destination=install(root,api,manifest,payloads,latest_commit(api,policy['branch']),source_proof=source_proof)
     print(f'Imported {slug} at {manifest["revision"]}: {destination}')
     return destination
 

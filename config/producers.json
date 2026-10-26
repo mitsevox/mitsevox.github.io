@@ -1,7 +1,11 @@
 {
   "nflstreet2": {
     "format": "nfl-legacy-v1",
-    "policy": "nflstreet2-producer.json"
+    "policy": "nflstreet2-producer.json",
+    "pending": {
+      "format": "report-v1",
+      "policy": "nflstreet2-report-v1-producer.json"
+    }
   },
   "mvp2005": {
     "format": "report-v1",
