@@ -12,8 +12,9 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'tools'))
 from reporting.validation import ROOT, decode, encoded, validate_activity, validate_package, validate_progress
-from reporting.github import FULL_STEPS, REUSE_STEP, authenticate_run, pages_reports, select_artifact, zip_members
-from import_nfl import accepted_package, check_decomp, check_update, install
+from reporting.archives.github import FULL_STEPS, REUSE_STEP, authenticate_run, pages_reports
+from reporting.github import select_artifact, zip_members
+from archives.import_nfl import accepted_package, check_decomp, check_update, install
 from build_site import build, locked_projects
 
 
@@ -152,9 +153,10 @@ class ExecutionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         lock=decode((ROOT/'data/reports.lock.json').read_bytes())
-        cls.directory=ROOT/lock['projects']['nflstreet2']['path']
+        from platform_fixtures import legacy_entry
+        cls.directory=ROOT/legacy_entry()['path']
         cls.receipt=decode((cls.directory/'receipt.json').read_bytes())
-        cls.policy=decode((ROOT/'config/nflstreet2-producer.json').read_bytes())
+        cls.policy=decode((ROOT/'config/nflstreet2-legacy-producer.json').read_bytes())
 
     def setUp(self):
         self.run=copy.deepcopy(self.receipt['run'])
@@ -245,7 +247,7 @@ class ExecutionTests(unittest.TestCase):
         import base64
         entry=decode((ROOT/'data/reports.lock.json').read_bytes())['projects']['nflstreet2']
         response={'encoding':'base64','content':base64.b64encode(encoded({'schemaVersion':1,'projects':{'nflstreet2':entry}})).decode()}
-        with patch('import_nfl.GitHub.get',return_value=response):
+        with patch('archives.import_nfl.GitHub.get',return_value=response):
             self.assertTrue(accepted_package(entry))
             mutated={**entry,'manifestSha256':'0'*64}
             self.assertFalse(accepted_package(mutated))

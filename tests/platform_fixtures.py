@@ -83,3 +83,9 @@ def presentation(root,**enabled):
         'modules':{name:enabled.get(name,False) for name in ('map','functionCounts','fileCounts','timeline','contributors')},
         'contributions':{'accepting':False}})
     (Path(root)/'config/projects.json').write_bytes(encoded(projects))
+
+
+def legacy_entry():
+    """Pinned historical receipt; independent of the current producer format/lane."""
+    checkpoint=decode((ROOT/'config/archives/nflstreet2-legacy-checkpoint.json').read_bytes())
+    return checkpoint['entry']

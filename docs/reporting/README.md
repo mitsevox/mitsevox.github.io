@@ -9,7 +9,7 @@ A curated platform for the owner's repositories. Game projects supply validated 
 - [Project template](onboarding.md): repository/CI structure and acceptance checklist.
 - [Workflow](workflow.md): candidate validation, main publication, proof reuse and recovery.
 - [Manifest schema](schema/report-v1.schema.json), [producer policy](schema/producer-v1.schema.json), and [presentation configuration](schema/project-v1.schema.json).
-- [Map](schema/map-v1.schema.json), [timeline](schema/timeline-v1.schema.json), [contributors](schema/contributors-v1.schema.json), and [execution](schema/execution-v1.schema.json) payloads.
+- Map [v1](schema/map-v1.schema.json) / [v2 with optional evidence](schema/map-v2.schema.json), [timeline](schema/timeline-v1.schema.json), [contributors](schema/contributors-v1.schema.json), and [execution](schema/execution-v1.schema.json) payloads.
 
 ## Ownership
 
@@ -19,6 +19,6 @@ A curated platform for the owner's repositories. Game projects supply validated 
 
 The website accepts only checked-in registrations for its configured owner. It has no visitor registration or public submission API. New report-v1 producers require configuration/artwork and a conforming artifact; project-specific importer or page code is unnecessary.
 
-A legacy format reader preserves the existing feed while its CI transitions. It is isolated at the input boundary and uses the common state/store/rendering path. Its [compatibility reference](nflstreet2.md) describes that older source format. New producers follow the common interface above.
+All current producers use report-v1. Archived compatibility validates retained historical packages; it does not select old artifacts or refresh a production feed. The [NFL integration record](nflstreet2.md) records that completed cutover. New producers follow the common interface above.
 
 The generic [wiki](../../wiki/) defines reusable project conventions. Keep actual targets, approved policies, tools and validation evidence in the repositories that own them.

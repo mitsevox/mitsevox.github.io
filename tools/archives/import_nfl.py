@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 """Import one authenticated NFL main publication; never build or modify the game."""
-import argparse
+if __name__ == '__main__':
+    raise SystemExit('Archived importer: use tools/import_reports.py for current reports.')
+
 import math
 from pathlib import Path
 import re
 
-from reporting.github import GitHub, artifact_bytes, authenticate_run, pages_reports, select_artifact, zip_members
+from reporting.github import GitHub, artifact_bytes, select_artifact, zip_members
+from reporting.archives.github import authenticate_run, pages_reports
 from reporting.validation import ROOT, decode, digest, encoded, require, summary, validate_package
 
 
@@ -135,12 +138,14 @@ def accepted_package(entry,root=ROOT):
 
 
 def refresh(root, run_id=None):
+    from reporting.registry import producer
+    require(producer(root,'nflstreet2')['format']=='nfl-legacy-v1', 'Archived legacy importer is disabled for the active producer')
     from reporting.state import frozen_snapshot
     frozen=frozen_snapshot(root,'nflstreet2')
     if frozen is not None:
         require(run_id is None,'Explicit producer import is frozen')
         return frozen
-    policy = decode((root/'config/nflstreet2-producer.json').read_bytes())
+    policy = decode((root/'config/nflstreet2-legacy-producer.json').read_bytes())
     api = GitHub(policy['repository'])
     if run_id is None:
         # Only the newest successful main run is selected. A failed import must
@@ -180,8 +185,3 @@ def refresh(root, run_id=None):
     print(f"Imported {manifest['revision']} from {manifest['validation']['mode']} run {run_id}: {destination}")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--run', type=int, help='Explicit successful main run; cannot move latest backward')
-    args = parser.parse_args()
-    refresh(ROOT, args.run)

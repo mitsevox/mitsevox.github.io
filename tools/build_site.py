@@ -9,7 +9,19 @@ from pathlib import Path
 
 from reporting.validation import ROOT, decode, digest, encoded, require, schema, validate_package
 from reporting.state import read_lock
-from reporting.registry import producer, snapshot_path, snapshot_directory
+from reporting.registry import SLUG, producer, snapshot_path, snapshot_directory
+
+
+def copy_redirects(root,stage):
+    aliases=Path(root)/'redirects'
+    if not aliases.exists():return
+    require(aliases.is_dir() and not aliases.is_symlink(),'Unsafe redirect directory')
+    for folder in aliases.iterdir():
+        require(folder.is_dir() and not folder.is_symlink() and SLUG.fullmatch(folder.name)
+                and not (stage/folder.name).exists(),'Unsafe or conflicting redirect')
+        require({p.name for p in folder.iterdir()}=={'index.html'}
+                and (folder/'index.html').is_file() and not (folder/'index.html').is_symlink(),'Unsafe redirect file')
+        shutil.copytree(folder,stage/folder.name)
 
 
 def version_html_assets(source, prefix):
@@ -126,6 +138,7 @@ def _build_locked(root, output):
         shutil.copytree(root/'docs', stage/'docs')
         for name in ('index.html','404.html'):
             shutil.copyfile(root/name, stage/name)
+        copy_redirects(root,stage)
         # One content-addressed asset directory keeps every module, stylesheet
         # and template in a release together, even across browser caches.
         fingerprints = [p.relative_to(stage).as_posix().encode()+b'\0'+p.read_bytes()

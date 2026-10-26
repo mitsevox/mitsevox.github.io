@@ -125,9 +125,15 @@ class PlatformTests(unittest.TestCase):
 
     def test_approved_historical_policy_survives_producer_format_cutover(self):
         registry=decode((self.root/'config/producers.json').read_bytes())
-        old={k:registry['nflstreet2'][k] for k in ('format','policy')}
+        from test_report_store import compact_legacy_package
+        entry,payloads=compact_legacy_package()
+        directory=self.root/entry['path'];directory.mkdir(parents=True,exist_ok=True)
+        for name,raw in payloads.items():(directory/name).write_bytes(raw)
+        lock=read_lock(self.root);lock['projects']['nflstreet2']=entry
+        (self.root/'data/reports.lock.json').write_bytes(encoded(lock))
+        old=next(p for p in registry['nflstreet2']['archives'] if p['format']=='nfl-legacy-v1')
         next_policy=copy.deepcopy(POLICY)
-        current_policy=decode((self.root/'config/nflstreet2-producer.json').read_bytes())
+        current_policy=decode((self.root/'config'/old['policy']).read_bytes())
         next_policy.update(repository=current_policy['repository'],target=current_policy['target'])
         (self.root/'config/next-producer.json').write_bytes(encoded(next_policy))
         registry['nflstreet2']={'format':'report-v1','policy':'next-producer.json','archives':[old]}

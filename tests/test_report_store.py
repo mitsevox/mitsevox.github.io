@@ -20,8 +20,9 @@ def compact_legacy_package():
     history are isolated test data; real packages are covered in test_reporting.
     """
     from test_reporting import tiny_reports
-    from reporting.legacy_nfl import summary
-    entry=copy.deepcopy(decode((ROOT/'data/reports.lock.json').read_bytes())['projects']['nflstreet2'])
+    from reporting.archives.legacy_nfl import summary
+    from platform_fixtures import legacy_entry
+    entry=copy.deepcopy(legacy_entry())
     directory=ROOT/entry['path']
     manifest=decode((directory/'manifest.json').read_bytes())
     progress,activity=tiny_reports()
