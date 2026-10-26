@@ -139,6 +139,14 @@ the evidence fields. Subsequent imports still verify the durable head/tree and o
 artifact; they do not look up the temporary merge SHA again. This consumer-owned evidence
 is not an extra producer payload or permission to trust a local unaccepted cache.
 
+## Automated policy proposals
+
+The optional [policy-sync workflow](policy-sync.md) reads registered producer
+policy files, preserves prior policies, and proposes a site PR only after the
+standard importer and builder accept a real package. It never approves or merges
+its proposals and does not change the ordinary refresh trust boundary. New
+projects supply a complete tracked policy and a stable source path at registration.
+
 ## Import and preview
 
 ```sh

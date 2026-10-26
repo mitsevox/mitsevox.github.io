@@ -83,3 +83,19 @@ work branches compare their entire diff against main; main pushes compare the
 complete pushed commit range. There is no manual fast-lane override.
 
 Run `uv sync --locked` and `uv run --locked python -m unittest discover -s tests -v`. Site CI validates and assembles candidates. Full-lane push/manual/scheduled refreshes restore all durable last-good packages and refresh registered producers. Successful full-lane current-main runs preserve snapshots on this repository’s data-only `report-data` branch before deploying Pages. PRs and work branches cannot publish. A failed refresh keeps the live site unchanged. Game repositories are never written. See [operations and rollout boundaries](docs/reporting/nflstreet2.md#automation-and-rollout-boundary).
+
+Policy updates can be proposed by `.github/workflows/policy-sync.yml` using the
+site-owned `config/policy-sync.json` source catalog. It never executes producer
+code, approves/merges a PR, or changes another producer's pointers. See the
+[policy-sync setup and recovery guide](docs/reporting/policy-sync.md). Scheduling
+is enabled with `POLICY_SYNC_ENABLED=true` after owner credential setup and a
+successful dry-run. Complete tracked policies and explicitly declared hash-free
+templates are supported; sources without a tracked policy remain explicitly
+unconfigured rather than guessed.
+
+
+Changed producer reports can use the separate [completion notification and refresh
+lane](docs/reporting/policy-sync.md#prompt-report-refresh). It accepts authenticated
+main completion hints, imports only changed approved packages, and publishes with
+already validated site code. Policy changes get proposed PRs with manual approval
+and merge. App setup and schedule enablement are explicit deployment steps.

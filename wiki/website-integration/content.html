@@ -237,6 +237,25 @@ and <a href="/docs/reporting/examples/map-evidence.json">v2 example</a>, which u
 <pre><code class="language-sh">uv run --locked python tools/import_reports.py --project game-slug --run RUN_ID
 uv run --locked python tools/build_site.py --output build/new-candidate
 </code></pre>
+<h2 id="policy-updates">Policy updates</h2>
+<p>After initial registration, keep a complete producer policy in a tracked JSON file,
+normally <code>config/TARGET_ID/producer.json</code>, and use it for packaging. The site records
+that path once in its policy-sync configuration. When the workflow, reporting job,
+required steps, artifact or tools change, update the policy in the same producer PR.
+Record the actual committed workflow Git blob; never substitute a commit SHA.</p>
+<p>The site's enabled policy-sync workflow detects changes and prepares a matching
+site PR. It copies the policy verbatim, preserves the previous policy for historical
+reports, authenticates a real successful package and validates the site candidate.
+You no longer need to pass hashes between agents manually. The PR still needs
+review/merge under the site's policy; a successful upstream run cannot approve
+itself. Until approval, the live site retains its last successful deployment.</p>
+<p>Routine progress needs no policy update when the policy is unchanged. A missing
+tracked policy or failed package produces a visible setup/validation result rather
+than guessed configuration. The <a href="/docs/reporting/policy-sync.md">policy-sync guide</a>
+covers the source registration, immediate/dry-run checks, site-owned token setup,
+manual approval and recovery. Producer repositories need no site-write token.
+Existing hash-free policy templates are an optional adoption case in the
+<a href="/wiki/existing-projects/#tracked-policy-sources">existing-project appendix</a>.</p>
 <h2 id="integration-acceptance">Integration acceptance</h2>
 <p>A workflow change is also a consumer trust change. Approve its actual Git blob after reviewing the code, update full/reused step requirements together, and test deliberate audit-step skips. Preserve archived policies and immutable history. A green upstream run must not automatically expand the receiver's trust.</p>
 <div class="wiki-table"><table>
@@ -281,5 +300,16 @@ uv run --locked python tools/build_site.py --output build/new-candidate
 </tr>
 </tbody>
 </table></div>
-<p>Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The <a href="/docs/reporting/onboarding.md">integration checklist</a> and <a href="/wiki/starter-kit/">starter files</a> provide a reusable handoff. Each repository supplies its own implementation details.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#map-parity-and-geometry">Map parity and geometry</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#register-and-use-the-platform">Register and use the platform</a><a href="#integration-acceptance">Integration acceptance</a></nav></aside></main>
+<p>Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The <a href="/docs/reporting/onboarding.md">integration checklist</a> and <a href="/wiki/starter-kit/">starter files</a> provide a reusable handoff. Each repository supplies its own implementation details.</p>
+<h3 id="prompt-updates">Prompt updates</h3>
+<p>After registration, add a separate completion notifier using the site's pinned
+reusable workflow. A successful main report run requests a site refresh; the site
+reauthenticates the run and imports only changed approved packages. No new policy
+is trusted automatically. This avoids waiting for the periodic refresh without
+rerunning site source tests for every producer commit.</p>
+<p>The site-scoped GitHub App, caller generator, exact event fields, repository
+variables/secrets, five-minute fallback and recovery behavior are documented in
+<a href="/docs/reporting/policy-sync.md#prompt-report-refresh">Producer policy sync</a>.
+These are optional delivery automation; the report contract and manual import
+remain the same. Keep the notifier separate from the approved report workflow.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#map-parity-and-geometry">Map parity and geometry</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#register-and-use-the-platform">Register and use the platform</a><a href="#policy-updates">Policy updates</a><a href="#integration-acceptance">Integration acceptance</a></nav></aside></main>

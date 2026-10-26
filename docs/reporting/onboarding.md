@@ -92,3 +92,12 @@ The browser reads public static files without a token or compiler. Latest reposi
 - [ ] The public page/manifest agree and the next refresh preserves the accepted state.
 
 Record commands, tested revisions, producing run/attempt, artifact/package identities, capability settings and limitations in the integration PR. Unchecked items remain explicit. A repository structure or schema-valid example does not establish that a build or integration passed.
+
+## Ongoing policy updates
+
+Maintain the producer's complete policy as tracked JSON and supply its stable path
+to the site during registration. Update it alongside workflow/tool changes and use
+it for packaging. The site's policy-sync workflow can generate the matching site
+PR after authenticating a successful report and validating the proposed policy.
+Review/merge remains explicit; routine measurements under the same policy need no
+manual policy handoff. See [policy sync](policy-sync.md) for setup and recovery.

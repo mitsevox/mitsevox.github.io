@@ -176,6 +176,29 @@ uv run --locked python tools/import_reports.py --project game-slug --run RUN_ID
 uv run --locked python tools/build_site.py --output build/new-candidate
 ```
 
+## Policy updates
+
+After initial registration, keep a complete producer policy in a tracked JSON file,
+normally `config/TARGET_ID/producer.json`, and use it for packaging. The site records
+that path once in its policy-sync configuration. When the workflow, reporting job,
+required steps, artifact or tools change, update the policy in the same producer PR.
+Record the actual committed workflow Git blob; never substitute a commit SHA.
+
+The site's enabled policy-sync workflow detects changes and prepares a matching
+site PR. It copies the policy verbatim, preserves the previous policy for historical
+reports, authenticates a real successful package and validates the site candidate.
+You no longer need to pass hashes between agents manually. The PR still needs
+review/merge under the site's policy; a successful upstream run cannot approve
+itself. Until approval, the live site retains its last successful deployment.
+
+Routine progress needs no policy update when the policy is unchanged. A missing
+tracked policy or failed package produces a visible setup/validation result rather
+than guessed configuration. The [policy-sync guide](/docs/reporting/policy-sync.md)
+covers the source registration, immediate/dry-run checks, site-owned token setup,
+manual approval and recovery. Producer repositories need no site-write token.
+Existing hash-free policy templates are an optional adoption case in the
+[existing-project appendix](/wiki/existing-projects/#tracked-policy-sources).
+
 ## Integration acceptance
 
 A workflow change is also a consumer trust change. Approve its actual Git blob after reviewing the code, update full/reused step requirements together, and test deliberate audit-step skips. Preserve archived policies and immutable history. A green upstream run must not automatically expand the receiver's trust.
@@ -192,3 +215,17 @@ A workflow change is also a consumer trust change. Approve its actual Git blob a
 | Publication | Public page and manifest agree; the next refresh preserves the same accepted state |
 
 Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The [integration checklist](/docs/reporting/onboarding.md) and [starter files](/wiki/starter-kit/) provide a reusable handoff. Each repository supplies its own implementation details.
+
+### Prompt updates
+
+After registration, add a separate completion notifier using the site's pinned
+reusable workflow. A successful main report run requests a site refresh; the site
+reauthenticates the run and imports only changed approved packages. No new policy
+is trusted automatically. This avoids waiting for the periodic refresh without
+rerunning site source tests for every producer commit.
+
+The site-scoped GitHub App, caller generator, exact event fields, repository
+variables/secrets, five-minute fallback and recovery behavior are documented in
+[Producer policy sync](/docs/reporting/policy-sync.md#prompt-report-refresh).
+These are optional delivery automation; the report contract and manual import
+remain the same. Keep the notifier separate from the approved report workflow.

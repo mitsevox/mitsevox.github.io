@@ -136,6 +136,14 @@ revision; the consumer verifies both, parents, tree and same-repository identity
 step or changing workflow code requires the site's reviewed producer-policy update. Keep prior
 policies available for existing immutable reports; never widen trust automatically on refresh.
 
+Keep the complete policy in a tracked JSON file (normally
+`config/TARGET_ID/producer.json`) and use it for packaging. Give the stable path to
+the site during registration so its policy-sync workflow can propose updates.
+Update the policy alongside workflow/tools changes; a matching successful package
+is required before the bot opens a site PR. Review/merge is still explicit.
+Producer CI needs no site-write token. See the website chapter's policy-update
+section and the shared reporting policy-sync guide for failure recovery.
+
 Job/step/artifact strings are case-sensitive exact matches to GitHub's API, not YAML keys or
 patterns. Include the actual matrix display suffix (for example `Build (TARGET_ID)`). Inspect
 the successful run's attempt-specific jobs/steps before registering policy. There must be
@@ -188,3 +196,13 @@ audit disagreement, zero/nonzero reuse handoff rules, identical/different-tree s
 explicit main seed and branch/no-save guards. Check report values, artifact identity and the
 next site refresh. Record revision, command, run/attempt, hashes, outcomes and remaining gaps.
 Do not copy another project's timing, target or successful status as evidence for this setup.
+
+## Notify the shared site
+
+After the first package is accepted, add the separate pinned completion notifier
+described in `reporting/policy-sync.md`. It runs after successful main report
+workflow completion and asks the site to refresh. Configure its site-scoped App
+variable/secret through Actions settings; never commit credentials. A notifier
+cannot approve a changed workflow or bypass package validation. Verify the entire
+producer-run → notification → site-refresh → public-update path before declaring
+automatic updates operational.
