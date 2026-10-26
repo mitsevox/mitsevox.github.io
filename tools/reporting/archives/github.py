@@ -71,5 +71,3 @@ def authenticate_run(policy, run, jobs, workflow_blob):
              and sum(s['name'] == SELECTION_STEP for s in steps) == 1)
     require(succeeded(SELECTION_STEP) or audit, 'Missing publication selection or full audit')
     return ('reused' if reused else 'full'), job
-
-

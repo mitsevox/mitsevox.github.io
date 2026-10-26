@@ -183,5 +183,3 @@ def refresh(root, run_id=None):
     latest = latest_commit(api)
     destination = install(root, api, manifest, payloads, latest)
     print(f"Imported {manifest['revision']} from {manifest['validation']['mode']} run {run_id}: {destination}")
-
-
