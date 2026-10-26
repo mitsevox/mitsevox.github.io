@@ -49,6 +49,8 @@ class ReportStoreTests(unittest.TestCase):
         subprocess.run(['git','init','--bare','--initial-branch=main',str(self.remote)],check=True,capture_output=True)
         self.repo=self.base/'site';self.repo.mkdir()
         shutil.copytree(ROOT/'config',self.repo/'config')
+        from platform_fixtures import clear_import_freezes
+        clear_import_freezes(self.repo)
         self.git('init','--initial-branch=main')
         self.git('-c','user.name=Test','-c','user.email=test@example.invalid','commit','--allow-empty','-m','Site source')
         self.git('remote','add','origin',str(self.remote))

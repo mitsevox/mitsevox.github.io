@@ -35,12 +35,17 @@ def producer(root,slug):
     require(isinstance(slug,str) and SLUG.fullmatch(slug),'Invalid project slug')
     item=registrations(root).get(slug)
     require(item is not None,'Unregistered project: '+slug)
-    require(set(item)<= {'format','policy','archives','pending'} and {'format','policy'}<=set(item),'Invalid producer registration')
+    require(set(item)<= {'format','policy','archives','pending','freeze'} and {'format','policy'}<=set(item),'Invalid producer registration')
     active=load_policy(root,slug,{k:item[k] for k in ('format','policy')})
     if 'pending' in item:
         pending=load_policy(root,slug,item['pending'])
         require(pending['repository']==active['repository'] and pending['target']==active['target'],
                 'Pending producer changes project identity')
+    if 'freeze' in item:
+        freeze=item['freeze']
+        require(isinstance(freeze,dict) and set(freeze)=={'path','revision','manifestSha256'},'Invalid import freeze')
+        snapshot_path(slug,freeze)
+        active['freeze']=freeze
     return active
 
 

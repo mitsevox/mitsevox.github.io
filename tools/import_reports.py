@@ -9,7 +9,7 @@ from urllib.parse import quote
 from reporting.validation import ROOT, decode, digest, require, schema, validate_package, timestamp
 from reporting.registry import producer, registrations, snapshot_path, snapshot_directory
 from reporting.github import GitHub, artifact_bytes, select_artifact, zip_members
-from reporting.state import read_lock, accepted_package, install, latest_commit
+from reporting.state import read_lock, accepted_package, frozen_snapshot, install, latest_commit
 
 
 def authenticate(policy,run,jobs,blob,candidate=False):
@@ -95,6 +95,10 @@ def verify_reuse(root,api,policy,manifest,receipt,trusted_proof=None):
 def refresh(root,slug,run_id=None):
     root=Path(root);policy=producer(root,slug)
     require(run_id is None or type(run_id) is int and run_id>0,'Run ID must be a positive integer')
+    frozen=frozen_snapshot(root,slug)
+    if frozen is not None:
+        require(run_id is None,'Explicit producer import is frozen')
+        return frozen
     if policy['format']=='nfl-legacy-v1':
         from import_nfl import refresh as legacy_refresh
         return legacy_refresh(root,run_id)

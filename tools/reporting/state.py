@@ -8,7 +8,7 @@ import subprocess
 import tempfile
 from urllib.parse import quote
 from .validation import ROOT, decode, digest, encoded, require, schema, validate_package
-from .registry import snapshot_path, snapshot_directory, site_config
+from .registry import producer, snapshot_path, snapshot_directory, site_config
 from .github import GitHub
 
 LOCK='data/reports.lock.json'
@@ -32,6 +32,19 @@ def read_lock(root):
                 require(key==proof['artifactSha256'] and proof['parents']==[proof['base'],proof['head']],
                         'Retained proof cache identity differs')
     return lock
+
+
+def frozen_snapshot(root,slug):
+    freeze=producer(root,slug).get('freeze')
+    if freeze is None:return None
+    entry=read_lock(root)['projects'].get(slug)
+    require(entry is not None and all(entry.get(k)==v for k,v in freeze.items()),'Frozen selection differs from checkpoint')
+    directory=snapshot_directory(root,slug,entry)
+    require(digest((directory/'manifest.json').read_bytes())==freeze['manifestSha256'],'Frozen manifest changed')
+    manifest,_,_=validate_package(directory,root)
+    require(manifest['revision']==freeze['revision'],'Frozen revision differs')
+    print('Import frozen at verified checkpoint:',slug,freeze['revision'])
+    return directory
 
 
 def check_update(previous,manifest,old_activity,new_activity,relation):
@@ -62,6 +75,12 @@ def install(root,api,manifest,payloads,latest,source_proof=None,source_proofs=No
     with (root/'data/.report-refresh.lock').open('a') as guard:
         fcntl.flock(guard,fcntl.LOCK_EX)
         lock=read_lock(root);slug=manifest['project'];parent=root/'data'/slug/'snapshots'
+        freeze=producer(root,slug).get('freeze')
+        if freeze is not None:
+            old=lock['projects'].get(slug)
+            require(old is not None and all(old.get(k)==v for k,v in freeze.items())
+                    and manifest['revision']==freeze['revision']
+                    and digest(payloads['manifest.json'])==freeze['manifestSha256'],'Producer import is frozen')
         require(parent.resolve()==parent,'Unsafe snapshot root')
         parent.mkdir(parents=True,exist_ok=True)
         with tempfile.TemporaryDirectory(prefix='.incoming-',dir=parent) as temp:

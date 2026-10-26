@@ -135,6 +135,11 @@ def accepted_package(entry,root=ROOT):
 
 
 def refresh(root, run_id=None):
+    from reporting.state import frozen_snapshot
+    frozen=frozen_snapshot(root,'nflstreet2')
+    if frozen is not None:
+        require(run_id is None,'Explicit producer import is frozen')
+        return frozen
     policy = decode((root/'config/nflstreet2-producer.json').read_bytes())
     api = GitHub(policy['repository'])
     if run_id is None:

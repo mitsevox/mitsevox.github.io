@@ -16,9 +16,17 @@ POLICY={'schemaVersion':1,'repository':'mitsevox/contract-test','target':{'id':'
         'tools':[{'name':'test-toolchain','identity':'sha256:'+'d'*64}]}
 
 
+def clear_import_freezes(root):
+    """Operator checkpoints bind real snapshots, never isolated synthetic fixtures."""
+    path=Path(root)/'config/producers.json';registry=decode(path.read_bytes())
+    for item in registry.values():item.pop('freeze',None)
+    path.write_bytes(encoded(registry))
+
+
 def registered_root(root,include_real=False):
     root=Path(root)
-    if not (root/'config').exists():shutil.copytree(ROOT/'config',root/'config')
+    if not (root/'config').exists():
+        shutil.copytree(ROOT/'config',root/'config');clear_import_freezes(root)
     if include_real:
         lock=decode((ROOT/'data/reports.lock.json').read_bytes())
         for entry in lock['projects'].values():shutil.copytree(ROOT/entry['path'],root/entry['path'])

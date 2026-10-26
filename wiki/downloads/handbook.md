@@ -1203,3 +1203,23 @@ See the [illustrative legacy timeline](/docs/reporting/examples/timeline-legacy.
 - [ ] Real report import and the next refresh preserve prior accepted state.
 
 These checks apply only to the adoption being performed. They are intentionally absent from the starter's new-project checklist.
+
+## Changing an accepted report format
+
+Stage the next producer policy as `pending` while the current importer stays active.
+Authenticate real outputs in both formats and compare raw summaries, map coverage and
+metrics, complete function IDs, optional credits and historical values/provenance. A
+pending policy cannot itself admit packages or select the active importer.
+
+When changing history representation, let the last current publisher finish, restore the
+durable store and freeze its exact snapshot using the registration's `freeze` fields:
+`path`, `revision`, `manifestSha256`. Copy the final stored row's revision and built_at
+verbatim to the producer; retain its original timestamp spelling. Do not infer the
+cutover from a local preview, an earlier parity run or the latest repository commit.
+
+The freeze permits other projects to refresh but blocks this project's newer imports,
+added rows and publication changes. Wait for the producer's cutover pin and successful
+main package. Then activate the staged policy, remove the freeze, archive the previous
+format policy and require every previously accepted row to survive unchanged or through
+an exact inherited record. Retire the producer's former website/artifact jobs only after
+the shared-site switch succeeds. See the [platform controls](/docs/reporting/platform.md).

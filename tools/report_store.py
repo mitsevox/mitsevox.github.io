@@ -114,6 +114,8 @@ def publish(root, site):
     files={LOCK:encoded(lock)}
     for slug,entry in lock['projects'].items():
         policy=producer(root,slug);directory=snapshot_directory(site,slug,entry)
+        freeze=policy.get('freeze')
+        require(freeze is None or all(entry.get(k)==v for k,v in freeze.items()),'Publication would advance a frozen producer')
         manifest,_,activity=validate_package(directory,root)
         require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256']
                 and manifest['project']==slug and manifest['revision']==entry['revision'],'Publication lock differs')

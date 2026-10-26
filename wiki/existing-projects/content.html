@@ -47,5 +47,21 @@ git merge-base --is-ancestor FULL_COMMIT_SHA origin/main
 <li>[ ] Previously accepted history remains unchanged or moves through an explicit compatible transition.</li>
 <li>[ ] Real report import and the next refresh preserve prior accepted state.</li>
 </ul>
-<p>These checks apply only to the adoption being performed. They are intentionally absent from the starter's new-project checklist.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/starter-kit/"><small>Previous</small><span>Starter kit</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#map-existing-responsibilities">Map existing responsibilities</a><a href="#adopt-policy-without-overriding-authority">Adopt policy without overriding authority</a><a href="#branch-and-trigger-conventions">Branch and trigger conventions</a><a href="#recovering-past-credit">Recovering past credit</a><a href="#import-legacy-history">Import legacy history</a><a href="#adoption-acceptance">Adoption acceptance</a></nav></aside></main>
+<p>These checks apply only to the adoption being performed. They are intentionally absent from the starter's new-project checklist.</p>
+<h2 id="changing-an-accepted-report-format">Changing an accepted report format</h2>
+<p>Stage the next producer policy as <code>pending</code> while the current importer stays active.
+Authenticate real outputs in both formats and compare raw summaries, map coverage and
+metrics, complete function IDs, optional credits and historical values/provenance. A
+pending policy cannot itself admit packages or select the active importer.</p>
+<p>When changing history representation, let the last current publisher finish, restore the
+durable store and freeze its exact snapshot using the registration's <code>freeze</code> fields:
+<code>path</code>, <code>revision</code>, <code>manifestSha256</code>. Copy the final stored row's revision and built_at
+verbatim to the producer; retain its original timestamp spelling. Do not infer the
+cutover from a local preview, an earlier parity run or the latest repository commit.</p>
+<p>The freeze permits other projects to refresh but blocks this project's newer imports,
+added rows and publication changes. Wait for the producer's cutover pin and successful
+main package. Then activate the staged policy, remove the freeze, archive the previous
+format policy and require every previously accepted row to survive unchanged or through
+an exact inherited record. Retire the producer's former website/artifact jobs only after
+the shared-site switch succeeds. See the <a href="/docs/reporting/platform.md">platform controls</a>.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/starter-kit/"><small>Previous</small><span>Starter kit</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#map-existing-responsibilities">Map existing responsibilities</a><a href="#adopt-policy-without-overriding-authority">Adopt policy without overriding authority</a><a href="#branch-and-trigger-conventions">Branch and trigger conventions</a><a href="#recovering-past-credit">Recovering past credit</a><a href="#import-legacy-history">Import legacy history</a><a href="#adoption-acceptance">Adoption acceptance</a><a href="#changing-an-accepted-report-format">Changing an accepted report format</a></nav></aside></main>
