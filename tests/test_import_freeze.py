@@ -73,9 +73,12 @@ class ImportFreezeTests(unittest.TestCase):
         self.assertIn('another-project',read_lock(self.root)['projects'])
 
     def test_direct_legacy_entry_point_obeys_the_same_freeze(self):
-        from import_nfl import refresh as legacy_refresh
+        from archives.import_nfl import refresh as legacy_refresh
         from test_report_store import compact_legacy_package
         entry,payloads=compact_legacy_package();manifest=decode(payloads['manifest.json'])
+        registry=decode((self.root/'config/producers.json').read_bytes())
+        registry['nflstreet2']=next(p for p in registry['nflstreet2']['archives'] if p['format']=='nfl-legacy-v1')
+        (self.root/'config/producers.json').write_bytes(encoded(registry))
         install(self.root,None,manifest,payloads,{'title':'legacy fixture'});self.freeze('nflstreet2')
         with patch.object(GitHub,'get',side_effect=AssertionError('upstream must not be read')):
             self.assertEqual(legacy_refresh(self.root),(self.root/entry['path']).resolve())

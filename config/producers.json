@@ -1,16 +1,13 @@
 {
   "nflstreet2": {
-    "format": "nfl-legacy-v1",
-    "policy": "nflstreet2-producer.json",
-    "pending": {
-      "format": "report-v1",
-      "policy": "nflstreet2-report-v1-producer.json"
-    },
-    "freeze": {
-      "path": "data/nflstreet2/snapshots/caec9316e808e72ccbaf79c5ec108d1ac9fa08d0-v1-40253689256-1",
-      "revision": "caec9316e808e72ccbaf79c5ec108d1ac9fa08d0",
-      "manifestSha256": "a6a8560555aef2215e23401ab9960e3f5070fef474620f5e264bf53aa594e744"
-    }
+    "format": "report-v1",
+    "policy": "nflstreet2-report-v1-producer.json",
+    "archives": [
+      {
+        "format": "nfl-legacy-v1",
+        "policy": "nflstreet2-legacy-producer.json"
+      }
+    ]
   },
   "mvp2005": {
     "format": "report-v1",

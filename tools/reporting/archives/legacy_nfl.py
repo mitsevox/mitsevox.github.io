@@ -1,7 +1,7 @@
 """Compatibility validator for the original producer format; isolated from the shared contract."""
 import math
 from pathlib import Path
-from .validation import ROOT, SHA, ADDRESS, decode, digest, require, schema, timestamp, integer
+from ..validation import ROOT, SHA, ADDRESS, decode, digest, require, schema, timestamp, integer
 
 PACKAGE_FILES = {'manifest.json', 'progress.json', 'activity.json', 'receipt.json', 'summary.json'}
 
@@ -183,7 +183,7 @@ def validate_package(directory, root=ROOT, policy=None):
     require(receipt['measuredAt'] == manifest['measuredAt'] and receipt['publishedAt'] == manifest['publishedAt']
             and receipt['publishedAt'] == p['built_at']
             and timestamp(receipt['measuredAt']) <= timestamp(receipt['publishedAt']), 'Measurement/publication time differs')
-    policy = policy or decode((root/'config/nflstreet2-producer.json').read_bytes())
+    policy = policy or decode((root/'config/nflstreet2-legacy-producer.json').read_bytes())
     require(manifest['project'] == 'nflstreet2' and manifest['repository'] == policy['repository'] and manifest['target'] == policy['target'],
             'Package does not match approved producer policy')
     require(manifest['tools'] == [{'name':'build-environment','identity':policy['environment']},

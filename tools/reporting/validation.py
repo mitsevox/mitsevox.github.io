@@ -69,7 +69,7 @@ def validate_package(directory, root=ROOT):
     require(digest(raw)==ref['sha256'],'Receipt checksum differs')
     policy=package_policy(root,manifest,decode(raw)['workflowBlob'])
     if policy['format'] == 'nfl-legacy-v1':
-        from .legacy_nfl import validate_package as validate_legacy
+        from .archives.legacy_nfl import validate_package as validate_legacy
         return validate_legacy(directory, root, policy)
     from .standard import validate_package as validate_standard
     return validate_standard(directory, manifest, policy)
@@ -77,17 +77,17 @@ def validate_package(directory, root=ROOT):
 
 # Compatibility imports for callers of the original validator API.
 def validate_progress(*args):
-    from .legacy_nfl import validate_progress as validate
+    from .archives.legacy_nfl import validate_progress as validate
     return validate(*args)
 
 
 def validate_activity(*args):
-    from .legacy_nfl import validate_activity as validate
+    from .archives.legacy_nfl import validate_activity as validate
     return validate(*args)
 
 
 def summary(*args):
-    from .legacy_nfl import summary as summarize
+    from .archives.legacy_nfl import summary as summarize
     return summarize(*args)
 
 

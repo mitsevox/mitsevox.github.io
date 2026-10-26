@@ -2,7 +2,7 @@
 
 Shared portfolio frontend and project wiki for mitsevox’s decompilation projects.
 
-This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2 data (legacy adapter), MVP Baseball 2005 data and Tiger Woods PGA Tour 2004 data (standard report-v1 producers); other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
+This repository owns the portfolio frontend, wiki and GitHub Pages publication. Production includes authenticated NFL Street 2, MVP Baseball 2005 and Tiger Woods PGA Tour 2004 data (standard report-v1 producers); other projects appear when their registered standard reports are verified. Game CI and reporting workflows are unchanged.
 
 Build with `uv run --locked python tools/build_site.py --output build/site`, then serve that directory with `python3 -m http.server 54872 --bind 127.0.0.1 --directory build/site`. Use a fresh output path for each retained candidate.
 
@@ -14,6 +14,8 @@ Build with `uv run --locked python tools/build_site.py --output build/site`, the
 - `/games/nflstreet2/`, `/games/mvp2005/`, `/games/tw2004/`: static entry points to one shared renderer.
 - `assets/app.js`: History API routing; the header/footer stay mounted while page content changes. Normal links, deep-link refresh, and browser back/forward keep working.
 - `assets/hub.html` and `assets/game.html`: shared page layouts.
+- `redirects/`: static aliases for retired project URLs.
+- `tools/archives/` and `tools/reporting/archives/`: historical compatibility; no active artifact selection.
 - `assets/lifecycle.js`: page-scoped request, listener, and animation cleanup when navigating.
 - `assets/projects.js`: game identity, artwork, repository URLs, and fixture locations.
 - `assets/progress.js` and `assets/activity.js`: shared progress map, bars, timeline, and contributor rendering.
@@ -23,7 +25,7 @@ Build with `uv run --locked python tools/build_site.py --output build/site`, the
 
 This is a personal shared platform for owner-registered repositories. `config/site.json` declares the owner/site identity; `config/producers.json` registers approved report sources; `config/projects.json` supplies identity, artwork and enabled modules. Conforming `report-v1` producers use one importer, validator, installer, store and renderer. See [the platform interface](docs/reporting/platform.md) for schemas, packaging metadata, execution policy and commands.
 
-The existing production source remains on its isolated compatibility adapter until its producer exports the standard format. Its current CI, measurements and history are preserved. Other games' old layout fixtures remain unregistered and never enter production output.
+All registered games use the standard importer. Retained NFL legacy snapshots remain readable through archived validation; the retired artifact reader is not an active importer. Old layout fixtures remain unregistered and never enter production output.
 
 ```sh
 uv sync --locked
@@ -33,7 +35,7 @@ uv run --locked python tools/build_site.py --output build/site
 
 Each immutable package is selected by `data/reports.lock.json`. The builder validates all archived reports, generates routes for displayed projects, and fingerprints the shared release. Optional map/count/history/credit sections and contribution links are configured independently. Artwork is maintained centrally in the website repository.
 
-The [generic handbook](docs/wiki/start-here.md) and [integration template](docs/reporting/onboarding.md) describe repository/CI responsibilities. The [legacy integration reference](docs/reporting/nflstreet2.md) records the existing compatibility path.
+The [generic handbook](docs/wiki/start-here.md) and [integration template](docs/reporting/onboarding.md) describe repository/CI responsibilities. The [NFL integration record](docs/reporting/nflstreet2.md) records its completed cutover and archived compatibility path.
 
 ## Artwork
 

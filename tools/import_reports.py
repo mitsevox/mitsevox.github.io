@@ -99,9 +99,7 @@ def refresh(root,slug,run_id=None):
     if frozen is not None:
         require(run_id is None,'Explicit producer import is frozen')
         return frozen
-    if policy['format']=='nfl-legacy-v1':
-        from import_nfl import refresh as legacy_refresh
-        return legacy_refresh(root,run_id)
+    require(policy['format']=='report-v1','Legacy import is archived; only stored snapshots may be read')
     api=GitHub(policy['repository'])
     if run_id is None:
         workflow=policy['workflow'].rsplit('/',1)[1]
