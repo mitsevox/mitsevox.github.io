@@ -59,4 +59,19 @@ Latest commit titles and descriptions in the summary fixtures are public GitHub 
 
 ## Checks and automation
 
-Run `uv sync --locked` and `uv run --locked python -m unittest discover -s tests -v`. Site CI validates and assembles candidates. Push/manual/scheduled refreshes restore all durable last-good packages and refresh registered producers. Successful current-main runs preserve snapshots on this repository’s data-only `report-data` branch before deploying Pages. PRs and work branches cannot publish. A failed refresh keeps the live site unchanged. Game repositories are never written. See [operations and rollout boundaries](docs/reporting/nflstreet2.md#automation-and-rollout-boundary).
+CI automatically selects a presentation-only lane for changes limited to the
+allowlist in `tools/ci_scope.py`: the shared stylesheets, game/hub HTML templates,
+header and console-icon components, and cover/banner images. It checks JavaScript
+syntax, restores and validates the durable last-good reports, and builds the same
+versioned site. On main it deploys with the existing current-main check, without
+refreshing producers or rewriting `report-data`. No report validation is bypassed.
+
+Report readers and renderers that also process data (including `reports.js`,
+`progress.js`, `hub.js`, `activity.js`, and `identity.js`), configuration, schemas,
+tools, dependencies, tests and workflow changes use full CI. Mixed or unknown
+changes, unavailable comparison commits, empty diffs, manual runs and scheduled
+refreshes also use full CI. PRs compare the tested revision against their base;
+work branches compare their entire diff against main; main pushes compare the
+complete pushed commit range. There is no manual fast-lane override.
+
+Run `uv sync --locked` and `uv run --locked python -m unittest discover -s tests -v`. Site CI validates and assembles candidates. Full-lane push/manual/scheduled refreshes restore all durable last-good packages and refresh registered producers. Successful full-lane current-main runs preserve snapshots on this repository’s data-only `report-data` branch before deploying Pages. PRs and work branches cannot publish. A failed refresh keeps the live site unchanged. Game repositories are never written. See [operations and rollout boundaries](docs/reporting/nflstreet2.md#automation-and-rollout-boundary).

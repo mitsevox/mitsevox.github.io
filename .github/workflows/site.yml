@@ -21,20 +21,37 @@ jobs:
     name: Validate reports and assemble site
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    outputs:
+      lane: ${{ steps.scope.outputs.lane }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Select presentation or full validation
+        id: scope
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_BEFORE_SHA: ${{ github.event.before }}
+        run: python3 tools/ci_scope.py
       - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
           version: '0.12.9'
       - name: Run site regression tests
+        if: steps.scope.outputs.lane != 'ui'
         run: |
           uv run --locked python -m unittest discover -s tests -v
+      - name: Check frontend JavaScript syntax
+        run: |
           for file in assets/*.js; do node --check "$file"; done
+      - name: Restore verified reports for presentation build
+        if: steps.scope.outputs.lane == 'ui'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --locked python tools/report_store.py restore
       - name: Refresh registered project reports
         id: refresh
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.scope.outputs.lane != 'ui'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -80,6 +97,7 @@ jobs:
           name: portfolio-site-${{ github.run_id }}-${{ github.run_attempt }}
           path: build/site
       - name: Preserve verified snapshots before deployment
+        if: needs.validate.outputs.lane != 'ui'
         env:
           GH_TOKEN: ${{ github.token }}
         run: uv run --locked python tools/report_store.py publish
