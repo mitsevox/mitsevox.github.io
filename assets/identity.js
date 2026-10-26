@@ -4,7 +4,10 @@ import {pageScope} from './lifecycle.js';
 export function mountIdentity(root,project){
   const scope=pageScope();
   const identity=document.createElement('div');identity.className='game-identity';
-  const heading=root.querySelector('h1');heading.className='game-identity-title';heading.textContent=project.title;
+  const heading=root.querySelector('h1');heading.className='game-identity-title';heading.textContent='';
+  const title=document.createElement('span');title.className='game-name';title.textContent=project.title;
+  const target=document.createElement('span');target.className='game-target';target.textContent=project.target;target.setAttribute('aria-label','Game ID: '+project.target);
+  heading.append(title,target);
   heading.insertAdjacentHTML('afterbegin',consoleIcon(project.console));
   root.prepend(identity);identity.append(heading);
   const commit=document.createElement('a');commit.className='identity-commit';commit.href=project.repo;
