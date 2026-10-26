@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "repository": "mitsevox/n100f",
+  "target": {
+    "id": "GIHE78",
+    "console": "GameCube",
+    "sha1": "c77fb29d39b5898933e8ef4d1ccd2ddac404554e"
+  },
+  "workflow": ".github/workflows/validate.yml",
+  "branch": "main",
+  "workflowBlobs": [
+    "4358db0f428d68ba6e99fd332dd27b2505c278c9"
+  ],
+  "artifact": "public-report",
+  "job": "Site report",
+  "requiredSteps": [
+    "Export public report inputs",
+    "Package and validate public report",
+    "Upload public report"
+  ],
+  "lanes": {
+    "full": [
+      "Download verified progress report"
+    ]
+  },
+  "tools": [
+    {
+      "name": "build-environment",
+      "identity": "ghcr.io/mitsevox/n100f-build@sha256:8b3d46328be5e3bc9e92eb256709edd039beed5f4269149727295bef17819e4d"
+    },
+    {
+      "name": "dtk",
+      "identity": "v1.8.3 + rom-copy-info patch sha256:09125d19ff103165c9dbd397543381a269b44eb84061c8418e1870555fb1adcf"
+    },
+    {
+      "name": "objdiff",
+      "identity": "v3.6.1"
+    }
+  ]
+}
