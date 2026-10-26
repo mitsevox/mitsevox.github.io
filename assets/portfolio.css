@@ -13,6 +13,7 @@ header { gap:20px; }
 .card-progress { min-width:0;display:grid;grid-template-columns:1fr;gap:24px; }
 .card-measure-label { display:flex;align-items:baseline;justify-content:space-between;font-size:13px;margin-bottom:10px;color:#b8c1cd; }
 .card-measure-label strong { color:var(--ink);font-size:13px;font-weight:500;font-variant-numeric:tabular-nums; }
+.card-measure .progress-key { gap:6px 14px; }
 .card-track { position:relative;height:var(--progress-track-height);border-radius:4px;background:var(--track); }
 .card-track i { position:absolute;top:0;left:0;height:100%;width:0;border-radius:3px;transition:width .8s var(--ease); }
 @media(hover:hover) { .project-card:hover .project-cover { transform:translateY(-3px);box-shadow:0 10px 24px #0005; } }
@@ -45,17 +46,20 @@ nav.project-menu a:hover,nav.project-menu a[aria-current] { background:#303844; 
   .card-measure-label,.card-measure-label strong { font-size:12px; }
   .game-title { font-size:13px;max-width:160px; }.project-trigger { gap:7px; }
   .main-nav { gap:3px; }.main-nav a { padding:0 7px; }
-  .main-nav .github-link span { display:none; }
+  header { gap:12px; }
+  .header-location { flex:1; }
+  .project-switcher { flex:1; }
+  .project-trigger { width:100%; }
+  .game-title { min-width:0; }
+  .main-nav { gap:2px; }
+  .main-nav a { justify-content:center;width:40px;min-height:44px;padding:0; }
+  .main-nav a > span { display:none; }
+  .main-nav .icon { width:19px;height:19px; }
   .contribute-picker summary { padding:0 9px;gap:7px; }
   nav.project-menu { width:min(300px,calc(100vw - 40px)); }
 }
 @media(prefers-reduced-motion:reduce) { .project-cover,.card-track i,.switch-chevron { transition:none!important; } }
 
-@media(max-width:480px) {
-  header { height:auto;min-height:104px;flex-wrap:wrap;gap:8px 12px;padding:14px 0; }
-  .header-location { width:100%; }.game-title { max-width:calc(100vw - 170px); }
-  .main-nav { margin-left:auto; }.main-nav .github-link span { display:inline; }
-}
 
 /* One shell and one gutter calculation for every route. */
 html { scrollbar-gutter: stable; }
