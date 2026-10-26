@@ -10,9 +10,13 @@ import {wikiChapters} from './wiki-chapters.js';
 const shell=document.querySelector('.shell');
 const header=createHeader(),footer=createFooter();
 const content=document.createElement('div');content.id='page-content';
-shell.replaceChildren(header.node,content,footer.node);
+const navigationStatus=document.createElement('div');navigationStatus.className='route-progress';navigationStatus.hidden=true;navigationStatus.setAttribute('role','status');
+const navigationLabel=document.createElement('span');navigationLabel.className='sr-only';navigationStatus.append(navigationLabel);
+shell.replaceChildren(header.node,navigationStatus,content,footer.node);
 const templates=new Map();
-let controllers=[],generation=0,displayedURL=null,restoring=false;
+let controllers=[],generation=0,displayedURL=null,restoring=false,scrollIntent=0;
+for(const event of ['wheel','touchstart'])document.addEventListener(event,()=>{scrollIntent++;},{passive:true});
+document.addEventListener('keydown',event=>{if(['PageDown','PageUp','Home','End','ArrowDown','ArrowUp',' '].includes(event.key))scrollIntent++;});
 function route(url){
   const path=url.pathname.replace(/\/+$/,'')||'/';
   if(path==='/')return {project:null};
@@ -38,11 +42,13 @@ function restorePosition(url,scrollY,{smooth=false}={}){
   if(url.hash){const target=document.getElementById(decodeURIComponent(url.hash.slice(1)));if(target){target.scrollIntoView({behavior});return;}}
   window.scrollTo({top:scrollY,behavior});
 }
+function templateFor(match){return match.wiki?(match.wiki==='start-here'?'/wiki/content.html':'/wiki/'+match.wiki+'/content.html'):match.project?'game':'hub';}
 async function navigate(url,{push=false,scrollY=0,focus=false}={}){
   const match=route(url);if(!match)return;
   const version=++generation;
+  navigationLabel.textContent='Loading '+(match.wiki?'wiki':match.project?.title||'projects');navigationStatus.hidden=false;content.setAttribute('aria-busy','true');
   try{
-    const html=await template(match.wiki?(match.wiki==='start-here'?'/wiki/content.html':'/wiki/'+match.wiki+'/content.html'):match.project?'game':'hub');
+    const html=await template(templateFor(match));
     if(version!==generation)return;
     saveScroll();restoring=true;
     const wikiController=match.wiki&&controllers.find(controller=>controller.update&&controller.main?.classList.contains('wiki-layout'));
@@ -70,15 +76,18 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
     document.title=match.wiki?main.querySelector('h1').textContent+' · Wiki · mitsevox':project?project.title+' · mitsevox':'mitsevox · Decompilations';
     if(project)controllers=[mountIdentity(main,project),mountProgress(main,project,footer.buildLink),mountActivity(main,project)];
     else controllers=[wikiController||(match.wiki?mountWiki(main):mountHub(main))];
+    navigationStatus.hidden=true;content.removeAttribute('aria-busy');
     if(focus&&focusedInContent)main.focus({preventScroll:true});
     window.scrollTo({top:0,behavior:'instant'});
+    // A late map response must never snap a visitor back after they start scrolling.
+    const intent=scrollIntent;
     // Restore after report-driven content has its final height.
     await Promise.allSettled(controllers.map(controller=>controller.ready));
     if(version!==generation)return;
-    restorePosition(url,scrollY);restoring=false;saveScroll();
+    if(intent===scrollIntent)restorePosition(url,scrollY);restoring=false;saveScroll();
   }catch(error){
     if(version!==generation)return;
-    restoring=false;
+    restoring=false;navigationStatus.hidden=true;content.removeAttribute('aria-busy');
     const message=document.createElement('p');message.className='route-error';
     message.textContent='This page could not load. ';
     const retry=document.createElement('a');retry.href=url.href;retry.textContent='Try again';message.append(retry);
@@ -86,6 +95,14 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
     console.error(error);
   }
 }
+// Warm only the small route template when a visitor indicates navigation intent.
+function warmTemplate(event){
+  const link=event.target.closest('a[href]');if(!link)return;
+  const url=new URL(link.href);if(url.origin!==location.origin)return;
+  const match=route(url);if(match)template(templateFor(match)).catch(()=>{});
+}
+document.addEventListener('pointerover',warmTemplate,{passive:true});
+document.addEventListener('focusin',warmTemplate);
 history.scrollRestoration='manual';
 history.replaceState({scrollY:window.scrollY,...history.state},'',location.href);
 let scrollFrame=null;
@@ -107,12 +124,12 @@ document.addEventListener('click',event=>{
     return;
   }
   event.preventDefault();
-  if(url.href===displayedURL&&!content.querySelector('.route-error')){header.update(route(url).project,{wiki:!!route(url).wiki});window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(url.href===displayedURL&&!content.querySelector('.route-error')){++generation;restoring=false;navigationStatus.hidden=true;content.removeAttribute('aria-busy');header.update(route(url).project,{wiki:!!route(url).wiki});window.scrollTo({top:0,behavior:'smooth'});return;}
   navigate(url,{push:true,focus:true});
 });
 window.addEventListener('popstate',event=>{
   const url=new URL(location.href);
-  if(displayedURL&&new URL(displayedURL).pathname===url.pathname){++generation;displayedURL=url.href;restoring=false;restorePosition(url,event.state?.scrollY||0,{smooth:!!route(url)?.wiki});return;}
+  if(displayedURL&&new URL(displayedURL).pathname===url.pathname){++generation;navigationStatus.hidden=true;content.removeAttribute('aria-busy');displayedURL=url.href;restoring=false;restorePosition(url,event.state?.scrollY||0,{smooth:!!route(url)?.wiki});return;}
   navigate(url,{scrollY:event.state?.scrollY||0,focus:true});
 });
 navigate(new URL(location.href),{scrollY:history.state?.scrollY||0});

@@ -224,3 +224,11 @@ footer a:hover { color: var(--ink); text-decoration: underline; text-underline-o
 }
 
 .stats-grid > .function-stats:only-child { grid-column: 1 / -1; }
+
+/* Navigation feedback belongs to the persistent shell; it never blocks input. */
+.route-progress { position:fixed;inset:0 0 auto;height:2px;z-index:100;pointer-events:none;overflow:hidden;background:var(--track); }
+.route-progress::after { content:'';display:block;width:35%;height:100%;background:var(--code-color);animation:route-loading 1s ease-in-out infinite; }
+.route-progress[hidden] { display:none; }
+.map-loading { display:grid;place-items:center;height:100%;color:var(--muted);font-size:12px; }
+@keyframes route-loading { from { transform:translateX(-100%); } to { transform:translateX(390%); } }
+@media(prefers-reduced-motion:reduce) { .route-progress::after { animation:none;width:100%;opacity:.6; } }

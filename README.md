@@ -21,6 +21,13 @@ Build with `uv run --locked python tools/build_site.py --output build/site`, the
 - `assets/progress.js` and `assets/activity.js`: shared progress map, bars, timeline, and contributor rendering.
 - `assets/style.css` and `assets/portfolio.css`: shared visual styling.
 
+Report summaries populate independently of maps. Immutable snapshot payloads are
+cached across routes in a bounded in-memory cache; each page cancels only its own
+subscription. A module worker parses and validates maps and prepares ripple
+boundaries, using flat transferable graph buffers for dense WebKit maps. Canvas
+painting yields between batches, and stale renders cannot replace a newer view.
+Worker-unavailable browsers use the same validation on the main thread.
+
 ## Registered projects and reports
 
 This is a personal shared platform for owner-registered repositories. `config/site.json` declares the owner/site identity; `config/producers.json` registers approved report sources; `config/projects.json` supplies identity, artwork and enabled modules. Conforming `report-v1` producers use one importer, validator, installer, store and renderer. See [the platform interface](docs/reporting/platform.md) for schemas, packaging metadata, execution policy and commands.

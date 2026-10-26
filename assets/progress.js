@@ -1,5 +1,6 @@
 import {pageScope} from './lifecycle.js';
-import {fetchProgress} from './reports.js';
+import {fetchProgress, fetchSummary, fetchBoundaryGraph} from './reports.js';
+import {validMeasure, validateMap} from './report-map-validation.js';
 import {mapLabel, showMapDetails} from './map-evidence.js';
 export function mountProgress(root, project, buildLink) {
 const scope = pageScope();
@@ -37,6 +38,8 @@ let mapFrame = null;
 let activePulses = [];
 let rippleSurface = null;
 let boundaryGraph = [];
+let renderVersion = 0;
+const yieldWork = () => new Promise(resolve => setTimeout(resolve, 0));
 let mapLayout = [];
 let hoverTarget = null;
 let hoverItem = null;
@@ -82,55 +85,6 @@ function clickOrigin(event, block) {
   const y = event?.detail ? event.clientY : target.top + target.height / 2;
   return {x: Math.max(0, Math.min(map.width, x - map.left)),
     y: Math.max(0, Math.min(map.height, y - map.top))};
-}
-function makeBoundaryGraph(layout) {
-  const nodes = [], byPoint = new Map(), rows = new Map(), columns = new Map();
-  function group(groups, coordinate) {
-    if (!groups.has(coordinate)) groups.set(coordinate, {nodes: [], spans: []});
-    return groups.get(coordinate);
-  }
-  function point(x, y) {
-    x = Math.round(x * 10) / 10;
-    y = Math.round(y * 10) / 10;
-    const key = x + ':' + y;
-    if (!byPoint.has(key)) {
-      const node = {x, y, edges: []};
-      byPoint.set(key, nodes.length);
-      nodes.push(node);
-      group(rows, y).nodes.push(node);
-      group(columns, x).nodes.push(node);
-    }
-    return nodes[byPoint.get(key)];
-  }
-  for (const item of layout) {
-    const a = point(item.x, item.y), b = point(item.x + item.w, item.y);
-    const c = point(item.x, item.y + item.h), d = point(item.x + item.w, item.y + item.h);
-    group(rows, a.y).spans.push([a.x, b.x]);
-    group(rows, c.y).spans.push([c.x, d.x]);
-    group(columns, a.x).spans.push([a.y, c.y]);
-    group(columns, b.x).spans.push([b.y, d.y]);
-  }
-  function connect(groups, axis) {
-    for (const entry of groups.values()) {
-      entry.nodes.sort((a, b) => a[axis] - b[axis]);
-      entry.spans.sort((a, b) => a[0] - b[0]);
-      let span = 0, end = -Infinity;
-      for (let i = 0; i < entry.nodes.length - 1; i++) {
-        const a = entry.nodes[i], b = entry.nodes[i + 1];
-        while (span < entry.spans.length && entry.spans[span][0] <= a[axis] + 0.1) {
-          end = Math.max(end, entry.spans[span++][1]);
-        }
-        const length = b[axis] - a[axis];
-        if (length > 0 && end >= b[axis] - 0.1) {
-          a.edges.push({node: b, length});
-          b.edges.push({node: a, length});
-        }
-      }
-    }
-  }
-  connect(rows, 'x');
-  connect(columns, 'y');
-  return nodes;
 }
 function drawPulses(now) {
   mapFrame = null;
@@ -415,7 +369,9 @@ function liftMapBlock(item) {
     ], {duration: 150, easing: 'cubic-bezier(.22,1,.36,1)'});
   }
 }
-function drawMap(layout) {
+async function drawMap(layout, version) {
+  const graph = fetchBoundaryGraph(layout.map(({x,y,w,h})=>({x,y,w,h})));
+  graph.catch(()=>{}); // A newer render may supersede this work before it is awaited.
   const ratio = Math.min(window.devicePixelRatio || 1, 2);
   const scene = document.createElement('canvas');
   scene.className = 'map-pixels';
@@ -435,7 +391,11 @@ function drawMap(layout) {
   const context = scene.getContext('2d');
   context.scale(ratio, ratio);
   // Transparent seams expose the ripple underneath; the opaque blocks are drawn only once.
-  for (const item of layout) {
+  for (const [index, item] of layout.entries()) {
+    if (index && index % 512 === 0) {
+      await yieldWork();
+      if (signal.aborted || version !== renderVersion) return false;
+    }
     context.fillStyle = colorValue(item);
     const inset = Math.min(0.6, item.w * 0.2, item.h * 0.2);
     const x = item.x + inset, y = item.y + inset;
@@ -443,8 +403,11 @@ function drawMap(layout) {
     context.fillRect(x, y, width, height);
     if (item.matched === item.size) drawCompletedFinish(context, x, y, width, height);
   }
-  boundaryGraph = makeBoundaryGraph(layout);
-  canvas.append(rippleSurface, scene);
+  const preparedGraph = await graph;
+  if (signal.aborted || version !== renderVersion) return false;
+  boundaryGraph = preparedGraph;
+  canvas.replaceChildren(rippleSurface, scene);
+  return true;
 }
 function selectItem(item, block, event) {
   const origin = clickOrigin(event, block);
@@ -525,7 +488,8 @@ mapListen(canvas, 'pointerleave', () => {
     hoverTarget = null;
   }
 });
-function render(direction = null, origin = null) {
+async function render(direction = null, origin = null) {
+  const version = ++renderVersion;
   if (!mapEnabled) return;
   if (!sections.length) return;
   const continuing = activePulses.filter(pulse => performance.now() - pulse.start < pulse.duration)
@@ -547,7 +511,8 @@ function render(direction = null, origin = null) {
   hoverTarget = null;
   hoverItem = null;
   rippleSurface = null;
-  mapLayout = layout;
+  mapLayout = [];
+  boundaryGraph = [];
   if (!items.length) {
     const empty = document.createElement('div');
     empty.className = 'empty-search';
@@ -555,7 +520,9 @@ function render(direction = null, origin = null) {
     canvas.append(empty);
     return;
   }
-  drawMap(layout);
+  try {if (!await drawMap(layout, version)) return;}
+  catch {if (!signal.aborted && version === renderVersion) canvas.textContent='Map unavailable';return;}
+  mapLayout = layout;
   // Pixel drawing keeps dense maps fast; larger cells and search results retain native keyboard targets.
   const targets = search.value.trim() ? layout.slice(0, 128) : layout.slice(0, 64);
   for (const [index, item] of targets.entries()) {
@@ -579,11 +546,12 @@ function render(direction = null, origin = null) {
   if (focusedIndex !== null && focusedIndex >= targets.length && layout[focusedIndex]) targetItem(layout[focusedIndex]).focus();
   for (const pulse of continuing) ripple(pulse.origin, pulse.start);
   if (direction !== 'search') ripple(origin);
+  return true;
 }
-mapListen(back, 'click', event => {
+mapListen(back, 'click', async event => {
   const origin = clickOrigin(event, back);
   const previous = path.pop();
-  render('back', origin);
+  if (!await render('back', origin) || signal.aborted) return;
   const tile = [...canvas.children].find(block => block.dataset.name === previous?.name);
   tile?.focus();
 });
@@ -606,19 +574,6 @@ mapListen(window, 'scroll', () => {
     if (item && rect.bottom > 0 && rect.top < window.innerHeight) showTooltip(focused, item, rect.left, rect.top);
   });
 }, {passive: true});
-function validMap(items, kind = null) {
-  return Array.isArray(items) && items.length > 0 && items.every(item => {
-    if (!(item.size>0) || !['code', 'data'].includes(item.kind) || (kind && item.kind !== kind) ||
-        typeof item.name !== 'string' || !validMeasure({total: item.size, linked: item.linked, matched: item.matched, fuzzy: item.fuzzy})) return false;
-    if (item.children) {
-      if (!validMap(item.children, item.kind)) return false;
-      for (const field of ['size', 'linked', 'matched', ...(item.fuzzy === undefined ? [] : ['fuzzy'])]) {
-        if (Math.abs(item.children.reduce((sum, child) => sum + child[field], 0) - item[field]) > 1e-6) return false;
-      }
-    }
-    return true;
-  });
-}
 function renderCounts(functions, type, basis) {
   if (!root.querySelector('[data-stats="' + type + '"]')) return;
   const available = functions && functions.basis !== 'unavailable' && functions.total > 0;
@@ -644,21 +599,12 @@ function renderCounts(functions, type, basis) {
   }
 }
 
-function validMeasure(m){return m&&Number.isSafeInteger(m.total)&&m.total>=0&&Number.isSafeInteger(m.linked)&&m.linked>=0&&m.linked<=m.total&&Number.isSafeInteger(m.matched)&&m.matched>=0&&m.matched<=m.total&&(m.fuzzy===undefined||(Number.isFinite(m.fuzzy)&&m.matched<=m.fuzzy&&m.fuzzy<=m.total));}
-async function loadProgress(){try{
-const data=await fetchProgress(project,signal);if(signal.aborted)return;
+function renderSummary(data) {
 if(data.schema!==1||data.target!==project.target||data.target_sha1!==project.targetSha1||data.baseline!=='verified'||!(/^[a-f0-9]{40}$/).test(data.revision)||!validMeasure(data.measures?.code)||!validMeasure(data.measures?.data))throw new Error('Invalid progress');
-const files=data.files||data.sections||[];
-if(mapEnabled){
-  if(data.basis!=='executable-sections'||!validMap(data.sections)||!validMap(files))throw new Error('Invalid map');
-  for(const key of ['sections','files'])for(const kind of ['code','data'])for(const field of ['total','linked','matched',...(data.measures[kind].fuzzy===undefined?[]:['fuzzy'])]){
-    if(Math.abs(data[key].filter(item=>item.kind===kind).reduce((sum,item)=>sum+item[field==='total'?'size':field],0)-data.measures[kind][field])>1e-6)throw new Error('Inconsistent map');
-  }
-}
-root.querySelector('.fuzzy-key').parentElement.hidden=!['code','data'].some(kind=>data.measures[kind].fuzzy!==undefined);
-renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(data.file_counts, 'file', 'mapped-file-inventory');sections=files;root.querySelectorAll('.progress-element').forEach(element => {
+renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(data.file_counts, 'file', 'mapped-file-inventory');root.querySelectorAll('.progress-element').forEach(element => {
   const kind = element.dataset.progress;
   const measures = data.measures[kind];
+  element.querySelector('.fuzzy-key').parentElement.hidden=measures.fuzzy===undefined;
   const available=measures.total>0;
   const linked = available ? measures.linked / measures.total * 100 : 0;
   const matched = available ? measures.matched / measures.total * 100 : 0;
@@ -734,10 +680,46 @@ renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(da
   });
   listen(track, 'blur', clearHover);
   listen(track, 'click', hoverStrip);
-});const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Verified report · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Measured '+(project.report?.measuredAt||data.built_at)+'; published '+data.built_at;render();}catch(error){if(signal.aborted)return;renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');buildLink.textContent='Progress unavailable';canvas.textContent='Progress unavailable';root.querySelectorAll('.track').forEach(track=>track.setAttribute('aria-valuetext','Unavailable'));}}
-const observer = mapEnabled ? new ResizeObserver(() => { if (!signal.aborted) render(); }) : null;
+});const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Verified report · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Measured '+(project.report?.measuredAt||data.built_at)+'; published '+data.built_at;
+}
+async function loadProgress() {
+  try {
+    const summary = await fetchSummary(project, signal);
+    if (signal.aborted) return;
+    renderSummary(summary);
+  } catch {
+    if (signal.aborted) return;
+    renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');
+    buildLink.textContent='Progress unavailable';
+    root.querySelectorAll('.track').forEach(track=>track.setAttribute('aria-valuetext','Unavailable'));
+    if (mapEnabled) canvas.textContent='Progress unavailable';
+    return;
+  }
+  if (!mapEnabled) return;
+  canvas.setAttribute('aria-busy','true');
+  const loading=document.createElement('span');loading.className='map-loading';loading.textContent='Loading map…';canvas.append(loading);
+  try {
+    const data = await fetchProgress(project, signal);
+    if (signal.aborted) return;
+    // Legacy fixtures retain the same checks; standard maps were validated in the worker.
+    if (!project.report) validateMap(data, 'nfl-progress-v1', data.measures);
+    sections=data.files||data.sections;
+    await render();
+  } catch {
+    if (!signal.aborted) canvas.textContent='Map unavailable';
+  } finally {
+    if (!signal.aborted) canvas.removeAttribute('aria-busy');
+  }
+}
+let resizeFrame = null, previousSize = '';
+const observer = mapEnabled ? new ResizeObserver(() => {
+  const size = canvas.clientWidth + ':' + canvas.clientHeight;
+  if (size === previousSize) return;previousSize = size;
+  if (resizeFrame !== null) cancelFrame(resizeFrame);
+  resizeFrame = frame(() => {resizeFrame = null;if (!signal.aborted) render();});
+}) : null;
 observer?.observe(canvas);
 const ready = loadProgress();
-return {ready, destroy() { observer?.disconnect(); clearMapMotion(); scope.destroy(); }};
+return {ready, destroy() { observer?.disconnect(); ++renderVersion; clearMapMotion(); scope.destroy(); }};
 
 }
