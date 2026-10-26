@@ -1,9 +1,21 @@
 {
   "schemaVersion": 1,
   "projects": {
-    "nflstreet2": {"policyPath": "config/GN7E69/report-v1-producer.json", "mode": "template"},
-    "mvp2005": {"policyPath": "config/GV4E69/producer.json", "mode": "policy"},
-    "n100f": {"policyPath": "config/GIHE78/producer.json", "mode": "policy"},
-    "tw2004": {"disabled": "Publish a tracked producer policy JSON; the current exporter generates its policy at runtime."}
+    "nflstreet2": {
+      "policyPath": "config/GN7E69/report-v1-producer.json",
+      "mode": "template"
+    },
+    "mvp2005": {
+      "policyPath": "config/GV4E69/producer.json",
+      "mode": "policy"
+    },
+    "n100f": {
+      "policyPath": "config/GIHE78/producer.json",
+      "mode": "policy"
+    },
+    "tw2004": {
+      "policyPath": "config/GW4E69/producer.json",
+      "mode": "policy"
+    }
   }
 }
