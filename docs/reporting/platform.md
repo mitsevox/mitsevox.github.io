@@ -20,6 +20,16 @@ for a staged migration. Its policy is checked for the same repository/target, bu
 package acceptance consults it. Activate it only after parity and the history cutover are
 ready; archive just the previous `{format, policy}` pair, not the entire registration.
 
+For a history handoff, an optional registration `freeze` binds the exact accepted lock
+entry's `path`, `revision` and `manifestSha256`. Take it from the durable store after the
+prior publisher finishes, and retain that immutable snapshot in the site checkout.
+Automatic refresh validates the checkpoint without reading a newer upstream run; explicit
+imports, direct installation and publication cannot advance it, even with extra history
+on the same source revision. Other producers continue refreshing. A changed checkpoint or
+corrupt snapshot fails closed. Remove the freeze only in the reviewed activation that
+imports the producer's newly pinned history package; do not use a provisional parity copy
+as the cutover value.
+
 The [producer configuration example](examples/producer.json) and [presentation example](examples/project.json) are unregistered templates with explicit example identities. Replace their target/tool/workflow facts before use; structural validity alone is not execution proof.
 
 ## report-v1 input

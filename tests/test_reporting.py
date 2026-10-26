@@ -164,6 +164,9 @@ class ExecutionTests(unittest.TestCase):
     def auth(self):return authenticate_run(self.policy,self.run,self.jobs,self.receipt['workflowBlob'])
 
     def test_real_reuse_receipt_and_simulated_full_lane(self):
+        self.assertEqual(self.auth()[0],self.receipt['mode'])
+        self.jobs[0]['steps']=[s for s in self.jobs[0]['steps'] if s['name'] not in FULL_STEPS and s['name']!=REUSE_STEP]
+        self.jobs[0]['steps'].append({'name':REUSE_STEP,'conclusion':'success'})
         self.assertEqual(self.auth()[0],'reused')
         self.jobs[0]['steps']=[s for s in self.jobs[0]['steps'] if s['name'] not in FULL_STEPS and s['name']!=REUSE_STEP]
         self.jobs[0]['steps'] += [{'name':n,'conclusion':'success'} for n in FULL_STEPS]
@@ -230,6 +233,8 @@ class ExecutionTests(unittest.TestCase):
             root=Path(temp)
             import shutil
             shutil.copytree(ROOT/'config',root/'config')
+            from platform_fixtures import clear_import_freezes
+            clear_import_freezes(root)
             install(root,None,manifest,payloads,{})
             before=(root/'data/reports.lock.json').read_bytes()
             payloads['progress.json']=b'{}'

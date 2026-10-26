@@ -92,3 +92,19 @@ legacy row's revision and built_at verbatim to the game owner. The producer pins
 cutover and publishes a new main report. Only then may phase C activate the pending
 standard policy, archive the compatibility reader and validate that every frozen row
 survives through an exact inherited record. Retire game Pages/artifacts after that switch.
+
+Phase B freezes the durable legacy package selected from report-data commit
+`399e3417058026523fc675625d8a110b757a5240`, after phase A's main publication succeeded.
+The selected package is run `40253689256`, with 160 rows. Its final stored row is:
+
+```json
+{
+  "revision": "caec9316e808e72ccbaf79c5ec108d1ac9fa08d0",
+  "built_at": "2026-10-26T01:23:04.825014+00:00"
+}
+```
+
+Both import entry points, the common installer and data-store publisher enforce the
+checkpoint. Standard import remains pending. Do not remove the freeze or activate it
+until the game lands this exact inheritedThrough pin and produces a successful main
+package. Phase C must authenticate that package and accept all 160 frozen rows.
