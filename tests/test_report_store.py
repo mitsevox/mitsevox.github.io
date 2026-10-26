@@ -10,7 +10,34 @@ from unittest.mock import patch
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 import report_store
-from reporting.validation import ROOT, decode, encoded
+from reporting.validation import ROOT, decode, digest, encoded
+
+
+def compact_legacy_package():
+    """Exercise the real compatibility validator without copying game-sized maps.
+
+    Only the retained manifest/receipt metadata is borrowed. Measurements and
+    history are isolated test data; real packages are covered in test_reporting.
+    """
+    from test_reporting import tiny_reports
+    from reporting.legacy_nfl import summary
+    entry=copy.deepcopy(decode((ROOT/'data/reports.lock.json').read_bytes())['projects']['nflstreet2'])
+    directory=ROOT/entry['path']
+    manifest=decode((directory/'manifest.json').read_bytes())
+    progress,activity=tiny_reports()
+    for document in (progress,activity):
+        document.update(revision=manifest['revision'],target=manifest['target']['id'],
+                        target_sha1=manifest['target']['sha1'])
+    progress['built_at']=manifest['publishedAt']
+    activity['snapshots'][0].update(revision=manifest['revision'],built_at=manifest['publishedAt'])
+    manifest['summary']=summary(progress)
+    payloads={'progress.json':encoded(progress),'activity.json':encoded(activity),
+              'summary.json':encoded(manifest['summary']),'receipt.json':(directory/'receipt.json').read_bytes()}
+    for module in manifest['modules'].values():
+        asset=module['asset'];asset['sha256']=digest(payloads[asset['path']])
+    payloads['manifest.json']=encoded(manifest)
+    entry['manifestSha256']=digest(payloads['manifest.json'])
+    return entry,payloads
 
 
 class ReportStoreTests(unittest.TestCase):
@@ -31,9 +58,10 @@ class ReportStoreTests(unittest.TestCase):
             'GITHUB_REF':'refs/heads/main','GITHUB_EVENT_NAME':'push','GITHUB_SHA':self.sha})
         self.env.start();self.addCleanup(self.env.stop)
         self.site=self.base/'built';self.site.mkdir()
-        self.lock=decode((ROOT/'data/reports.lock.json').read_bytes())
-        for entry in self.lock['projects'].values():
-            shutil.copytree(ROOT/entry['path'],self.site/entry['path'])
+        entry,payloads=compact_legacy_package()
+        self.lock={'schemaVersion':1,'projects':{'nflstreet2':entry}}
+        directory=self.site/entry['path'];directory.mkdir(parents=True)
+        for name,raw in payloads.items():(directory/name).write_bytes(raw)
         (self.site/report_store.LOCK).write_bytes(encoded(self.lock))
 
     def git(self,*args):return subprocess.check_output(['git',*args],cwd=self.repo,stderr=subprocess.DEVNULL)
@@ -109,8 +137,8 @@ class ReportStoreTests(unittest.TestCase):
 class MultiProjectStoreTests(unittest.TestCase):
     setUp=ReportStoreTests.setUp
     git=ReportStoreTests.git
-    # These scenarios exercise the same bare-remote writer, with an independent
-    # contract producer alongside all real registered packages.
+    # Exercise both formats through the real bare-remote writer and validators,
+    # using small compatibility and standard reports in every failure scenario.
     def add_contract(self):
         from platform_fixtures import registered_root,report,SLUG
         from reporting.state import install

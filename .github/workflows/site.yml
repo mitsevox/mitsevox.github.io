@@ -28,7 +28,7 @@ jobs:
       - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
         with:
           version: '0.12.9'
-      - name: Validate locked packages and failure handling
+      - name: Run site regression tests
         run: |
           uv run --locked python -m unittest discover -s tests -v
           for file in assets/*.js; do node --check "$file"; done
