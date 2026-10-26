@@ -1,5 +1,6 @@
 import {pageScope} from './lifecycle.js';
 import {fetchProgress} from './reports.js';
+import {mapLabel, showMapDetails} from './map-evidence.js';
 export function mountProgress(root, project, buildLink) {
 const scope = pageScope();
 const {signal, listen, frame, cancelFrame, animate} = scope;
@@ -8,6 +9,8 @@ const mapListen = mapEnabled ? listen : () => {};
 let sections=[];
 const canvas=root.querySelector('#canvas');
 const projectMap = root.querySelector('#project-map');
+const mapDetails = root.querySelector('#map-details');
+let detailItem = null;
 const mapLift = document.createElement('div');
 mapLift.className = 'map-lift';
 mapLift.setAttribute('aria-hidden', 'true');
@@ -332,8 +335,7 @@ function hideTooltip() {
   activeTile = null;
 }
 function showTooltip(block, item, x, y) {
-  const name = (item.source && !item.name.includes(item.source) ? item.source + ' · ' : '') + item.name;
-  showTooltipText(block, name, x, y, percent(item));
+  showTooltipText(block, mapLabel(item), x, y, percent(item));
   liftMapBlock(item);
 }
 function showTooltipText(block, text, x, y, value = '') {
@@ -447,6 +449,8 @@ function drawMap(layout) {
 function selectItem(item, block, event) {
   const origin = clickOrigin(event, block);
   hideTooltip();
+  detailItem = item;
+  showMapDetails(mapDetails, item);
   if (item.children?.length) {
     search.value = '';
     path.push(item);
@@ -481,7 +485,7 @@ function targetItem(item) {
   }
   hoverTarget.dataset.name = item.name;
   hoverTarget.dataset.mapIndex = mapLayout.indexOf(item);
-  hoverTarget.setAttribute('aria-label', item.name + ' · ' + percent(item));
+  hoverTarget.setAttribute('aria-label', mapLabel(item) + ' · ' + percent(item));
   Object.assign(hoverTarget.style, {left: item.x + 'px', top: item.y + 'px', width: item.w + 'px', height: item.h + 'px'});
   return hoverTarget;
 }
@@ -531,6 +535,8 @@ function render(direction = null, origin = null) {
   const focusedIndex = !direction && canvas.contains(document.activeElement) ? Number(document.activeElement.dataset.mapIndex) : null;
   hideTooltip();
   const current = path.at(-1);
+  if (direction) detailItem = current;
+  showMapDetails(mapDetails, detailItem);
   const items = mapItems();
   back.hidden = !current;
   canvas.setAttribute('aria-description', 'Use arrow keys to move between blocks, Home or End to reach the first or last block, and Enter to select.');
@@ -559,7 +565,7 @@ function render(direction = null, origin = null) {
     block.dataset.name = item.name;
     block.dataset.mapIndex = index;
     Object.assign(block.style, {left: item.x + 'px', top: item.y + 'px', width: item.w + 'px', height: item.h + 'px'});
-    block.setAttribute('aria-label', item.name + ' · ' + percent(item));
+    block.setAttribute('aria-label', mapLabel(item) + ' · ' + percent(item));
     item.target = block;
     mapListen(block, 'blur', () => { if (activeTile === block) hideTooltip(); });
     mapListen(block, 'focus', () => {
@@ -580,6 +586,11 @@ mapListen(back, 'click', event => {
   render('back', origin);
   const tile = [...canvas.children].find(block => block.dataset.name === previous?.name);
   tile?.focus();
+});
+if (mapDetails) mapListen(mapDetails.querySelector('button'), 'click', () => {
+  detailItem = null;
+  mapDetails.hidden = true;
+  (hoverTarget?.isConnected ? hoverTarget : back.hidden ? canvas.querySelector('button') : back)?.focus();
 });
 listen(document, 'keydown', event => {
   if (event.key === 'Escape') hideTooltip();

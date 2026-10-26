@@ -84,7 +84,7 @@ with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFL
     references = [ROOT / 'docs/reporting/platform.md', ROOT / 'docs/reporting/contract-v1.md']
     references += [ROOT / 'docs/reporting/schema' / name for name in (
         'report-v1.schema.json', 'project-v1.schema.json', 'producer-v1.schema.json',
-        'execution-v1.schema.json', 'map-v1.schema.json', 'timeline-v1.schema.json',
+        'execution-v1.schema.json', 'map-v1.schema.json', 'map-v2.schema.json', 'timeline-v1.schema.json',
         'contributors-v1.schema.json')]
     references += list((ROOT / 'docs/reporting/examples').glob('*.json'))
     for path in sorted(references):

@@ -5,7 +5,15 @@ from pathlib import Path
 from .validation import decode, digest, encoded, integer, require, schema, timestamp
 
 ASSETS = {'map':'map-v1','timeline':'timeline-v1','contributors':'contributors-v1'}
+MAP_SCHEMAS = {1:'map-v1', 2:'map-v2'}
 FIXED = {'manifest.json','summary.json','receipt.json'}
+
+
+def asset_schema(key, document):
+    if key != 'map':return ASSETS[key]
+    version=document.get('schemaVersion') if isinstance(document,dict) else None
+    require(type(version) in (int,float) and version in MAP_SCHEMAS,'Unsupported map schema version')
+    return MAP_SCHEMAS[version]
 
 
 def metrics(m):
@@ -29,8 +37,10 @@ def view(manifest):
     return p
 
 
-def check_map(document,p):
-    schema(document,'map-v1.schema.json')
+def check_map(document,p,identifier=None):
+    expected=asset_schema('map',document)
+    require(identifier is None or identifier==expected,'Map asset schema/version differs')
+    schema(document,expected+'.schema.json')
     from .validation import merged_ranges
     # Generic address handling also permits wider targets; measured byte counts
     # stay within the integer range supported by the browser.
@@ -44,6 +54,12 @@ def check_map(document,p):
         return rs
     functions={};exact=set()
     def walk(item,kind,inventory=False):
+        if document['schemaVersion']==2:
+            for key in ('source','comparison_source'):
+                if key in item:
+                    path=item[key]
+                    require(re.fullmatch(r'[A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)*',path)
+                            and not any(part in ('.','..') for part in path.split('/')),'Invalid repository source path')
         require(item['kind']==kind,'Map kind differs')
         m={'totalBytes':item['size'],'linkedBytes':item['linked'],'matchedBytes':item['matched'],
            'fuzzyEquivalentBytes':item.get('fuzzy')};metrics(m)
@@ -123,7 +139,8 @@ def validate_package(directory,manifest,policy):
         module=manifest['modules'][key]
         if module['status']=='supported':
             ref=module['asset']
-            require(ref['schema']==identifier and re.fullmatch(r'[A-Za-z0-9_-]+\.json',ref['path']) and ref['path'] not in expected,'Unknown/duplicate module asset')
+            identifiers=tuple(MAP_SCHEMAS.values()) if key=='map' else (identifier,)
+            require(ref['schema'] in identifiers and re.fullmatch(r'[A-Za-z0-9_-]+\.json',ref['path']) and ref['path'] not in expected,'Unknown/duplicate module asset')
             expected.add(ref['path'])
     require({x.name for x in directory.iterdir()}==expected and len(expected)<=20
             and all(x.is_file() and not x.is_symlink() for x in directory.iterdir())
@@ -142,7 +159,7 @@ def validate_package(directory,manifest,policy):
         if module['status']!='supported':continue
         ref=module['asset'];require(digest(raw[ref['path']])==ref['sha256'],'Payload checksum differs: '+key)
         doc=documents[ref['path']]
-        if key=='map':exact=check_map(doc,p);p.update(sections=doc['sections'],files=doc['files'],basis='executable-sections')
+        if key=='map':exact=check_map(doc,p,ref['schema']);p.update(sections=doc['sections'],files=doc['files'],basis='executable-sections')
         if key=='timeline':check_timeline(doc,p);a['snapshots']=doc['snapshots']
         if key=='contributors':check_contributors(doc,p,exact);a.update({k:doc[k] for k in ('contributors','credited_functions')})
     receipt=documents['receipt.json'];schema(receipt,'execution-v1.schema.json')
