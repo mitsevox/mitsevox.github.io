@@ -37,6 +37,46 @@ When map support is enabled, section and file views must cover exactly the same 
 
 Use end-exclusive intervals, explicit disjoint extents, full function identity/coverage and declared inventory parity. See the [complete map rules and paired examples](platform.md#map-semantics); JSON Schema alone does not establish these relationships.
 
+### Optional map evidence (map-v2)
+
+The report manifest stays `schemaVersion: 1`. Producers that export node evidence use
+[`map-v2`](schema/map-v2.schema.json): `map.json` declares `schemaVersion: 2` and the manifest's
+map asset declares `schema: "map-v2"`. The shared packager selects that identifier from the
+payload version. The package validator and browser both require a known, matching identifier
+and payload version. Pin a consumer/packager revision that supports v2 before emitting it.
+Existing `map-v1` payloads stay valid and strict; adding evidence fields to v1 fails.
+
+All six fields below are optional. A node carrying one must explicitly declare an allowed
+`type`. V2 adds `group` to the existing `file`, `function`, `section` and `gap` node types;
+it does not infer a type from a name, hierarchy depth or address.
+
+| Field | Value | Allowed node types | Meaning |
+| --- | --- | --- | --- |
+| `source` | Repository-relative source path | `file`, `group`, `function` | Source file holding this code |
+| `comparison_source` | Repository-relative source path | `function` | Source compared for this full function, potentially separate from its linked source |
+| `complete` | Boolean | `file` | The whole declared file extent is accounted for rather than partial |
+| `auto_generated` | `true` only; omit otherwise | `file` | Generated placeholder for an unmapped range |
+| `boundary` | `exact`, `provisional`, `open` | `file` | Original start/end evidence: established, tentative, or at least one unresolved boundary |
+| `scope` | `mapped-ranges`, `candidate-ranges` | `file` | Extents from mapped ownership or candidate ownership |
+
+Source paths use case-preserving repository-relative components containing ASCII letters,
+digits, `_`, `.`, `+` and `-`, separated by single `/` characters. Empty, `.` and `..`
+components, leading/trailing slashes, backslashes, URLs, drive prefixes, percent escapes,
+whitespace and control characters fail. These are public metadata paths, not instructions
+to open files or proof that a source claim is correct. The producer remains responsible
+for its naming/evidence policy; no fixed `src/` directory or language extension is required.
+
+Evidence never changes byte measures, function identity (`TARGET:0xADDR:size` from
+`function_address`/`original_size`), address coverage, aggregation or exact-credit rules.
+`complete: true` describes extent accounting; it does not establish original boundaries,
+100% byte matching, source linkage or exact file credit on its own.
+
+The tooltip prefixes `source` unless already present in the node name. When `source` equals
+the name and `complete` is false, it adds “partial file”. Selecting an evidence-bearing
+node opens its detail area, including comparison source, boundary, scope and supplied file
+flags. The full values remain in the immutable public map. See the
+[v2 map example](examples/map-evidence.json), paired with [this summary](examples/map-summary.json).
+
 ## Three independent controls
 
 1. **Producer capabilities:** a module is `supported` with a validated asset, or `unsupported` with a reason. A supported module that failed to generate is a failed report, not a newly unsupported feature.

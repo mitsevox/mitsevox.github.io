@@ -62,6 +62,44 @@ Use positive, end-exclusive intervals without overlaps inside a view. Preserve d
 
 The [map specification and paired examples](/docs/reporting/platform.md#map-semantics) list the exact field/aggregation rules. Validate with the shared packager locally; a schema-valid JSON tree can still fail coverage checks.
 
+### Optional node evidence
+
+Use [map-v2](/docs/reporting/schema/map-v2.schema.json) when the public map carries source or
+file-boundary evidence. Set `map.json` to `schemaVersion: 2`; the report manifest stays v1.
+The shared packager labels that asset `map-v2`. Pin a site tools revision supporting v2
+before publishing it: the package validator and browser reject unknown or mismatched
+versions. Existing v1 maps remain supported, with unknown fields still rejected.
+
+| Optional field | Allowed node `type` | Valid values and purpose |
+| --- | --- | --- |
+| `source` | `file`, `group`, `function` | Repository-relative source file holding the code |
+| `comparison_source` | `function` | Repository-relative file used for this function's comparison |
+| `complete` | `file` | Boolean: whole file extent accounted for versus partial |
+| `auto_generated` | `file` | `true` only for an unmapped placeholder; omit otherwise |
+| `boundary` | `file` | `exact`, `provisional`, `open`: established, tentative or unresolved original boundary evidence |
+| `scope` | `file` | `mapped-ranges` or `candidate-ranges`: mapped versus candidate extent ownership |
+
+Every field is optional, but a node carrying evidence must explicitly declare an allowed
+type. V2 introduces `group`; section and gap nodes cannot carry these fields. Translate
+untyped internal nodes deliberately rather than guessing ownership or copying file-only
+flags onto functions or groups.
+
+Paths preserve case and use ASCII letters, digits, `_`, `.`, `+` and `-` in components
+separated by single `/` characters. They must be canonical repository-relative paths:
+no `.`/`..` or empty components, absolute paths, backslashes, URLs, percent escapes,
+whitespace or controls. A producer's source tree need not be named `src/`.
+
+The compact hover prefixes the source path when absent from the name and marks “partial
+file” when source equals name and `complete` is false. Selecting an evidence-bearing node
+shows source, comparison source, boundary, scope and supplied file flags in its details.
+Raw evidence stays in the public map. These fields never change byte totals, function IDs,
+exact credit or aggregation; `complete` alone does not prove matching or exact original
+file boundaries.
+
+See the [full field contract](/docs/reporting/contract-v1.md#optional-map-evidence-map-v2)
+and [v2 example](/docs/reporting/examples/map-evidence.json), which uses the existing
+[example summary](/docs/reporting/examples/map-summary.json).
+
 ## Choose modules independently
 
 Presentation settings belong in the site's project registration, such as `config/projects.json`:

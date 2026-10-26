@@ -1,3 +1,5 @@
+import {assertMapCompatibility} from './map-evidence.js';
+
 function summaryView(project){
   const report=project.report;
   const measures=Object.fromEntries(['code','data'].map(kind=>{
@@ -25,6 +27,7 @@ export async function fetchProgress(project,signal){
     const asset=project.report.modules.map.asset;
     if(!asset)throw Error('Map unsupported');
     const map=await read(project.reportBase+'/'+asset.path,signal);
+    assertMapCompatibility(map,asset.schema);
     Object.assign(p,{basis:'executable-sections',sections:map.sections,files:map.files});
   }
   return p;

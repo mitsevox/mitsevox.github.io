@@ -114,6 +114,70 @@
 <p>A supported map includes both <code>sections</code> and <code>files</code>. For each of code and data separately, their leaf address unions must be identical and each view's top-level metrics must sum to the summary. The views can group bytes differently; matching numeric totals at different addresses still fail.</p>
 <p>Use positive, end-exclusive intervals without overlaps inside a view. Preserve disjoint ranges through <code>mapped_extents</code>, aggregate child metrics into parents, and represent measured bytes without known file ownership as gap/unmapped nodes. Do not invent ownership or drop unassigned bytes. Function fragments must collectively cover the declared complete extent and reconcile any reported function inventory; fragments alone cannot earn full-function exact credit.</p>
 <p>The <a href="/docs/reporting/platform.md#map-semantics">map specification and paired examples</a> list the exact field/aggregation rules. Validate with the shared packager locally; a schema-valid JSON tree can still fail coverage checks.</p>
+<h3 id="optional-node-evidence">Optional node evidence</h3>
+<p>Use <a href="/docs/reporting/schema/map-v2.schema.json">map-v2</a> when the public map carries source or
+file-boundary evidence. Set <code>map.json</code> to <code>schemaVersion: 2</code>; the report manifest stays v1.
+The shared packager labels that asset <code>map-v2</code>. Pin a site tools revision supporting v2
+before publishing it: the package validator and browser reject unknown or mismatched
+versions. Existing v1 maps remain supported, with unknown fields still rejected.</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Optional field</th>
+<th>Allowed node <code>type</code></th>
+<th>Valid values and purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source</code></td>
+<td><code>file</code>, <code>group</code>, <code>function</code></td>
+<td>Repository-relative source file holding the code</td>
+</tr>
+<tr>
+<td><code>comparison_source</code></td>
+<td><code>function</code></td>
+<td>Repository-relative file used for this function's comparison</td>
+</tr>
+<tr>
+<td><code>complete</code></td>
+<td><code>file</code></td>
+<td>Boolean: whole file extent accounted for versus partial</td>
+</tr>
+<tr>
+<td><code>auto_generated</code></td>
+<td><code>file</code></td>
+<td><code>true</code> only for an unmapped placeholder; omit otherwise</td>
+</tr>
+<tr>
+<td><code>boundary</code></td>
+<td><code>file</code></td>
+<td><code>exact</code>, <code>provisional</code>, <code>open</code>: established, tentative or unresolved original boundary evidence</td>
+</tr>
+<tr>
+<td><code>scope</code></td>
+<td><code>file</code></td>
+<td><code>mapped-ranges</code> or <code>candidate-ranges</code>: mapped versus candidate extent ownership</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every field is optional, but a node carrying evidence must explicitly declare an allowed
+type. V2 introduces <code>group</code>; section and gap nodes cannot carry these fields. Translate
+untyped internal nodes deliberately rather than guessing ownership or copying file-only
+flags onto functions or groups.</p>
+<p>Paths preserve case and use ASCII letters, digits, <code>_</code>, <code>.</code>, <code>+</code> and <code>-</code> in components
+separated by single <code>/</code> characters. They must be canonical repository-relative paths:
+no <code>.</code>/<code>..</code> or empty components, absolute paths, backslashes, URLs, percent escapes,
+whitespace or controls. A producer's source tree need not be named <code>src/</code>.</p>
+<p>The compact hover prefixes the source path when absent from the name and marks “partial
+file” when source equals name and <code>complete</code> is false. Selecting an evidence-bearing node
+shows source, comparison source, boundary, scope and supplied file flags in its details.
+Raw evidence stays in the public map. These fields never change byte totals, function IDs,
+exact credit or aggregation; <code>complete</code> alone does not prove matching or exact original
+file boundaries.</p>
+<p>See the <a href="/docs/reporting/contract-v1.md#optional-map-evidence-map-v2">full field contract</a>
+and <a href="/docs/reporting/examples/map-evidence.json">v2 example</a>, which uses the existing
+<a href="/docs/reporting/examples/map-summary.json">example summary</a>.</p>
 <h2 id="choose-modules-independently">Choose modules independently</h2>
 <p>Presentation settings belong in the site's project registration, such as <code>config/projects.json</code>:</p>
 <pre><code class="language-json">{

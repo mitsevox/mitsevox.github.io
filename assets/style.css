@@ -126,6 +126,15 @@ nav .contribute-link:hover { background: var(--surface-hover); border-color: #43
 .map-tooltip { position: fixed; z-index: 10; pointer-events: none; display: flex; align-items: baseline; gap: 14px; width: max-content; max-width: min(460px,calc(100vw - 20px)); padding: 9px 12px; border: 1px solid #454e5b; border-radius: 7px; background: #20252cf7; color: var(--ink); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; box-shadow: 0 5px 24px #0005; }
 .tooltip-name { min-width: 0; }
 .tooltip-value { color: var(--map-color); font-size: 12px; line-height: 1.5; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.map-details { margin-top: 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.map-details-heading { display: flex; align-items: start; justify-content: space-between; gap: 16px; }
+.map-details h3 { margin: 0; font-size: 14px; font-weight: 550; overflow-wrap: anywhere; }
+.map-details button { display: grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 5px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); }
+.map-details button:hover { background: var(--surface-hover); color: var(--ink); }
+.map-details button:focus-visible { outline: 1px solid var(--map-color); outline-offset: 2px; }
+.map-details dl { display: grid; grid-template-columns: minmax(90px,auto) minmax(0,1fr); gap: 6px 18px; margin: 12px 0 0; font-size: 12px; }
+.map-details dt { color: var(--muted); }
+.map-details dd { margin: 0; overflow-wrap: anywhere; }
 
 .history-section, .people-section { padding: 22px 0 38px; }
 .history-section h2, .people-section h2 { margin: 0 0 24px; font-size: 18px; font-weight: 550; letter-spacing: -.3px; }

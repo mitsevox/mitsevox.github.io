@@ -24,7 +24,7 @@ The producer supplies `summary.json`, plus any supported `map.json`, `timeline.j
 
 Payload schemas:
 
-- [Map](schema/map-v1.schema.json): code/data nodes with addresses or explicit extents, nested groups, exact/linked/optional fuzzy bytes, and optional full function identities.
+- Map: [v1](schema/map-v1.schema.json) for measured geometry and full function identities; [v2](schema/map-v2.schema.json) additionally supports optional, typed source and file-boundary evidence. Both use the same code/data aggregation and identity rules.
 - [Timeline](schema/timeline-v1.schema.json): ordered unique measured revisions, raw linked totals and declared provenance. No contributor field is required.
 - [Contributors](schema/contributors-v1.schema.json): distinct user identities, counts, and a function-to-authors ledger. Joint authors can each count a function; the union must equal the exact inventory. When function map extents are present, their exact identities must agree with the credit ledger.
 - [Execution receipt](schema/execution-v1.schema.json): immutable input/output and execution bindings.
@@ -52,6 +52,14 @@ A supported `map.json` contains **both** `sections` and `files`. These are two p
 Keep unassigned bytes represented as honest gap/unmapped nodes with their actual metrics. Do not invent file ownership, split original units, or shrink summary denominators to hide bytes missing from the file view. A gap between two actual measured ranges is not automatically part of the measured universe; represent only the bytes the summary declares.
 
 The [map example](examples/map.json) and [matching summary](examples/map-summary.json) show one code section split into a descriptive file group and an unassigned range, plus data. The values are illustrative. Rename the selected summary to `summary.json` when preparing a canonical input directory; do not copy every examples file into the package.
+
+For optional source paths, comparison paths, completeness, generated placeholders and
+boundary/scope evidence, use `map.json` with `schemaVersion: 2`. The packager records
+`map-v2` in its asset reference; the validator and browser reject unknown or mismatched
+schema/version pairs. Node types and closed enums are specified in the
+[evidence contract](contract-v1.md#optional-map-evidence-map-v2), with a
+[paired v2 example](examples/map-evidence.json). All fields are optional; v1 producers
+need no change. Unknown properties remain errors in both versions.
 
 For example, two views of 100 bytes at different addresses fail even when every numeric total agrees. A tree can also pass JSON Schema but fail semantic validation because children overlap or parent totals do not reconcile. Run the shared packager/validator locally before uploading.
 

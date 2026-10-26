@@ -6,7 +6,7 @@ import shutil
 import tempfile
 
 from reporting.validation import decode, digest, encoded, require, schema
-from reporting.standard import ASSETS, validate_package
+from reporting.standard import asset_schema, validate_package
 from reporting.registry import SLUG
 
 INPUTS={'map':'map.json','timeline':'timeline.json','contributors':'contributors.json'}
@@ -23,7 +23,7 @@ def package(source,metadata,policy,output):
             and all(p.is_file() and not p.is_symlink() for p in source.iterdir()),'Unsafe or unknown producer inputs')
     payloads={p.name:p.read_bytes() for p in source.iterdir()}
     summary=decode(payloads['summary.json'])
-    assets={key:({'status':'supported','asset':{'path':name,'schema':ASSETS[key],'sha256':digest(payloads[name])}}
+    assets={key:({'status':'supported','asset':{'path':name,'schema':asset_schema(key,decode(payloads[name])),'sha256':digest(payloads[name])}}
                  if name in payloads else {'status':'unsupported','reason':'Not supplied by this producer.'})
             for key,name in INPUTS.items()}
     identity={k:metadata[k] for k in ('repository','target','revision','tree','methodology','generation','measuredAt','publishedAt')}

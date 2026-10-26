@@ -30,6 +30,7 @@ class HandbookTests(unittest.TestCase):
                   'publishedAt':'2000-01-02T00:00:00Z'})
         map_data = json.loads((examples/'map.json').read_text())
         check_map(map_data, p)
+        check_map(json.loads((examples/'map-evidence.json').read_text()), p, 'map-v2')
         map_data['files'][0]['address'] = '0x00003000'
         with self.assertRaisesRegex(ValueError, 'coverage'):
             check_map(map_data, p)  # Same totals, different actual address universe.
@@ -56,7 +57,8 @@ class HandbookTests(unittest.TestCase):
                 if path.is_file():
                     self.assertEqual(archive.read(base+str(path.relative_to(ROOT/'docs/wiki/starter'))), path.read_bytes())
             for name in ('platform.md', 'contract-v1.md', 'schema/producer-v1.schema.json',
-                         'schema/execution-v1.schema.json', 'schema/report-v1.schema.json'):
+                         'schema/execution-v1.schema.json', 'schema/report-v1.schema.json',
+                         'schema/map-v2.schema.json', 'examples/map-evidence.json'):
                 self.assertEqual(archive.read(base+'reporting/'+name), (ROOT/'docs/reporting'/name).read_bytes())
             self.assertEqual(archive.read(base+'OPTIONAL-ADOPTION.md'),
                              (ROOT/'docs/wiki/existing-projects.md').read_bytes())

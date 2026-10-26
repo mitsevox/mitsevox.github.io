@@ -145,6 +145,10 @@ does not grant acceptance; use the adopting repository's naming and trigger conv
 For maps, section/file address unions must match per kind and both views must reconcile with
 the summary. A new timeline begins with the first actual verified main measurement and appends
 only supported measurements. The bundled platform contract defines both formats and examples.
+Optional per-node source/comparison paths and file evidence use `map.json` schemaVersion 2
+and the manifest asset identifier `map-v2`; the report manifest remains v1. The shared packager
+selects the identifier. Pin v2-capable tools first and follow the bundled evidence field/type,
+closed-enum and safe repository-path rules. Existing strict v1 maps need no change.
 OPTIONAL-ADOPTION.md covers pre-existing workflows/history and can be skipped for a new project.
 
 ## Proof and cache contracts
