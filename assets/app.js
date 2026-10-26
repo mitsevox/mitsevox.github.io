@@ -6,6 +6,7 @@ import {mountActivity} from './activity.js';
 import {mountIdentity} from './identity.js';
 import {mountWiki} from './wiki.js?v=4';
 import {wikiChapters} from './wiki-chapters.js';
+import {createScrollState, pushRoute} from './scroll-state.js';
 
 const shell=document.querySelector('.shell');
 const header=createHeader(),footer=createFooter();
@@ -34,9 +35,9 @@ function template(name){
   }).catch(error=>{templates.delete(name);throw error;}));
   return templates.get(name);
 }
-function saveScroll(){
-  if(!restoring&&displayedURL===location.href)history.replaceState({...history.state,scrollY:window.scrollY},'',location.href);
-}
+const scrollState=createScrollState({history,location,readY:()=>window.scrollY,
+  canSave:()=>!restoring&&displayedURL===location.href});
+function saveScroll(){scrollState.save(true);}
 function restorePosition(url,scrollY,{smooth=false}={}){
   const behavior=smooth&&!matchMedia('(prefers-reduced-motion: reduce)').matches?'smooth':'instant';
   if(url.hash){const target=document.getElementById(decodeURIComponent(url.hash.slice(1)));if(target){target.scrollIntoView({behavior});return;}}
@@ -54,7 +55,7 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
     const wikiController=match.wiki&&controllers.find(controller=>controller.update&&controller.main?.classList.contains('wiki-layout'));
     const focusedInContent=content.contains(document.activeElement)&&!wikiController?.sidebar.contains(document.activeElement);
     if(!wikiController){controllers.forEach(controller=>controller.destroy());controllers=[];}
-    if(push)history.pushState({scrollY:0},'',url);
+    if(push&&!pushRoute({scrollY:0},url))return;
     displayedURL=location.href;
     const fragment=document.createElement('template');fragment.innerHTML=html;
     let main=fragment.content.querySelector('main');main.tabIndex=-1;
@@ -104,9 +105,8 @@ function warmTemplate(event){
 document.addEventListener('pointerover',warmTemplate,{passive:true});
 document.addEventListener('focusin',warmTemplate);
 history.scrollRestoration='manual';
-history.replaceState({scrollY:window.scrollY,...history.state},'',location.href);
-let scrollFrame=null;
-window.addEventListener('scroll',()=>{if(scrollFrame===null)scrollFrame=requestAnimationFrame(()=>{scrollFrame=null;saveScroll();});},{passive:true});
+window.addEventListener('scroll',()=>scrollState.save(),{passive:true});
+window.addEventListener('pagehide',saveScroll);
 document.addEventListener('click',event=>{
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
   const link=event.target.closest('a[href]');
@@ -118,7 +118,7 @@ document.addEventListener('click',event=>{
       let id;try{id=decodeURIComponent(url.hash.slice(1));}catch{return;}
       if(!document.getElementById(id))return;
       event.preventDefault();saveScroll();
-      if(location.href!==url.href)history.pushState({scrollY:window.scrollY},'',url);
+      if(location.href!==url.href&&!pushRoute({scrollY:window.scrollY},url))return;
       displayedURL=url.href;restorePosition(url,0,{smooth:true});
     }
     return;
