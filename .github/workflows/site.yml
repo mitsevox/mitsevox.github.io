@@ -77,6 +77,9 @@ jobs:
   publish:
     name: Preserve reports and publish Pages
     needs: validate
+    concurrency:
+      group: portfolio-pages
+      queue: max
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -96,6 +99,13 @@ jobs:
         with:
           name: portfolio-site-${{ github.run_id }}-${{ github.run_attempt }}
           path: build/site
+      - name: Refresh presentation candidate from latest accepted data
+        if: needs.validate.outputs.lane == 'ui'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          uv run --locked python tools/report_store.py restore
+          uv run --locked python tools/build_site.py
       - name: Preserve verified snapshots before deployment
         if: needs.validate.outputs.lane != 'ui'
         env:

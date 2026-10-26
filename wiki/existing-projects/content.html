@@ -63,5 +63,17 @@ added rows and publication changes. Wait for the producer's cutover pin and succ
 main package. Then activate the staged policy, remove the freeze, archive the previous
 format policy and require every previously accepted row to survive unchanged or through
 an exact inherited record. Retire the producer's former website/artifact jobs only after
-the shared-site switch succeeds. See the <a href="/docs/reporting/platform.md">platform controls</a>.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/starter-kit/"><small>Previous</small><span>Starter kit</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#map-existing-responsibilities">Map existing responsibilities</a><a href="#adopt-policy-without-overriding-authority">Adopt policy without overriding authority</a><a href="#branch-and-trigger-conventions">Branch and trigger conventions</a><a href="#recovering-past-credit">Recovering past credit</a><a href="#import-legacy-history">Import legacy history</a><a href="#adoption-acceptance">Adoption acceptance</a><a href="#changing-an-accepted-report-format">Changing an accepted report format</a></nav></aside></main>
+the shared-site switch succeeds. See the <a href="/docs/reporting/platform.md">platform controls</a>.</p>
+<h2 id="tracked-policy-sources">Tracked policy sources</h2>
+<p>The normal new-project interface is a complete tracked producer policy JSON. An
+existing exporter that generates its policy only at runtime must publish a tracked
+policy before automatic synchronization can be enabled. Do not execute exporter
+code in the site job to recover that configuration.</p>
+<p>For an existing tracked template that omits only <code>workflowBlobs</code>, the site can
+explicitly register <code>mode: "template"</code>. The sync job obtains the current workflow's
+Git blob at the pinned producer revision and adds it to the previously approved
+list. All other schema, identity, successful-package and review checks are the
+same. A template must omit that field; a complete policy must declare its own
+approved blobs. Template mode is an optional adoption aid, outside the starter
+checklist. Prefer a complete tracked policy for a new repository.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/starter-kit/"><small>Previous</small><span>Starter kit</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#map-existing-responsibilities">Map existing responsibilities</a><a href="#adopt-policy-without-overriding-authority">Adopt policy without overriding authority</a><a href="#branch-and-trigger-conventions">Branch and trigger conventions</a><a href="#recovering-past-credit">Recovering past credit</a><a href="#import-legacy-history">Import legacy history</a><a href="#adoption-acceptance">Adoption acceptance</a><a href="#changing-an-accepted-report-format">Changing an accepted report format</a><a href="#tracked-policy-sources">Tracked policy sources</a></nav></aside></main>

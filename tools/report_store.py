@@ -95,7 +95,7 @@ def restore(root):
 def require_current_main(root):
     require(os.environ.get('GITHUB_REPOSITORY') == site_config(root)['repository']
             and os.environ.get('GITHUB_REF') == 'refs/heads/main'
-            and os.environ.get('GITHUB_EVENT_NAME') in ('push','schedule','workflow_dispatch'),
+            and os.environ.get('GITHUB_EVENT_NAME') in ('push','schedule','workflow_dispatch','repository_dispatch'),
             'Report publication is restricted to trusted main workflows')
     source_revision = os.environ.get('GITHUB_SHA','')
     require(SHA.fullmatch(source_revision), 'Missing publisher revision')

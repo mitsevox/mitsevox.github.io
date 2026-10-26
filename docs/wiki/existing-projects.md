@@ -84,3 +84,18 @@ main package. Then activate the staged policy, remove the freeze, archive the pr
 format policy and require every previously accepted row to survive unchanged or through
 an exact inherited record. Retire the producer's former website/artifact jobs only after
 the shared-site switch succeeds. See the [platform controls](/docs/reporting/platform.md).
+
+## Tracked policy sources
+
+The normal new-project interface is a complete tracked producer policy JSON. An
+existing exporter that generates its policy only at runtime must publish a tracked
+policy before automatic synchronization can be enabled. Do not execute exporter
+code in the site job to recover that configuration.
+
+For an existing tracked template that omits only `workflowBlobs`, the site can
+explicitly register `mode: "template"`. The sync job obtains the current workflow's
+Git blob at the pinned producer revision and adds it to the previously approved
+list. All other schema, identity, successful-package and review checks are the
+same. A template must omit that field; a complete policy must declare its own
+approved blobs. Template mode is an optional adoption aid, outside the starter
+checklist. Prefer a complete tracked policy for a new repository.
