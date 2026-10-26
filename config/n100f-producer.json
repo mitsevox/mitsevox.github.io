@@ -9,7 +9,8 @@
   "workflow": ".github/workflows/validate.yml",
   "branch": "main",
   "workflowBlobs": [
-    "4358db0f428d68ba6e99fd332dd27b2505c278c9"
+    "4358db0f428d68ba6e99fd332dd27b2505c278c9",
+    "2b36a13322246c158f3159dc6f34328d86828f44"
   ],
   "artifact": "public-report",
   "job": "Site report",
@@ -26,7 +27,7 @@
   "tools": [
     {
       "name": "build-environment",
-      "identity": "ghcr.io/mitsevox/n100f-build@sha256:8b3d46328be5e3bc9e92eb256709edd039beed5f4269149727295bef17819e4d"
+      "identity": "ghcr.io/mitsevox/n100f-build@sha256:3473801159a17e96bfceb1d6ad152fa413fee53cb75ad634a70e826c62ced286"
     },
     {
       "name": "dtk",

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "snapshots": [
+    {
+      "built_at": "2026-10-26T16:34:26Z",
+      "code": {
+        "linked": 0,
+        "total": 1610980
+      },
+      "data": {
+        "linked": 0,
+        "total": 870068
+      },
+      "provenance": {
+        "kind": "measured",
+        "source": "validate.yml run 40360367860"
+      },
+      "revision": "7792f075ebea873a2cfdc48de435e4f8a85fb7cb"
+    },
+    {
+      "built_at": "2026-10-26T16:50:38Z",
+      "code": {
+        "linked": 0,
+        "total": 1610980
+      },
+      "data": {
+        "linked": 0,
+        "total": 870068
+      },
+      "provenance": {
+        "kind": "measured",
+        "source": "validate.yml run 40362930503"
+      },
+      "revision": "270e7a3201239af9d0ae7491fb88c1a2da0be8f8"
+    },
+    {
+      "built_at": "2026-10-26T17:05:21Z",
+      "code": {
+        "linked": 0,
+        "total": 1610980
+      },
+      "data": {
+        "linked": 0,
+        "total": 870068
+      },
+      "provenance": {
+        "kind": "measured",
+        "source": "validate.yml run 40365285351"
+      },
+      "revision": "0b094077025fde29b0bba6a1b3781831d4c6dbca"
+    },
+    {
+      "built_at": "2026-10-26T17:36:12Z",
+      "code": {
+        "linked": 0,
+        "total": 1610980
+      },
+      "data": {
+        "linked": 0,
+        "total": 870068
+      },
+      "provenance": {
+        "kind": "measured",
+        "source": "validate.yml run 40370115647"
+      },
+      "revision": "520c8e28c1eaf59d3d1c81c632d07a726bb77fef"
+    },
+    {
+      "built_at": "2026-10-26T17:40:48Z",
+      "code": {
+        "linked": 0,
+        "total": 1610980
+      },
+      "data": {
+        "linked": 0,
+        "total": 870068
+      },
+      "provenance": {
+        "kind": "measured",
+        "source": "validate.yml run 40370813683"
+      },
+      "revision": "edfdc75a7f92ffc9b6ea8673c2731106cce62e5a"
+    }
+  ]
+}
