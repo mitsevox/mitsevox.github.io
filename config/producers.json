@@ -19,6 +19,12 @@
   },
   "n100f": {
     "format": "report-v1",
-    "policy": "n100f-producer.json"
+    "policy": "n100f-producer.json",
+    "archives": [
+      {
+        "format": "report-v1",
+        "policy": "n100f-producer-initial.json"
+      }
+    ]
   }
 }
