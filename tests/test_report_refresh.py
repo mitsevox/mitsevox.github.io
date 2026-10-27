@@ -100,6 +100,8 @@ class ReportRefreshTests(unittest.TestCase):
                  patch.object(refresh,'successful_site_source',return_value=False) as verified, \
                  patch.object(refresh,'accepted_hint',return_value=lock), \
                  patch.object(refresh,'changed_runs',return_value=({},[])), \
+                 patch.object(refresh,'latest_commit_updates',return_value=({},[])), \
+                 patch.object(refresh,'update_latest_commits'), \
                  patch.object(refresh,'live_lock',return_value=None), \
                  patch.object(refresh,'read_lock',return_value=lock):
                 refresh.main()

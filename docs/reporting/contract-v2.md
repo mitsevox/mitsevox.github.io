@@ -66,7 +66,8 @@ An archived target without a report is selectable as metadata only. It has no pe
 map, timeline, invented baseline, or producer policy. Build support and report support must be
 verified before activation. Each enabled producer policy must exactly match a catalog target.
 The default target must have validated data; the hub shows its metrics, never a sum or average
-across revisions.
+across revisions. Repository commit metadata refreshes independently, including docs-only commits
+that do not select any target build. It never adds a measurement or timeline row.
 
 ## Packages and authentication
 

@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 from reporting.github import GitHub
 from reporting.registry import producer, producers, registrations, site_config, snapshot_path
 from reporting.targets import entries, selected, normalize_lock
-from reporting.state import read_lock
+from reporting.state import read_lock, latest_commit, update_latest_commits
 from reporting.validation import ROOT, SHA, decode, require
 
 
@@ -95,6 +95,18 @@ def refresh_changed(root, runs, failures, refresh=None):
     return failures
 
 
+def latest_commit_updates(root,lock,api_factory=GitHub):
+    updates,failures={},[]
+    for slug in registrations(root):
+        try:
+            policy=producer(root,slug)
+            commit=latest_commit(api_factory(policy['repository']),policy['branch'])
+            current=[entry for name,_,entry in entries(lock) if name==slug]
+            if current and any(entry.get('latestCommit')!=commit for entry in current):updates[slug]=commit
+        except Exception as error:failures.append({'project':slug,'error':'Commit metadata: '+str(error)[:900]})
+    return updates,failures
+
+
 def live_lock(root):
     settings = decode((Path(root)/'config/report-refresh.json').read_bytes())
     require(set(settings) == {'schemaVersion','siteUrl'} and settings['schemaVersion'] == 1, 'Invalid refresh config')
@@ -121,21 +133,29 @@ def main():
         event = decode(Path(os.environ['GITHUB_EVENT_PATH']).read_bytes())
         require(event.get('action') == 'producer-report-ready', 'Unknown report event')
         validate_notification(ROOT,event)
-    result = {'siteRevision':revision,'publish':False,'failures':[],'changed':{}}
+    result = {'siteRevision':revision,'publish':False,'failures':[],'changed':{},'metadataUpdated':[]}
     if not successful_site_source(ROOT,revision):
         result['deferred'] = 'Current site main has not completed its normal validation/deployment; retry after it succeeds.'
     else:
         hint = accepted_hint(ROOT)
         runs, failures = changed_runs(ROOT,hint)
+        commits,metadata_failures=latest_commit_updates(ROOT,hint)
+        failures.extend(metadata_failures)
         try:
             public = live_lock(ROOT)
         except Exception:
             public = None
-        if runs or public != hint:
+        if runs or commits or public != hint:
             # Authentication, ancestry, history and schema validation remain in
             # the shared importer/store. A failure retains that producer's pointer.
             restore(ROOT)
             refresh_changed(ROOT,runs,failures)
+            # Importers can observe a newer repository head than the initial hint.
+            # Refresh metadata after imports and compare-and-swap its basis.
+            basis=read_lock(ROOT)
+            commits,final_metadata_failures=latest_commit_updates(ROOT,basis)
+            failures.extend(error for error in final_metadata_failures if error not in failures)
+            result['metadataUpdated']=sorted(update_latest_commits(ROOT,commits,basis))
             selected = read_lock(ROOT)
             result['publish'] = selected != public
         result.update(changed=runs,failures=failures)

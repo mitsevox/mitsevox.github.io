@@ -163,6 +163,21 @@ class MultiTargetTests(unittest.TestCase):
             self.assertEqual(bindings['report']['summary']['code']['linkedBytes'],20)
             self.assertEqual(bindings['targetReports'][other['target']['id']]['report']['summary']['code']['linkedBytes'],30)
             self.assertEqual(bindings['latestCommit']['title'],'1')
+            # A docs-only repository commit needs no target build/new snapshot.
+            from reporting.state import update_latest_commits
+            metadata={'revision':'9'*40,'title':'Document setup','description':'','date':'2026-10-27T00:00:00Z','url':'https://github.com/'+POLICY['repository']+'/commit/'+'9'*40}
+            update_latest_commits(root,{SLUG:metadata},before)
+            after_metadata=read_lock(root)
+            for target in (TARGET['id'],other['target']['id']):
+                original=selected(before,SLUG,target);current=selected(after_metadata,SLUG,target)
+                self.assertEqual({k:v for k,v in current.items() if k!='latestCommit'},{k:v for k,v in original.items() if k!='latestCommit'})
+                self.assertEqual(current['latestCommit'],metadata)
+            # A stale observation cannot overwrite metadata installed later.
+            stale={**metadata,'title':'Older observation'}
+            self.assertEqual(update_latest_commits(root,{SLUG:stale},before),set())
+            self.assertEqual(read_lock(root),after_metadata)
+            before=copy.deepcopy(after_metadata)
+
             # A policy update stages only its target, never newer sibling files.
             updated={**policy,'workflowBlobs':['c'*40,'d'*40]}
             paths=sync_policies.apply_policy(root,SLUG,encoded(updated),TARGET['id'])
@@ -181,6 +196,14 @@ class MultiTargetTests(unittest.TestCase):
                 entry,manifest,_,_=report_store.stored_package(root,head,SLUG,target)
                 self.assertEqual(manifest['target']['id'],target)
                 self.assertEqual(entry,selected(before,SLUG,target))
+
+    def test_metadata_refresh_rejects_symlinked_store_before_opening_guard(self):
+        from reporting.state import update_latest_commits
+        with tempfile.TemporaryDirectory() as temp:
+            base=Path(temp);root=base/'site';root.mkdir();outside=base/'outside';outside.mkdir()
+            (root/'data').symlink_to(outside,target_is_directory=True)
+            with self.assertRaises(ValueError):update_latest_commits(root,{}, {'projects':{}})
+            self.assertFalse((outside/'.report-refresh.lock').exists())
 
 
 if __name__=='__main__':unittest.main()

@@ -162,3 +162,19 @@ def latest_commit(api,branch='main'):
     commit=api.get('commits/'+quote(branch,safe=''));message=commit['commit']['message'].split('\n',1)
     return {'revision':commit['sha'],'title':message[0],'description':message[1].strip() if len(message)>1 else '',
             'date':commit['commit']['committer']['date'],'url':f'https://github.com/{api.repository}/commit/{commit["sha"]}'}
+
+
+def update_latest_commits(root,updates,expected):
+    """Repository activity is metadata, never a new target measurement/history row."""
+    root=Path(root).resolve()
+    require((root/'data').resolve()==root/'data' and not (root/'data/.report-refresh.lock').is_symlink(),'Unsafe commit metadata store')
+    with (root/'data/.report-refresh.lock').open('a') as guard:
+        fcntl.flock(guard,fcntl.LOCK_EX)
+        lock=read_lock(root);changed=set()
+        for slug,target,entry in entries(lock):
+            # A concurrent import wins over an earlier metadata observation.
+            if entry!=selected(expected,slug,target):continue
+            if slug in updates and entry.get('latestCommit')!=updates[slug]:
+                entry['latestCommit']=updates[slug];changed.add(slug)
+        if changed:atomic_write(root/LOCK,encoded(lock))
+    return changed

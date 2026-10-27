@@ -91,7 +91,7 @@ Before adopting the starter, have the owner settle the following decisions and r
 
 | Decision | Starter default | Must be supplied or confirmed |
 | --- | --- | --- |
-| Target/objective | Faithful matching, one explicit target | Console, executable format, region/revision, hashes, measurement universe and any different objective |
+| Target/objective | Faithful matching, explicit target identity/registry | Console, executable format, region/revision, hashes, measurement universe and any different objective |
 | Tools/runtime | Pinned approved environment | Actual digest/hash, supported hosts, tools/profiles and reference access |
 | Author workflow | Isolated branch/worktree and bounded active scope | Branch convention, reservations, dependencies and push/PR authority |
 | Review/merge | Independent accuracy and hostile review; owner-only merge | Adopting owner and any explicit alternative policy |
@@ -1074,7 +1074,7 @@ Record commands, revisions, run/attempt, artifact/package hashes, module setting
 ### Prompt updates
 
 After registration, add a separate completion notifier using the site's pinned
-reusable workflow. A successful main report run requests a site refresh; the site
+reusable workflow. A completed main report run requests a site refresh (successful overall for v1; successful target/shared jobs for v2); the site
 reauthenticates the run and imports only changed approved packages. No new policy
 is trusted automatically. This avoids waiting for the periodic refresh without
 rerunning site source tests for every producer commit.

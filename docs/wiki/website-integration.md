@@ -219,7 +219,7 @@ Record commands, revisions, run/attempt, artifact/package hashes, module setting
 ### Prompt updates
 
 After registration, add a separate completion notifier using the site's pinned
-reusable workflow. A successful main report run requests a site refresh; the site
+reusable workflow. A completed main report run requests a site refresh (successful overall for v1; successful target/shared jobs for v2); the site
 reauthenticates the run and imports only changed approved packages. No new policy
 is trusted automatically. This avoids waiting for the periodic refresh without
 rerunning site source tests for every producer commit.
