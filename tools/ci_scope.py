@@ -11,6 +11,7 @@ PRESENTATION = frozenset({
     'assets/style.css', 'assets/portfolio.css', 'assets/wiki.css',
     'assets/game.html', 'assets/hub.html',
     'assets/shell.js', 'assets/console-icon.js',
+    'assets/components/ui/dropdown.js',
 })
 SHA = re.compile(r'[0-9a-f]{40}')
 IMAGE_SUFFIXES = {'.webp', '.png', '.jpg', '.jpeg', '.svg', '.avif'}

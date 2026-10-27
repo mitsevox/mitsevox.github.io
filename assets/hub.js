@@ -1,3 +1,4 @@
+import {createDropdown} from './components/ui/dropdown.js';
 import {fetchSummary} from './reports.js';
 import {projects} from './projects.js';
 import {consoleIcon} from './console-icon.js';
@@ -9,7 +10,7 @@ const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 const pending=[];
 const grid=root.querySelector('.project-grid');
 const tooltip=root.querySelector('#card-tooltip');
-const search=root.querySelector('#project-search'),filter=root.querySelector('#project-filter'),sort=root.querySelector('#project-sort');
+const search=root.querySelector('#project-search');
 const entries=[];
 const relativeTime=new Intl.RelativeTimeFormat('en',{numeric:'always'});
 function updateCommitTimes(){
@@ -24,54 +25,19 @@ function updateCommitTimes(){
 const timeRefresh=setInterval(updateCommitTimes,60000);
 let filterValue='all',sortValue='latest';
 
-const check='<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg>';
 const controls=[
-  {trigger:filter,menu:root.querySelector('#filter-menu'),getValue:()=>filterValue,setValue:value=>filterValue=value,choices:[['all','All consoles'],...[...new Set(projects.map(p=>p.console))].map(name=>[name,name])]},
-  {trigger:sort,menu:root.querySelector('#sort-menu'),getValue:()=>sortValue,setValue:value=>sortValue=value,choices:[['latest','Latest commit'],['name','Name A–Z'],['code','Code progress'],['data','Data progress']]}
+  {id:'project-filter',label:'Filter by console',icon:'filter',defaultValue:'all',getValue:()=>filterValue,setValue:value=>filterValue=value,
+   options:[{value:'all',label:'All consoles'},...[...new Set(projects.map(p=>p.console))].map(console=>({value:console,label:console,console}))]},
+  {id:'project-sort',label:'Sort games',icon:'sort',defaultValue:'latest',getValue:()=>sortValue,setValue:value=>sortValue=value,
+   options:[['latest','Latest commit'],['name','Name A–Z'],['code','Code progress'],['data','Data progress']].map(([value,label])=>({value,label}))}
 ];
-function closeMenu(control,restoreFocus=false){
-  control.menu.hidden=true;control.trigger.setAttribute('aria-expanded','false');
-  if(restoreFocus)control.trigger.focus();
-}
-function syncControls(){
-  for(const control of controls){
-    control.trigger.classList.toggle('has-selection',!['all','latest'].includes(control.getValue()));
-    for(const option of control.menu.querySelectorAll('[role="menuitemradio"]')){
-      const selected=option.dataset.value===control.getValue();
-      option.setAttribute('aria-checked',String(selected));option.tabIndex=selected?0:-1;
-    }
-  }
-}
-function openMenu(control,focusLast=false){
-  document.dispatchEvent(new CustomEvent('portfolio-menu-open',{detail:control.trigger}));
-  for(const other of controls)if(other!==control)closeMenu(other);
-  control.menu.hidden=false;control.trigger.setAttribute('aria-expanded','true');
-  const options=[...control.menu.querySelectorAll('[role="menuitemradio"]')];
-  (focusLast?options.at(-1):options.find(option=>option.getAttribute('aria-checked')==='true')||options[0]).focus();
-}
+function syncControls(){for(const control of controls)control.dropdown.setValue(control.getValue());}
+const optionArea=root.querySelector('.hub-options');
 for(const control of controls){
-  for(const [value,label] of control.choices){
-    const option=document.createElement('button');option.type='button';option.className='popover-option';option.dataset.value=value;option.setAttribute('role','menuitemradio');
-    const text=document.createElement('span');text.className='popover-option-label';
-    if(control.trigger===filter&&value!=='all')text.insertAdjacentHTML('beforeend',consoleIcon(value));
-    text.append(document.createTextNode(label));option.append(text);option.insertAdjacentHTML('beforeend',check);
-    control.menu.querySelector('.popover-options').append(option);
-    listen(option,'click',()=>{control.setValue(value);syncControls();updateEntries();closeMenu(control,true);});
-  }
-  listen(control.trigger,'click',()=>control.menu.hidden?openMenu(control):closeMenu(control,true));
-  listen(control.trigger,'keydown',event=>{if(['ArrowDown','ArrowUp'].includes(event.key)){event.preventDefault();openMenu(control,event.key==='ArrowUp');}});
-  listen(control.menu,'keydown',event=>{
-    if(event.key==='Escape'){event.preventDefault();closeMenu(control,true);return;}
-    const options=[...control.menu.querySelectorAll('[role="menuitemradio"]')],index=options.indexOf(document.activeElement);
-    if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){
-      event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?options.length-1:(index+(event.key==='ArrowDown'?1:-1)+options.length)%options.length;
-      options.forEach((option,i)=>option.tabIndex=i===next?0:-1);options[next].focus();
-    }
-  });
-  listen(control.trigger.parentElement,'focusout',()=>frame(()=>{if(!control.trigger.parentElement.contains(document.activeElement))closeMenu(control);}));
+  control.dropdown=createDropdown({...control,className:'hub-control',triggerClass:'hub-icon-button',value:control.getValue(),ariaLabel:control.label,scope,
+    onSelect:option=>{control.setValue(option.value);syncControls();updateEntries();}});
+  optionArea.append(control.dropdown.node);
 }
-listen(document,'pointerdown',event=>{for(const control of controls)if(!control.trigger.parentElement.contains(event.target))closeMenu(control);});
-listen(document,'portfolio-menu-open',event=>{for(const control of controls)if(event.detail!==control.trigger)closeMenu(control);});
 syncControls();
 function updateEntries(){
   hideTooltip();
