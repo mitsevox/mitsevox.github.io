@@ -2,17 +2,18 @@ import {makeBoundaryGraph, unpackBoundaryGraph} from './map-geometry.js';
 import {validateMap} from './report-map-validation.js';
 
 function summaryView(project){
-  const report=project.report;
+  const report=project.report,s=report.summary;
   const measures=Object.fromEntries(['code','data'].map(kind=>{
-    const m=report.summary[kind];
-    return [kind,{total:m.totalBytes,linked:m.linkedBytes,matched:m.matchedBytes,
-      ...(m.fuzzyEquivalentBytes===null?{}:{fuzzy:m.fuzzyEquivalentBytes})}];
+    const m=s[kind];
+    return [kind,{total:m.total,linked:m.linked,matched:m.matched,...(m.fuzzy===null?{}:{fuzzy:m.fuzzy})}];
   }));
   return {schema:1,baseline:'verified',basis:'measured-bytes',target:project.target,
-    target_sha1:report.target.sha1,revision:report.revision,built_at:report.publishedAt,
-    measures,functions:report.summary.functions,file_counts:report.summary.files};
+    target_sha1:project.targetSha1,revision:report.source.revision,built_at:report.measuredAt,
+    measures,functions:s.functions,file_counts:s.files};
 }
-// Snapshot URLs are immutable; retain a bounded set of parsed payloads across routes.
+// A target's files change with each measurement; keying them by revision makes each URL immutable.
+function asset(project,path){return project.reportBase+path+'?v='+project.report.source.revision.slice(0,12);}
+// Revisioned asset URLs are immutable; retain a bounded set of parsed payloads across routes.
 const payloads = new Map(), maps = new Map();
 function cached(cache, key, load, limit = 8) {
   if (cache.has(key)) {
@@ -73,9 +74,9 @@ function workerRequest(message, fallback) {
     catch (error) { pending.delete(id);reject(error); }
   });
 }
-function loadMap(url, schema, measures) {
-  const fallback = () => read(url, undefined, true).then(map => validateMap(map, schema, measures));
-  return workerRequest({url:new URL(url, import.meta.url).href, schema, measures}, fallback);
+function loadMap(url, measures) {
+  const fallback = () => read(url, undefined, true).then(map => validateMap(map, measures));
+  return workerRequest({url:new URL(url, import.meta.url).href, measures}, fallback);
 }
 export async function fetchBoundaryGraph(layout) {
   const result = await workerRequest({layout}, async () => {
@@ -84,34 +85,29 @@ export async function fetchBoundaryGraph(layout) {
   });
   return Array.isArray(result) ? result : unpackBoundaryGraph(result);
 }
-export async function fetchSummary(project,signal){
-  const summary=project.report?summaryView(project):await read(project.summaryUrl,signal);
-  return project.latestCommit?{...summary,latest_commit:project.latestCommit}:summary;
+export async function fetchSummary(project){
+  const source=project.report.source;
+  return {...summaryView(project),latest_commit:{title:source.title,date:source.committedAt,url:source.url,revision:source.revision}};
 }
 export async function fetchProgress(project,signal){
-  if(!project.report)return read(project.progressUrl,signal);
   const p=summaryView(project);
-  if(project.modules?.map!==false){
-    const asset=project.report.modules.map.asset;
-    if(!asset)throw Error('Map unsupported');
-    const url=project.reportBase+'/'+asset.path;
-    const key=JSON.stringify([url,asset.schema,p.measures]);
-    const map=await subscribe(cached(maps,key,()=>loadMap(url,asset.schema,p.measures),3),signal);
+  if(project.modules.map){
+    const url=asset(project,project.report.modules.map);
+    const key=JSON.stringify([url,p.measures]);
+    const map=await subscribe(cached(maps,key,()=>loadMap(url,p.measures),3),signal);
     Object.assign(p,{basis:'executable-sections',sections:map.sections,files:map.files});
   }
   return p;
 }
 export async function fetchActivity(project,signal){
-  if(!project.report)return read(project.activityUrl,signal);
-  const report=project.report,files=new Map();
-  const a={schema:1,revision:report.revision,target:project.target,target_sha1:report.target.sha1};
-  await Promise.all([['timeline','snapshots'],['contributors','contributors']].map(async ([module,field])=>{
-    if(project.modules?.[module]===false)return;
-    const asset=report.modules[module].asset;
-    if(!asset)throw Error('Unsupported activity module');
-    const url=project.reportBase+'/'+asset.path;
-    if(!files.has(url))files.set(url,read(url,signal,true));
-    a[field]=(await files.get(url))[field];
-  }));
+  const report=project.report;
+  const a={schema:1,revision:report.source.revision,target:project.target,target_sha1:project.targetSha1};
+  await Promise.all([
+    project.modules.timeline&&read(asset(project,'history.json'),signal,true).then(rows=>{
+      a.snapshots=rows.map(row=>({revision:row.revision,built_at:row.measuredAt,
+        code:{total:row.code.total,linked:row.code.linked},data:{total:row.data.total,linked:row.data.linked}}));
+    }),
+    project.modules.contributors&&read(asset(project,report.modules.contributors),signal,true).then(document=>{a.contributors=document.contributors;}),
+  ]);
   return a;
 }

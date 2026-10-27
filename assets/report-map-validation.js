@@ -19,8 +19,8 @@ function validMap(items, kind = null) {
     return true;
   });
 }
-export function validateMap(map, identifier, measures) {
-  assertMapCompatibility(map, identifier);
+export function validateMap(map, measures) {
+  assertMapCompatibility(map);
   const files = map.files || map.sections;
   if (!validMap(map.sections) || !validMap(files)) throw Error('Invalid map');
   for (const items of [map.sections, files]) for (const kind of ['code', 'data']) {

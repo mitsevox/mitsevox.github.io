@@ -1,10 +1,6 @@
 // Explicit reader support: an unknown map version must not silently lose evidence.
-export function assertMapCompatibility(map, identifier) {
-  if (identifier === 'nfl-progress-v1' && map?.schema === 1 && map.schemaVersion === undefined) return;
-  const versions = {'map-v1': 1, 'map-v2': 2};
-  if (!Object.hasOwn(versions, identifier) || map?.schemaVersion !== versions[identifier]) {
-    throw new Error('Unsupported map schema or mismatched version');
-  }
+export function assertMapCompatibility(map) {
+  if (map?.schema !== 1) throw new Error('Unsupported map schema');
 }
 
 export function mapLabel(item) {

@@ -14,13 +14,9 @@ class MapEvidenceUITests(unittest.TestCase):
 import assert from 'node:assert/strict';
 import {assertMapCompatibility, mapLabel, showMapDetails} from './assets/map-evidence.js';
 import {fetchProgress} from './assets/reports.js';
-const fs = await import('node:fs');
-const map=JSON.parse(fs.readFileSync('docs/reporting/examples/map-evidence.json','utf8'));
-assertMapCompatibility(map,'map-v2');
-assertMapCompatibility({...map,schemaVersion:1},'map-v1');
-for (const [version,identifier] of [[1,'map-v2'],[2,'map-v1'],[3,'map-v3'],['2','map-v2']]) {
-  assert.throws(()=>assertMapCompatibility({...map,schemaVersion:version},identifier));
-}
+import {map,project as target} from './tests/fixtures/project.mjs';
+assertMapCompatibility(map);
+for (const schema of [2,'1',undefined]) assert.throws(()=>assertMapCompatibility({...map,schema}));
 assert.equal(mapLabel({name:'Update',source:'src/math.c'}),'src/math.c · Update');
 assert.equal(mapLabel({name:'src/math.c · Update',source:'src/math.c'}),'src/math.c · Update');
 assert.equal(mapLabel({name:'src/math.c',source:'src/math.c',complete:false}),'src/math.c · partial file');
@@ -39,20 +35,13 @@ assert.ok(list.children.every(x=>x.innerHTML===undefined));
 showMapDetails(panel,{name:'Plain'});assert.equal(panel.hidden,true);assert.equal(list.children.length,0);
 showMapDetails(panel,null);assert.equal(panel.hidden,true);assert.equal(heading.textContent,'');
 showMapDetails(null,item);
-const summary=JSON.parse(fs.readFileSync('docs/reporting/examples/map-summary.json','utf8'));
-const project={modules:{map:true},reportBase:'/report',report:{target:{id:'TEST',sha1:'a'.repeat(40)},summary,revision:'b'.repeat(40),publishedAt:'2000-01-02T00:00:00Z',modules:{map:{asset:{path:'map.json',schema:'map-v2'}}}}};
+const project=target('/report/');
 globalThis.fetch=async()=>({ok:true,json:async()=>map});
 const result=await fetchProgress(project,new AbortController().signal);
 assert.deepEqual(result.files,map.files);assert.deepEqual(result.sections,map.sections);
-project.report.modules.map.asset.schema='map-v1';
-await assert.rejects(fetchProgress(project,new AbortController().signal),/map schema/);
-const legacy={schema:1,files:map.files,sections:map.sections};
-globalThis.fetch=async()=>({ok:true,json:async()=>legacy});
-assert.deepEqual(await fetchProgress({progressUrl:'/legacy.json'},new AbortController().signal),legacy);
-project.report.modules.map.asset={path:'progress.json',schema:'nfl-progress-v1'};
-assert.deepEqual((await fetchProgress(project,new AbortController().signal)).files,legacy.files);
-assert.throws(()=>assertMapCompatibility({...legacy,schemaVersion:2},'nfl-progress-v1'));
-console.log('Browser compatibility, source labels, partial files, detail text and v1/v2/legacy fetch checks passed.');
+globalThis.fetch=async()=>({ok:true,json:async()=>({...map,schema:2})});
+await assert.rejects(fetchProgress(target('/other/'),new AbortController().signal),/map schema/);
+console.log('Map schema gate, source labels, partial files, detail text and fetch checks passed.');
 '''
         result=subprocess.run(['node','--input-type=module'],input=script,
                               text=True,cwd=ROOT,capture_output=True)

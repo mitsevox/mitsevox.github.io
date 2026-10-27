@@ -1,45 +1,14 @@
-"""Check the downloadable interface and executable default-clearance template."""
+"""Check that every wiki chapter is routable and the clearance template behaves."""
 import json
 from pathlib import Path
 import subprocess
-import sys
 import textwrap
 import unittest
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT/'tools'))
-from build_site import version_html_assets
-from reporting.standard import view, check_map, check_timeline
 
 
 class HandbookTests(unittest.TestCase):
-    def test_html_versions_real_assets_without_corrupting_copyable_examples(self):
-        literal = ('<pre><code>{&quot;cover&quot;: &quot;/assets/covers/game.webp&quot;}\n'
-                   '&lt;img src="/assets/example.webp"&gt;</code></pre>')
-        source = '<link href="/assets/wiki.css">\n' + literal + '\n<img src="/assets/game.webp"/>'
-        result = version_html_assets(source, '/releases/example/assets/')
-        self.assertIn(literal, result)
-        self.assertIn('href="/releases/example/assets/wiki.css"', result)
-        self.assertIn('src="/releases/example/assets/game.webp"', result)
-
-    def test_documented_map_and_legacy_timeline_examples_pass_real_validator(self):
-        examples = ROOT/'docs/reporting/examples'
-        summary = json.loads((examples/'map-summary.json').read_text())
-        p = view({'summary':summary,'target':{'id':'EXAMPLE','sha1':'3'*40},'revision':'2'*40,
-                  'publishedAt':'2000-01-02T00:00:00Z'})
-        map_data = json.loads((examples/'map.json').read_text())
-        check_map(map_data, p)
-        check_map(json.loads((examples/'map-evidence.json').read_text()), p, 'map-v2')
-        map_data['files'][0]['address'] = '0x00003000'
-        with self.assertRaisesRegex(ValueError, 'coverage'):
-            check_map(map_data, p)  # Same totals, different actual address universe.
-        timeline = json.loads((examples/'timeline-legacy.json').read_text())
-        check_timeline(timeline, p)
-        del timeline['snapshots'][0]['code']['total']
-        with self.assertRaises(ValueError):
-            check_timeline(timeline, p)  # "reconstructed" cannot excuse a missing total.
-
     def test_every_registered_chapter_is_routable(self):
         module = (ROOT/'assets/wiki-chapters.js').read_text()
         slugs = json.loads(module.split('Object.freeze(', 1)[1].split(');', 1)[0])
@@ -49,21 +18,6 @@ class HandbookTests(unittest.TestCase):
             route = ROOT/'wiki' if slug == 'start-here' else ROOT/'wiki'/slug
             self.assertTrue((route/'index.html').is_file())
             self.assertTrue((route/'content.html').is_file())
-
-    def test_download_contains_current_generic_contract_and_templates(self):
-        with zipfile.ZipFile(ROOT/'wiki/downloads/repository-starter.zip') as archive:
-            base = 'repository-starter/'
-            for path in (ROOT/'docs/wiki/starter').rglob('*'):
-                if path.is_file():
-                    self.assertEqual(archive.read(base+str(path.relative_to(ROOT/'docs/wiki/starter'))), path.read_bytes())
-            for name in ('platform.md', 'contract-v1.md', 'schema/producer-v1.schema.json',
-                         'schema/execution-v1.schema.json', 'schema/report-v1.schema.json',
-                         'schema/map-v2.schema.json', 'examples/map-evidence.json'):
-                self.assertEqual(archive.read(base+'reporting/'+name), (ROOT/'docs/reporting'/name).read_bytes())
-            self.assertEqual(archive.read(base+'OPTIONAL-ADOPTION.md'),
-                             (ROOT/'docs/wiki/existing-projects.md').read_bytes())
-            self.assertFalse(any('nfl-' in n or 'nflstreet2' in n or 'legacy_nfl' in n
-                                 for n in archive.namelist()))
 
     def test_clearance_template_rejects_invalid_or_deleted_evidence(self):
         template = (ROOT/'docs/wiki/starter/.github/workflows/review.yml.template').read_text()

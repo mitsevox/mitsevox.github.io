@@ -1,121 +1,58 @@
-name: Portfolio
+name: Site
 
+# The site is static: it renders whatever mitsevox/decomp-data publishes and builds nothing.
+# Pull requests run the tests; main also deploys.
 on:
   push:
-    branches: [main, 'codex/**']
+    branches: [main]
   pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: '19 */6 * * *'
 
 permissions:
   contents: read
-  actions: read
-
-concurrency:
-  group: portfolio-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
-  validate:
-    name: Validate reports and assemble site
+  test:
+    name: Test
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    outputs:
-      lane: ${{ steps.scope.outputs.lane }}
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-          fetch-depth: 0
-      - name: Select presentation or full validation
-        id: scope
-        env:
-          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          CI_BEFORE_SHA: ${{ github.event.before }}
-        run: python3 tools/ci_scope.py
-      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
-        with:
-          version: '0.12.9'
-      - name: Run site regression tests
-        if: steps.scope.outputs.lane != 'ui'
-        run: |
-          uv run --locked python -m unittest discover -s tests -v
-      - name: Check frontend JavaScript syntax
-        run: |
-          find assets -type f -name '*.js' -print0 | while IFS= read -r -d '' file; do node --check "$file"; done
-      - name: Restore verified reports for presentation build
-        if: steps.scope.outputs.lane == 'ui'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: uv run --locked python tools/report_store.py restore
-      - name: Refresh registered project reports
-        id: refresh
-        if: github.event_name != 'pull_request' && steps.scope.outputs.lane != 'ui'
-        continue-on-error: true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          uv run --locked python tools/report_store.py restore
-          uv run --locked python tools/import_reports.py --all --allow-target-failures
-      - name: Assemble verified static output
-        run: uv run --locked python tools/build_site.py
-      - name: Preserve validated site candidate
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: portfolio-site-${{ github.run_id }}-${{ github.run_attempt }}
-          path: build/site
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 90
-      - name: Report refresh failure without discarding last good data
-        if: steps.refresh.outcome == 'failure'
-        run: |
-          echo 'Refresh failed. No deployment will replace the live site.'
-          exit 1
+      - name: Unit tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Frontend syntax
+        run: find assets -name '*.js' -print0 | xargs -0 -n1 node --check
 
-  publish:
-    name: Preserve reports and publish Pages
-    needs: validate
-    concurrency:
-      group: portfolio-pages
-      queue: max
+  deploy:
+    name: Deploy
+    needs: test
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
       pages: write
       id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
         with:
-          version: '0.12.9'
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
-        with:
-          name: portfolio-site-${{ github.run_id }}-${{ github.run_attempt }}
-          path: build/site
-      - name: Refresh presentation candidate from latest accepted data
-        if: needs.validate.outputs.lane == 'ui'
-        env:
-          GH_TOKEN: ${{ github.token }}
+          persist-credentials: false
+      - name: Stage the site
         run: |
-          uv run --locked python tools/report_store.py restore
-          uv run --locked python tools/build_site.py
-      - name: Preserve verified snapshots before deployment
-        if: needs.validate.outputs.lane != 'ui'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: uv run --locked python tools/report_store.py publish
+          mkdir -p _site/docs
+          cp -r index.html 404.html assets wiki _site/
+          cp -r docs/wiki _site/docs/
+          cp -r redirects/. _site/
       - uses: actions/upload-pages-artifact@98ef48e41587a300b82de4cf298aa98b57b2faae
         with:
-          path: build/site
-      - name: Confirm site source is still current
-        run: uv run --locked python tools/report_store.py check-current
-      - name: Deploy verified portfolio
-        id: deployment
+          path: _site
+      - id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346

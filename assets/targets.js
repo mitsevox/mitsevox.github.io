@@ -1,41 +1,46 @@
 import {createDropdown} from './components/ui/dropdown.js';
 import {pageScope} from './lifecycle.js';
 
+// A project viewed at one target. Only that target's measurements are ever shown under it.
+export function withTarget(project, id) {
+  const target = project.targets.find(item => item.id === id) || null;
+  const report = target ? project.reports[id] : null;
+  const s = report?.summary;
+  const counted = c => !!(c && c.exact !== null && c.named !== null);
+  return {
+    ...project, target:id, selectedTarget:target, unknownTarget:!target, available:!!report, report,
+    targetSha1:target?.sha1, reportBase:report ? `${project.base}${id}/` : null,
+    // A single-target game shows its id inline instead of a picker.
+    targetCatalog:target && project.targets.length > 1 ? project.targets : null,
+    modules:{map:!!report?.modules.map, timeline:!!report, contributors:!!report?.modules.contributors,
+      functionCounts:counted(s?.functions), fileCounts:counted(s?.files)},
+    contributionsEnabled:!!report && !!project.contributions?.accepting,
+  };
+}
+
 export function selectTarget(project, url) {
-  if (!project.targetCatalog) return project;
-  const catalog=project.targetCatalog;
-  const id=url.searchParams.get('target')||catalog.defaultTarget;
-  const item=catalog.targets.find(item=>item.target.id===id);
-  if(!item)return {...project,target:id,targetCatalog:null,available:false,unknownTarget:true,report:null,reportBase:null,latestCommit:null,
-    modules:Object.fromEntries(Object.keys(project.modules).map(key=>[key,false])),contributionsEnabled:false};
-  const report=project.targetReports[id];
-  const available=!!report?.available;
-  // Never inherit the default target's measurements into another selection.
-  return {...project,target:id,selectedTarget:item,available,
-    report:available?report.report:null,reportBase:available?report.reportBase:null,
-    latestCommit:available?report.latestCommit:null,targetSha1:item.target.sha1,
-    modules:available?report.modules:Object.fromEntries(Object.keys(project.modules).map(key=>[key,false])),
-    contributionsEnabled:available&&project.contributionsEnabled};
+  return withTarget(project, url.searchParams.get('target') || project.defaultTarget);
 }
 
 export function mountTargetPicker(parent,project) {
   const scope=pageScope();
   if (!project.targetCatalog) return scope;
-  const catalog=project.targetCatalog,current=project.selectedTarget.target;
+  const catalog=project.targetCatalog,current=project.selectedTarget;
   const wrapper=document.createElement('div');wrapper.className='target-pickers';
-  const ids=[...new Set(catalog.targets.map(item=>item.target.gameId))];
-  const games=ids.map(id=>catalog.targets.find(item=>item.target.gameId===id&&item.target.id===catalog.defaultTarget)||catalog.targets.find(item=>item.target.gameId===id));
-  const revisions=catalog.targets.filter(item=>item.target.gameId===current.gameId);
+  // Targets group by label (the game id on disc), then by revision.
+  const labels=[...new Set(catalog.map(item=>item.label))];
+  const games=labels.map(label=>catalog.find(item=>item.label===label&&item.id===project.defaultTarget)||catalog.find(item=>item.label===label));
+  const revisions=catalog.filter(item=>item.label===current.label);
   for(const [name,choices] of [['Game ID',games],['Disc revision',revisions]]){
     const gamePicker=name==='Game ID';
     const options=choices.map(item=>{
-      const url=new URL(project.href,location.origin);url.searchParams.set('target',item.target.id);
-      return {value:gamePicker?item.target.gameId:item.target.id,label:gamePicker?item.target.gameId:'Rev '+item.target.discRevision,
-        ...(gamePicker?{region:item.target.region,ariaLabel:item.target.gameId+' · '+item.target.region}:{}),href:url.pathname+url.search};
+      const url=new URL(project.href,location.origin);url.searchParams.set('target',item.id);
+      return {value:gamePicker?item.label:item.id,label:gamePicker?item.label:'Rev '+item.revision,
+        ...(gamePicker?{region:item.region,ariaLabel:item.label+' · '+item.region}:{}),href:url.pathname+url.search};
     });
     const picker=createDropdown({id:'target-'+(gamePicker?'game':'revision'),label:name,className:'target-picker',triggerClass:'target-trigger',menuClass:'target-menu',
-      value:gamePicker?current.gameId:current.id,options,scope,selectedLeading:gamePicker,
-      ariaLabel:gamePicker?'Game ID: '+current.gameId+' · '+current.region:'Disc revision: Rev '+current.discRevision});
+      value:gamePicker?current.label:current.id,options,scope,selectedLeading:gamePicker,
+      ariaLabel:gamePicker?'Game ID: '+current.label+' · '+current.region:'Disc revision: Rev '+current.revision});
     wrapper.append(picker.node);
   }
   parent.append(wrapper);return scope;
