@@ -221,9 +221,10 @@ class ExecutionTests(unittest.TestCase):
         self.assertEqual(manifest['summary']['code']['fuzzyEquivalentBytes'],p['measures']['code']['fuzzy'])
         self.assertEqual(manifest['summary']['functions']['exact'],a['credited_functions'])
         projects=locked_projects(ROOT)
-        self.assertEqual({c['slug'] for c,_,_ in projects},
+        self.assertEqual({c['slug'] for c,*_ in projects},
                          {c['slug'] for c in decode((ROOT/'config/projects.json').read_bytes())})
-        for config,_,report in projects:
+        for config,primary,_,_ in projects:
+            report=primary['report']
             self.assertEqual(report['origin'],'measured')
             self.assertEqual(report['project'],config['slug'])
             self.assertEqual(report['repository'],config['repository'])

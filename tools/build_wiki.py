@@ -81,11 +81,12 @@ with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFL
     info.compress_type = zipfile.ZIP_DEFLATED
     archive.writestr(info, (SOURCE / 'existing-projects.md').read_bytes())
     # Ship the actual generic interface with the offline starter, not per-game adapters.
-    references = [ROOT / 'docs/reporting/platform.md', ROOT / 'docs/reporting/contract-v1.md', ROOT / 'docs/reporting/policy-sync.md']
+    references = [ROOT / 'docs/reporting/platform.md', ROOT / 'docs/reporting/contract-v1.md', ROOT / 'docs/reporting/policy-sync.md', ROOT / 'docs/reporting/contract-v2.md']
     references += [ROOT / 'docs/reporting/schema' / name for name in (
         'report-v1.schema.json', 'project-v1.schema.json', 'producer-v1.schema.json',
         'execution-v1.schema.json', 'map-v1.schema.json', 'map-v2.schema.json', 'timeline-v1.schema.json',
-        'contributors-v1.schema.json')]
+        'contributors-v1.schema.json', 'target-v2.schema.json', 'targets-v1.schema.json',
+        'report-v2.schema.json', 'execution-v2.schema.json', 'producer-v2.schema.json', 'project-v2.schema.json')]
     references += list((ROOT / 'docs/reporting/examples').glob('*.json'))
     for path in sorted(references):
         info = zipfile.ZipInfo('repository-starter/reporting/' + str(path.relative_to(ROOT / 'docs/reporting')),

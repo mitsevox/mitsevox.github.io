@@ -111,3 +111,17 @@ Demonstrate a real passing fresh candidate and main report first. Exercise wrong
 The website side must reject unapproved workflow blobs, wrong run attempts, missing lane steps, artifact digest mismatch and malformed payloads while preserving all accepted projects. Verify direct routes, selected manifest identity, and the next successful refresh. A schema-valid fixture or local preview is not evidence of live integration.
 
 For a UI rollback, revert reviewed site source while retaining current accepted measurement history. For a producer failure, fix the failing layer; do not weaken checks, reset history or change private dependency access to get green.
+
+## Multiple targets
+
+Plan an explicit matrix from changed paths and a reviewed dependency map. A target-only config
+change validates that target; shared source, headers and toolchain inputs validate their actual
+dependents. Include deleted/renamed paths and conservatively validate all buildable targets for
+unknown inputs. An archived revision without build support is not a zero-percent build target.
+
+Use independent target jobs with `fail-fast: false`, isolated `build/<targetId>/` outputs and
+unique report artifacts. Each job verifies its whole executable before measuring and packaging.
+A stable aggregate check blocks a PR if a required target fails. A successful target on main may
+publish despite a failed sibling, after its shared prerequisite checks pass. See the complete
+[report-v2 CI contract](/docs/reporting/contract-v2.md#target-scoped-ci-and-repository-layout).
+Caches remain optional and must bind target ID/hash as well as actual inputs.

@@ -157,7 +157,9 @@ under that project's own merge policy.
 
 The notifier sends `producer-report-ready` to the site with exactly `project`,
 `repository`, and `runId`. The site independently fetches that run and checks its
-registered repository, workflow path, branch, event and successful completion.
+registered repository, workflow path, branch and event. Report-v1 requires successful completion.
+Report-v2 completion can include a failed sibling; import still requires the selected target
+job and all shared prerequisites to succeed, as defined in [report-v2](contract-v2.md).
 A notification is only a hint: the standard importer still authenticates the
 workflow blob, jobs, steps, artifact, package, ancestry, history and measurements.
 A new unapproved policy cannot be admitted by notifying.

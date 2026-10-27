@@ -12,7 +12,8 @@ import tempfile
 from urllib.parse import quote
 
 from reporting.github import GitHub
-from reporting.registry import producer, registrations, site_config
+from reporting.registry import producer, registration, registrations, site_config
+from reporting.targets import selected, select
 from reporting.state import read_lock
 from reporting.validation import ROOT, SHA, decode, digest, encoded, require, schema
 
@@ -39,13 +40,19 @@ def sources(root):
     require(set(config) == {'schemaVersion', 'projects'} and config['schemaVersion'] == 1
             and isinstance(config['projects'], dict), 'Invalid policy-sync configuration')
     registered = registrations(root)
-    for slug, item in config['projects'].items():
-        require(slug in registered and registered[slug]['format'] == 'report-v1', 'Unregistered sync source')
-        if set(item) == {'disabled'}:
-            require(isinstance(item['disabled'], str) and item['disabled'].strip(), 'Missing disabled reason')
+    def check(item):
+        if set(item)=={'disabled'}:
+            require(isinstance(item['disabled'],str) and item['disabled'].strip(),'Missing disabled reason')
         else:
-            require(set(item) == {'policyPath', 'mode'} and item['mode'] in ('policy', 'template'), 'Invalid sync source')
+            require(set(item)=={'policyPath','mode'} and item['mode'] in ('policy','template'),'Invalid sync source')
             source_path(item['policyPath'])
+    for slug,item in config['projects'].items():
+        require(slug in registered,'Unregistered sync source')
+        if 'targets' in registered[slug]:
+            require(set(item)=={'targets'} and set(item['targets'])<=set(registered[slug]['targets']),'Unregistered target sync source')
+            for value in item['targets'].values():check(value)
+        else:
+            require(registered[slug]['format']=='report-v1','Unregistered sync source');check(item)
     return config['projects']
 
 
@@ -70,7 +77,8 @@ def proposed_policy(raw, old_raw, blob, mode):
         require('workflowBlobs' not in value, 'Template mode requires an explicit hash-free template')
         value['workflowBlobs'] = list(dict.fromkeys([*old['workflowBlobs'], blob]))
         raw = (json.dumps(value, indent=2, allow_nan=False)+'\n').encode()
-    schema(value, 'producer-v1.schema.json')
+    require(type(value.get('schemaVersion')) is int and value['schemaVersion'] in (1,2),'Unknown policy version')
+    schema(value,'producer-v'+str(value['schemaVersion'])+'.schema.json')
     require(value['repository'] == old['repository'] and value['target'] == old['target'],
             'Repository/target changes require manual registration')
     require(blob in value['workflowBlobs'], 'Producer policy does not approve its current workflow blob')
@@ -80,10 +88,10 @@ def proposed_policy(raw, old_raw, blob, mode):
     return raw
 
 
-def inspect_source(root, slug, item, api=None):
-    current = producer(root, slug)
-    registration = registrations(root)[slug]
-    require('freeze' not in registration and 'pending' not in registration, 'Producer migration/freeze needs manual review')
+def inspect_source(root, slug, item, api=None,target=None):
+    current = producer(root,slug,target)
+    registered,_ = registration(root,slug,target)
+    require('freeze' not in registered and 'pending' not in registered, 'Producer migration/freeze needs manual review')
     api = api or GitHub(current['repository'])
     revision = api.get('commits/'+quote(current['branch'], safe=''))['sha']
     require(SHA.fullmatch(revision), 'Invalid producer main revision')
@@ -93,35 +101,35 @@ def inspect_source(root, slug, item, api=None):
     require(isinstance(value, dict) and re.fullmatch(r'\.github/workflows/[A-Za-z0-9_-]+\.ya?ml', value.get('workflow', '')),
             'Invalid producer workflow path')
     _, blob = remote_file(api, value['workflow'], revision)
-    old_path = Path(root)/'config'/registration['policy']
+    old_path = Path(root)/'config'/registered['policy']
     old_raw = old_path.read_bytes()
     candidate = proposed_policy(raw, old_raw, blob, item['mode'])
     return {'raw':candidate, 'old':old_raw, 'revision':revision, 'workflowBlob':blob,
             'key':digest(old_raw+b'\0'+candidate)[:16]}
 
 
-def apply_policy(root, slug, raw):
+def apply_policy(root, slug, raw,target=None):
     root = Path(root)
     registry = registrations(root)
-    item = registry[slug]
+    item = registry[slug]['targets'][target] if target else registry[slug]
     active = root/'config'/item['policy']
     previous = active.read_bytes()
     if previous == raw:
         return []
-    archive_name = f'{slug}-producer-{digest(previous)[:16]}.json'
+    archive_name = f'{slug}'+('-'+target if target else '')+f'-producer-{digest(previous)[:16]}.json'
     archive = root/'config'/archive_name
     require(not archive.is_symlink() and (not archive.exists() or archive.read_bytes() == previous), 'Policy archive collision')
     archive.write_bytes(previous)
-    reference = {'format':'report-v1', 'policy':archive_name}
+    reference = {'format':item['format'], 'policy':archive_name}
     if reference not in item.setdefault('archives', []):
         item['archives'].append(reference)
     active.write_bytes(raw)
     (root/'config/producers.json').write_text(json.dumps(registry, indent=2)+'\n')
     return [str(active.relative_to(root)), 'config/'+archive_name, 'config/producers.json',
-            'data/reports.lock.json', 'data/'+slug]
+            'data/reports.lock.json', 'data/'+slug+('/targets/'+target if target else '')]
 
 
-def prepare_candidate(root, slug, item, info, candidate, output):
+def prepare_candidate(root, slug, item, info, candidate, output,target=None):
     from import_reports import refresh
     from report_store import restore
     from build_site import build
@@ -132,13 +140,13 @@ def prepare_candidate(root, slug, item, info, candidate, output):
     baseline = read_lock(candidate)
     restore(candidate)
     restored = read_lock(candidate)
-    if slug in restored['projects']:
-        baseline['projects'][slug] = restored['projects'][slug]
+    entry=selected(restored,slug,target)
+    if entry:select(baseline,slug,target,entry)
     # Durable state for the selected producer is needed for proof reuse. Other
     # producers stay byte-for-byte at this PR's base, not incidental refreshes.
     (candidate/'data/reports.lock.json').write_bytes(encoded(baseline))
-    paths = apply_policy(candidate, slug, info['raw'])
-    destination = refresh(candidate, slug)
+    paths = apply_policy(candidate,slug,info['raw'],target)
+    destination = refresh(candidate,slug,target=target) if target else refresh(candidate,slug)
     manifest = decode((destination/'manifest.json').read_bytes())
     require(manifest['validation']['mode'] == 'full' or manifest['validation']['mode'] == 'reused', 'Unknown execution lane')
     measured_raw, _ = remote_file(GitHub(manifest['repository']), item['policyPath'], manifest['revision'])
@@ -148,12 +156,16 @@ def prepare_candidate(root, slug, item, info, candidate, output):
     build(candidate, candidate/'build/policy-sync-site')
     git(candidate, 'add', '--', *paths)
     staged = git(candidate, 'diff', '--cached', '--name-only').splitlines()
-    require(staged and all(path in paths or path.startswith('data/'+slug+'/snapshots/') for path in staged),
+    require(staged and all(path in paths or path.startswith('data/'+slug+('/targets/'+target if target else '')+'/snapshots/') for path in staged),
             'Proposal contains changes outside the selected producer')
     after = read_lock(candidate)
     original = read_lock(root)
     require(all(after['projects'].get(name) == entry for name, entry in original['projects'].items() if name != slug),
             'Proposal changed another producer')
+    if target:
+        before=(original['projects'].get(slug) or {}).get('targets',{})
+        after_targets=(after['projects'].get(slug) or {}).get('targets',{})
+        require(all(after_targets.get(key)==entry for key,entry in before.items() if key!=target),'Proposal changed another target')
     output.mkdir(parents=True, exist_ok=True)
     patch = subprocess.check_output(['git', '-C', str(candidate), 'diff', '--cached', '--binary'])
     (output/'proposal.patch').write_bytes(patch)
@@ -172,20 +184,21 @@ def existing_proposal(site, branch):
     return rows[0]
 
 
-def sync_one(root, slug, item, output, propose=False):
+def sync_one(root, slug, item, output, propose=False,target=None):
     if 'disabled' in item:
         return {'project':slug, 'status':'disabled', 'reason':item['disabled']}
-    info = inspect_source(root, slug, item)
+    info = inspect_source(root,slug,item,target=target) if target else inspect_source(root,slug,item)
     if info['raw'] == info['old']:
         return {'project':slug, 'status':'unchanged'}
     site = site_config(root)['repository']
-    branch = 'codex/policy-sync/'+slug+'/'+info['key']
+    branch = 'codex/policy-sync/'+slug+('/'+target if target else '')+'/'+info['key']
     existing = existing_proposal(site, branch) if propose else None
     if existing:
         return {'project':slug, 'status':'existing-'+existing['state'].lower(), 'url':existing['url']}
     with tempfile.TemporaryDirectory(prefix='policy-sync-') as temp:
         candidate = Path(temp)/'candidate'
-        manifest = prepare_candidate(root, slug, item, info, candidate, output/slug/info['key'])
+        location=output/slug/(target or 'single')/info['key']
+        manifest=prepare_candidate(root,slug,item,info,candidate,location,target) if target else prepare_candidate(root,slug,item,info,candidate,location)
         body = ('Update the registered policy for `'+slug+'` from its tracked producer source.\n\n'
                 '- Producer policy inspected at `'+info['revision']+'`.\n'
                 '- Current workflow blob: `'+info['workflowBlob']+'`.\n'
@@ -195,7 +208,7 @@ def sync_one(root, slug, item, output, propose=False):
                 'Review the policy diff and producing workflow before merging. This automation never approves or merges.\n')
         if os.getenv('GITHUB_RUN_ID'):
             body += '\n[Validation run](https://github.com/'+site+'/actions/runs/'+os.environ['GITHUB_RUN_ID']+')\n'
-        body_file = output/slug/info['key']/'pr-body.md'
+        body_file=location/'pr-body.md'
         body_file.write_text(body)
         if not propose:
             return {'project':slug, 'status':'validated-dry-run', 'patch':str(body_file.parent/'proposal.patch')}
@@ -228,13 +241,15 @@ def main():
     selected = configured if args.all else {args.project:configured[args.project]}
     args.output.mkdir(parents=True, exist_ok=True)
     results = []
-    for slug, item in selected.items():
-        try:
-            result = sync_one(ROOT, slug, item, args.output, args.propose)
-        except Exception as error:
-            result = {'project':slug, 'status':'failed', 'reason':str(error)[:1500]}
-        results.append(result)
-        print(json.dumps(result))
+    for slug,group in selected.items():
+        targets=group['targets'].items() if 'targets' in group else [(None,group)]
+        for target,item in targets:
+            try:
+                result=sync_one(ROOT,slug,item,args.output,args.propose,target) if target else sync_one(ROOT,slug,item,args.output,args.propose)
+            except Exception as error:
+                result={'project':slug,'status':'failed','reason':str(error)[:1500]}
+            if target:result['target']=target
+            results.append(result);print(json.dumps(result))
     (args.output/'results.json').write_text(json.dumps(results, indent=2)+'\n')
     if os.getenv('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:

@@ -91,7 +91,7 @@ class PlatformTests(unittest.TestCase):
         self.assertFalse((output/'fixtures').exists())
 
     def test_one_failed_refresh_does_not_skip_other_registered_sources(self):
-        with patch('import_reports.registrations',return_value={'first':{},'second':{}}), \
+        with patch('import_reports.producers',return_value=[('first',None,{}),('second',None,{})]), \
              patch('import_reports.refresh',side_effect=[ValueError('bad report'),None]) as call:
             self.assertEqual(refresh_all(self.root),['first'])
             self.assertEqual([args.args[1] for args in call.call_args_list],['first','second'])

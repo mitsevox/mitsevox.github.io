@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "shared": ["src/shared/**", "include/shared/**", "tools/**", ".github/workflows/validate.yml", "config/targets.json", "config/ci-targets.json"],
+  "targets": {"ABC123-rev0": ["config/ABC123-rev0/**", "src/ABC123-rev0/**", "include/ABC123-rev0/**", "orig/ABC123-rev0/**"]},
+  "nonBuild": ["*.md", "docs/**", "tests/**"]
+}

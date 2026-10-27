@@ -25,7 +25,7 @@ Before adopting the starter, have the owner settle the following decisions and r
 
 | Decision | Starter default | Must be supplied or confirmed |
 | --- | --- | --- |
-| Target/objective | Faithful matching, one explicit target | Console, executable format, region/revision, hashes, measurement universe and any different objective |
+| Target/objective | Faithful matching, explicit target identity/registry | Console, executable format, region/revision, hashes, measurement universe and any different objective |
 | Tools/runtime | Pinned approved environment | Actual digest/hash, supported hosts, tools/profiles and reference access |
 | Author workflow | Isolated branch/worktree and bounded active scope | Branch convention, reservations, dependencies and push/PR authority |
 | Review/merge | Independent accuracy and hostile review; owner-only merge | Adopting owner and any explicit alternative policy |

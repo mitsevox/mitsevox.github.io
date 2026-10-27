@@ -134,7 +134,7 @@ def validate_package(directory,manifest,policy):
     directory=Path(directory)
     require(manifest['origin']=='measured','Production rejects fixture packages')
     expected=set(FIXED)
-    require(manifest['validation']['receipt']['path']=='receipt.json' and manifest['validation']['receipt']['schema']=='execution-v1','Invalid execution reference')
+    require(manifest['validation']['receipt']['path']=='receipt.json' and manifest['validation']['receipt']['schema']=='execution-v'+str(manifest['schemaVersion']),'Invalid execution reference')
     for key,identifier in ASSETS.items():
         module=manifest['modules'][key]
         if module['status']=='supported':
@@ -162,7 +162,7 @@ def validate_package(directory,manifest,policy):
         if key=='map':exact=check_map(doc,p,ref['schema']);p.update(sections=doc['sections'],files=doc['files'],basis='executable-sections')
         if key=='timeline':check_timeline(doc,p);a['snapshots']=doc['snapshots']
         if key=='contributors':check_contributors(doc,p,exact);a.update({k:doc[k] for k in ('contributors','credited_functions')})
-    receipt=documents['receipt.json'];schema(receipt,'execution-v1.schema.json')
+    receipt=documents['receipt.json'];schema(receipt,'execution-v'+str(manifest['schemaVersion'])+'.schema.json')
     require(digest(raw['receipt.json'])==manifest['validation']['receipt']['sha256'],'Receipt checksum differs')
     for key in ('repository','target','revision','tree','methodology','generation','measuredAt','publishedAt'):
         require(receipt[key]==manifest[key],'Receipt identity differs: '+key)

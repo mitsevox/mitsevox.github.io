@@ -1,0 +1,107 @@
+# Editable overlay; replace approved pins and implement the adapter contract first.
+name: Validate
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+jobs:
+  plan:
+    name: Plan affected targets
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_targets: ${{ steps.plan.outputs.has_targets }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: plan
+        run: python3 tools/ci_targets.py
+  tests:
+    name: Tool tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -v
+  target:
+    name: Validate ${{ matrix.target }}
+    needs: [plan, tests]
+    if: needs.plan.outputs.has_targets == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+      actions: read
+    container:
+      image: APPROVED_PRIVATE_IMAGE_AT_SHA256_DIGEST
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      TARGET_ID: ${{ matrix.target }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Verify original and target inputs
+        run: python3 tools/project_ci.py verify-inputs --target "$TARGET_ID"
+      - name: Build and verify complete target
+        run: python3 tools/project_ci.py build --target "$TARGET_ID"
+      - name: Measure target
+        run: python3 tools/project_ci.py measure --target "$TARGET_ID"
+      - name: Export public report inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 tools/project_ci.py export --target "$TARGET_ID"
+          python3 tools/project_ci.py metadata --target "$TARGET_ID"
+      - name: Check out pinned site packager
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: OWNER/SITE_REPOSITORY
+          ref: APPROVED_FULL_SITE_COMMIT
+          path: build/site-tools
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
+        with:
+          version: '0.12.9'
+      - name: Package and validate public report
+        run: |
+          uv run --locked --project build/site-tools python build/site-tools/tools/package_report.py \
+            --input "build/$TARGET_ID/public-input" --metadata "build/$TARGET_ID/public-metadata.json" \
+            --policy "config/$TARGET_ID/producer.json" --output "build/$TARGET_ID/public-report"
+      - name: Upload public report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: report-v2-${{ matrix.target }}
+          path: build/${{ matrix.target }}/public-report/*.json
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 90
+  complete:
+    name: Validate targets
+    needs: [plan, tests, target]
+    if: always()
+    runs-on: ubuntu-24.04
+    env:
+      PLAN: ${{ needs.plan.result }}
+      TESTS: ${{ needs.tests.result }}
+      HAS_TARGETS: ${{ needs.plan.outputs.has_targets }}
+      TARGETS: ${{ needs.target.result }}
+    steps:
+      - name: Require all selected validations
+        run: |
+          test "$PLAN" = success && test "$TESTS" = success
+          if [ "$HAS_TARGETS" = true ]; then test "$TARGETS" = success; else test "$TARGETS" = skipped; fi

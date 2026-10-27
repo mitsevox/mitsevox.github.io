@@ -99,3 +99,26 @@ list. All other schema, identity, successful-package and review checks are the
 same. A template must omit that field; a complete policy must declare its own
 approved blobs. Template mode is an optional adoption aid, outside the starter
 checklist. Prefer a complete tracked policy for a new repository.
+
+## Explicit target adoption
+
+This optional migration is unnecessary for a working single-target report-v1 producer. Agree
+on the new consumer contract before renaming directories or emitted identities.
+
+1. Deploy report-v2 consumer support while the existing producer still emits v1.
+2. Register the exact old target object (`id`, `console`, executable `sha1`) in the canonical
+   target's `legacyTargets`. Keep its old policy in that target's `archives` and preserve every
+   original package byte, receipt, checksum and timeline row. The site adopts the pointer only
+   through this explicit same-binary alias. It never guesses a revision from a game ID.
+3. Migrate producer/private-original paths and generated outputs, approve the pinned environment,
+   implement target-specific CI, and pin a reviewed v2 packager. Coordinate required-check names
+   with the owner. Preserve existing compiler profiles and measurement methodology when their
+   meaning has not changed. Known targets without validated builds remain archived metadata.
+4. Review the new policy and workflow blob for each publishing target. Produce and authenticate
+   a real main package, compare old/new totals and geometry, and prove history retention with
+   zero lost/changed rows. Switch that producer to report-v2 only after these checks pass.
+5. Update policy-sync source paths and completion notifier pins/format. Keep single-target
+   projects on their existing wire contract. Do not retain duplicate legacy build/report pipelines.
+
+Legacy rows remain records of their original execution. Function identifiers in newly generated
+v2 reports use the explicit target ID; never rewrite already accepted v1 packages to update IDs.

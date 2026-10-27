@@ -96,3 +96,12 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 The separators are tabs. Addresses are hexadecimal and end-exclusive. Use `-` where unknown or inapplicable. Origins distinguish `target`, `signature`, `related` and `inferred`; boundaries independently distinguish `exact`, `provisional`, `open` and no claim. Use separate rows for a name, function extent, field layout and source-unit boundary—one claim must not silently prove another.
 
 The project’s `config/README.md` defines the vocabulary, allowed claim types and validation rules. Version that schema and provide a validator before CI relies on it.
+
+## Explicit target layout
+
+For revision-aware projects, place the registry at `config/targets.json` and target-specific
+configuration at `config/<targetId>/`. Use the same ID for private `orig/<targetId>/` and generated
+`build/<targetId>/` directories. Keep reusable source in the shared source tree; isolate actual
+revision differences without duplicating the entire codebase. Git commit `revision` remains
+separate from a disc's numeric `discRevision`. The
+[report-v2 contract](/docs/reporting/contract-v2.md) gives exact schemas and CI/storage rules.

@@ -8,8 +8,9 @@ import tempfile
 from pathlib import Path
 
 from reporting.validation import ROOT, decode, digest, encoded, require, schema, validate_package
+from reporting.targets import entries, selected, registered_catalog, canonical_target, validate_selection
 from reporting.state import read_lock
-from reporting.registry import SLUG, producer, snapshot_path, snapshot_directory
+from reporting.registry import SLUG, producer, registrations, snapshot_path, snapshot_directory
 
 
 def copy_redirects(root,stage):
@@ -50,53 +51,67 @@ def version_html_assets(source, prefix):
 
 
 def locked_projects(root):
-    lock = read_lock(root)
-    require(lock.get('schemaVersion') == 1, 'Unknown report lock version')
-    configurations = decode((root/'config/projects.json').read_bytes())
-    require(len({c['slug'] for c in configurations}) == len(configurations), 'Duplicate project configuration')
-    result = []
+    lock=read_lock(root)
+    configurations=decode((root/'config/projects.json').read_bytes())
+    require(len({c['slug'] for c in configurations})==len(configurations),'Duplicate project configuration')
+    result=[]
     for config in configurations:
-        schema(config, 'project-v1.schema.json')
-        entry = lock['projects'].get(config['slug'])
-        require(entry is not None, 'Enabled project lacks verified data: '+config['slug'])
-        directory = snapshot_directory(root,config['slug'],entry)
-        require(directory.resolve().is_relative_to((root/'data'/config['slug']/'snapshots').resolve()),
-                'Report lock escapes snapshot store')
-        require(digest((directory/'manifest.json').read_bytes()) == entry['manifestSha256'], 'Locked manifest changed')
-        manifest, p, a = validate_package(directory,root)
-        require(manifest['revision'] == entry['revision'] and manifest['repository'] == config['repository']
-                and manifest['project'] == config['slug'] and manifest['target']['id'] == config['target'],
-                'Project configuration differs from report')
-        require(config['console']==manifest['target']['console'],'Console identity differs')
+        version=config.get('schemaVersion')
+        require(type(version) is int and version in (1,2),'Unknown project configuration version')
+        schema(config,'project-v'+str(version)+'.schema.json')
+        slug=config['slug'];document=registered_catalog(root,slug)
+        require((version==2)==(document is not None),'Project/producer target format differs')
+        if document:require(config['targetRegistry']==registrations(root)[slug]['catalog'],'Project target registry differs')
         cover=root/config['artwork']['cover'].lstrip('/')
         require(cover.is_file() and not cover.is_symlink(),'Project cover is missing or unsafe')
-        for key, value in config['modules'].items():
-            if not value:
+        variants=[x['target']['id'] for x in document['targets']] if document else [None]
+        bindings={}
+        for target in variants:
+            entry=selected(lock,slug,target)
+            if entry is None:
+                require(document and target!=document['defaultTarget'],'Enabled project lacks verified data: '+slug)
+                bindings[target]={'available':False}
                 continue
-            if key in ('functionCounts','fileCounts'):
-                counts=manifest['summary']['functions' if key == 'functionCounts' else 'files']
-                require(counts is not None and counts['exact'] is not None and counts['named'] is not None,
-                        'Enabled inventory is unsupported')
-            else:
-                require(manifest['modules'][key]['status'] == 'supported', 'Enabled module is unsupported: '+key)
-        result.append((config, entry, manifest))
+            directory=snapshot_directory(root,slug,entry,target)
+            require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256'],'Locked manifest changed')
+            manifest,_,_=validate_package(directory,root)
+            require(manifest['revision']==entry['revision'] and manifest['repository']==config['repository']
+                    and manifest['project']==slug,'Project configuration differs from report')
+            identity=canonical_target(root,slug,manifest['target'])
+            if document:require(identity['id']==target,'Target selection differs from report')
+            else:require(identity['id']==config['target'] and identity['console']==config['console'],'Console/target identity differs')
+            modules=dict(config['modules'])
+            for key,enabled in modules.items():
+                if not enabled:continue
+                if key in ('functionCounts','fileCounts'):
+                    counts=manifest['summary']['functions' if key=='functionCounts' else 'files']
+                    supported=counts is not None and counts['exact'] is not None and counts['named'] is not None
+                else:supported=manifest['modules'][key]['status']=='supported'
+                # Modules are target capabilities; a new target need not produce
+                # every optional module the game enables for its other targets.
+                if document:modules[key]=supported
+                else:require(supported,'Enabled module is unsupported: '+key)
+            bindings[target]={'available':True,'target':identity['id'],'targetSha1':identity['sha1'],
+                'reportBase':'/'+entry['path'],'report':manifest,'latestCommit':entry['latestCommit'],'modules':modules}
+        primary=bindings[document['defaultTarget'] if document else None]
+        result.append((config,primary,document,bindings))
     return result
 
 
-def project_bindings(root, output, production=False):
-    projects = {}
-    for config, entry, manifest in locked_projects(root):
-        base = '/' + entry['path']
-        projects[config['slug']] = {
-            **config, 'preview':False, 'targetSha1':manifest['target']['sha1'],
-            'reportBase':base, 'report':manifest, 'latestCommit':entry['latestCommit'],
-            'contributionsEnabled':config['contributions']['accepting'],
-            'contributeUrl':config['contributions'].get('guideUrl'),
-        }
-    output.parent.mkdir(parents=True, exist_ok=True)
+def project_bindings(root,output,production=False):
+    projects={}
+    for config,primary,document,variants in locked_projects(root):
+        project={**config,**primary,'preview':False,'contributionsEnabled':config['contributions']['accepting'],
+                 'contributeUrl':config['contributions'].get('guideUrl')}
+        if document:
+            project.update(targetCatalog=document,targetReports=variants)
+            commits=[item['latestCommit'] for item in variants.values() if item.get('available') and item.get('latestCommit',{}).get('date')]
+            if commits:project['latestCommit']=max(commits,key=lambda commit:commit['date'])
+        projects[config['slug']]=project
+    output.parent.mkdir(parents=True,exist_ok=True)
     output.write_text('// Generated by tools/build_site.py from validated report locks.\n'
-                      + 'export const production = '+('true' if production else 'false')+';\n'
-                      + 'export const reportProjects = '+encoded(projects).decode().strip()+';\n')
+        +'export const production = '+('true' if production else 'false')+';\n'
+        +'export const reportProjects = '+encoded(projects).decode().strip()+';\n')
     return projects
 
 
@@ -120,19 +135,20 @@ def _build_locked(root, output):
         projects = project_bindings(root, stage/'assets/report-projects.js', production=True)
         lock = read_lock(root)
         # Archive every locked producer, including one hidden from presentation.
-        for slug,entry in lock['projects'].items():
-            producer(root,slug)
-            directory=snapshot_directory(root,slug,entry)
+        for slug,target,entry in entries(lock):
+            producer(root,slug,target)
+            directory=snapshot_directory(root,slug,entry,target)
             manifest,_,_=validate_package(directory,root)
             require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256']
                     and manifest['project']==slug and manifest['revision']==entry['revision'],'Archive lock differs')
+            validate_selection(root,slug,target,entry,manifest)
             shutil.copytree(directory, stage/entry['path'])
         for slug in projects:
             # Routes do not require a hand-authored entry file per game.
             destination=stage/'games'/slug
             destination.mkdir(parents=True)
             shutil.copyfile(root/'index.html',destination/'index.html')
-        shutil.copyfile(root/'data/reports.lock.json', stage/'data/reports.lock.json')
+        (stage/'data/reports.lock.json').write_bytes(encoded(lock))
         shutil.copytree(root/'wiki', stage/'wiki')
         # Keep per-chapter Markdown and starter links available in the public wiki.
         shutil.copytree(root/'docs', stage/'docs')

@@ -303,7 +303,7 @@ Existing hash-free policy templates are an optional adoption case in the
 <p>Record commands, revisions, run/attempt, artifact/package hashes, module settings and limitations in the integration PR. The <a href="/docs/reporting/onboarding.md">integration checklist</a> and <a href="/wiki/starter-kit/">starter files</a> provide a reusable handoff. Each repository supplies its own implementation details.</p>
 <h3 id="prompt-updates">Prompt updates</h3>
 <p>After registration, add a separate completion notifier using the site's pinned
-reusable workflow. A successful main report run requests a site refresh; the site
+reusable workflow. A completed main report run requests a site refresh (successful overall for v1; successful target/shared jobs for v2); the site
 reauthenticates the run and imports only changed approved packages. No new policy
 is trusted automatically. This avoids waiting for the periodic refresh without
 rerunning site source tests for every producer commit.</p>
@@ -311,5 +311,16 @@ rerunning site source tests for every producer commit.</p>
 variables/secrets, five-minute fallback and recovery behavior are documented in
 <a href="/docs/reporting/policy-sync.md#prompt-report-refresh">Producer policy sync</a>.
 These are optional delivery automation; the report contract and manual import
-remain the same. Keep the notifier separate from the approved report workflow.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#map-parity-and-geometry">Map parity and geometry</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#register-and-use-the-platform">Register and use the platform</a><a href="#policy-updates">Policy updates</a><a href="#integration-acceptance">Integration acceptance</a></nav></aside></main>
+remain the same. Keep the notifier separate from the approved report workflow.</p>
+<h2 id="multiple-game-ids-and-revisions">Multiple game IDs and revisions</h2>
+<p>Use <a href="/docs/reporting/contract-v2.md">report-v2</a> when a game has multiple executable targets, or
+when starting a project with explicit revision identities. Keep one game slug/artwork entry and
+publish an independent package, policy and history per target. <code>config/targets.json</code> separates
+known/archived identities from verified build/report support. The site selects game ID/region
+and disc revision without combining their numbers. An archived target without a report has no
+fabricated progress.</p>
+<p>The versioned schemas, exact registry/registration examples, target-scoped authentication,
+optional capabilities, immutable storage layout and rollout order are specified in that contract.
+Report-v1 single-target producers keep working unchanged. Declare the report format explicitly;
+do not insert new target fields into a v1 object.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/credits-and-history/"><small>Previous</small><span>Credits &amp; history</span></a><a href="/wiki/operations/"><small>Next</small><span>Troubleshooting &amp; upkeep</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#responsibilities">Responsibilities</a><a href="#project-identity-and-presentation">Project identity and presentation</a><a href="#required-public-contract">Required public contract</a><a href="#measurement-rules">Measurement rules</a><a href="#map-parity-and-geometry">Map parity and geometry</a><a href="#choose-modules-independently">Choose modules independently</a><a href="#producer-template">Producer template</a><a href="#consumer-template">Consumer template</a><a href="#register-and-use-the-platform">Register and use the platform</a><a href="#policy-updates">Policy updates</a><a href="#integration-acceptance">Integration acceptance</a><a href="#multiple-game-ids-and-revisions">Multiple game IDs and revisions</a></nav></aside></main>

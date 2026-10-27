@@ -24,6 +24,9 @@ on:
       producer_workflow:
         type: string
         required: true
+      report_format:
+        type: string
+        default: report-v1
       site_repository:
         type: string
         required: true
@@ -47,6 +50,7 @@ jobs:
           PRODUCER_BRANCH: ${{ inputs.producer_branch }}
           PRODUCER_WORKFLOW: ${{ inputs.producer_workflow }}
           SITE_REPOSITORY: ${{ inputs.site_repository }}
+          REPORT_FORMAT: ${{ inputs.report_format }}
         run: |
           python3 - <<'PY'
 '''
@@ -74,6 +78,7 @@ def caller(root,slug,revision,workflow_name):
     policy=producer(root,slug)
     values={'workflow':policy['workflow'],'branch':policy['branch'],'name':workflow_name}
     j=json.dumps
+    conclusion="(github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure')" if policy['format']=='report-v2' else "github.event.workflow_run.conclusion == 'success'"
     return f'''# No producer code or report artifact is executed by this completion notifier.
 name: Notify portfolio
 on:
@@ -86,7 +91,7 @@ permissions:
 jobs:
   notify:
     if: >-
-      github.event.workflow_run.conclusion == 'success' &&
+      {conclusion} &&
       (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch') &&
       github.event.workflow_run.head_branch == {"'"+values['branch'].replace("'","''")+"'"} &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
@@ -94,6 +99,7 @@ jobs:
     uses: {site_config(root)['repository']}/.github/workflows/notify-site.yml@{revision}
     with:
       project: {slug}
+      report_format: {policy['format']}
       producer_branch: {j(values['branch'])}
       producer_workflow: {j(values['workflow'])}
       site_repository: {j(site_config(root)['repository'])}

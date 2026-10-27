@@ -58,7 +58,7 @@ class ReportRefreshTests(unittest.TestCase):
             class API:
                 def get(self,path):return {'workflow_runs':[run(event='pull_request'),run()]}
             lock={'projects':{SLUG:lock_entry()}}
-            with patch.object(refresh,'registrations',return_value={SLUG:{}}):
+            with patch.object(refresh,'producers',return_value=[(SLUG,None,{**POLICY,'format':'report-v1'})]):
                 self.assertEqual(refresh.changed_runs(root,lock,lambda repo:API()),({},[]))
                 lock['projects'][SLUG]=lock_entry(attempt=2)
                 self.assertEqual(refresh.changed_runs(root,lock,lambda repo:API()),({SLUG:42},[]))
@@ -100,6 +100,8 @@ class ReportRefreshTests(unittest.TestCase):
                  patch.object(refresh,'successful_site_source',return_value=False) as verified, \
                  patch.object(refresh,'accepted_hint',return_value=lock), \
                  patch.object(refresh,'changed_runs',return_value=({},[])), \
+                 patch.object(refresh,'latest_commit_updates',return_value=({},[])), \
+                 patch.object(refresh,'update_latest_commits'), \
                  patch.object(refresh,'live_lock',return_value=None), \
                  patch.object(refresh,'read_lock',return_value=lock):
                 refresh.main()

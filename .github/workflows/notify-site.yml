@@ -12,6 +12,9 @@ on:
       producer_workflow:
         type: string
         required: true
+      report_format:
+        type: string
+        default: report-v1
       site_repository:
         type: string
         required: true
@@ -35,6 +38,7 @@ jobs:
           PRODUCER_BRANCH: ${{ inputs.producer_branch }}
           PRODUCER_WORKFLOW: ${{ inputs.producer_workflow }}
           SITE_REPOSITORY: ${{ inputs.site_repository }}
+          REPORT_FORMAT: ${{ inputs.report_format }}
         run: |
           python3 - <<'PY'
           """Embedded into the pinned notifier workflow; never check out producer code."""
@@ -44,17 +48,18 @@ jobs:
           import re
 
 
-          def notification(event, project, repository, branch, workflow, site):
+          def notification(event, project, repository, branch, workflow, site, report_format="report-v1"):
               if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*',project):
                   raise ValueError('Invalid project slug')
               if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+',site):
                   raise ValueError('Invalid site repository')
+              if report_format not in ('report-v1','report-v2'):raise ValueError('Unknown report format')
               run=event.get('workflow_run',{})
               if not (event.get('action')=='completed' and event.get('repository',{}).get('full_name')==repository
                       and run.get('head_repository',{}).get('full_name')==repository
                       and run.get('head_branch')==branch and run.get('path')==workflow
                       and run.get('event') in ('push','workflow_dispatch')
-                      and run.get('status')=='completed' and run.get('conclusion')=='success'
+                      and run.get('status')=='completed' and run.get('conclusion') in (('success','failure') if report_format=='report-v2' else ('success',))
                       and type(run.get('id')) is int and 0<run['id']<2**63):
                   raise ValueError('Only the registered successful same-repository main workflow may notify')
               return {'event_type':'producer-report-ready','client_payload':{
@@ -64,7 +69,7 @@ jobs:
           def main():
               payload=notification(json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text()),
                   os.environ['PROJECT'],os.environ['GITHUB_REPOSITORY'],os.environ['PRODUCER_BRANCH'],
-                  os.environ['PRODUCER_WORKFLOW'],os.environ['SITE_REPOSITORY'])
+                  os.environ['PRODUCER_WORKFLOW'],os.environ['SITE_REPOSITORY'],os.environ.get('REPORT_FORMAT','report-v1'))
               path=Path(os.environ['RUNNER_TEMP'])/'report-notification.json'
               path.write_text(json.dumps(payload))
               with open(os.environ['GITHUB_OUTPUT'],'a') as output:

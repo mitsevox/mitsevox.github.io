@@ -1,5 +1,7 @@
 # Public report contract v1
 
+For explicit game IDs/disc revisions, use [report-v2](contract-v2.md). Report-v1 remains supported unchanged; its closed target object must not gain revision fields.
+
 The shared manifest and project configuration define the integration boundary. Each producer and consumer adapter validates its own payload format against these semantics. Use the [project integration template](onboarding.md) and [website chapter](../../wiki/website-integration/) when applying the contract.
 
 The [platform interface](platform.md) implements this contract for registered owner repositories. It provides common packaging, import, validation, storage and rendering; producer-specific fields are normalized into typed report-v1 assets.
