@@ -41,7 +41,7 @@ runs:
   steps:
     - name: Split data repository name
       id: repo
-      shell: bash
+      shell: sh
       env:
         DATA_REPOSITORY: ${{ inputs.data-repository }}
       run: |
@@ -57,7 +57,7 @@ runs:
         repositories: ${{ steps.repo.outputs.name }}
         permission-contents: write
     - name: Publish
-      shell: bash
+      shell: sh
       env:
         DATA_TOKEN: ${{ steps.token.outputs.token }}
         TARGET: ${{ inputs.target }}
