@@ -75,5 +75,26 @@ Git blob at the pinned producer revision and adds it to the previously approved
 list. All other schema, identity, successful-package and review checks are the
 same. A template must omit that field; a complete policy must declare its own
 approved blobs. Template mode is an optional adoption aid, outside the starter
-checklist. Prefer a complete tracked policy for a new repository.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/starter-kit/"><small>Previous</small><span>Starter kit</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#map-existing-responsibilities">Map existing responsibilities</a><a href="#adopt-policy-without-overriding-authority">Adopt policy without overriding authority</a><a href="#branch-and-trigger-conventions">Branch and trigger conventions</a><a href="#recovering-past-credit">Recovering past credit</a><a href="#import-legacy-history">Import legacy history</a><a href="#adoption-acceptance">Adoption acceptance</a><a href="#changing-an-accepted-report-format">Changing an accepted report format</a><a href="#tracked-policy-sources">Tracked policy sources</a></nav></aside></main>
+checklist. Prefer a complete tracked policy for a new repository.</p>
+<h2 id="explicit-target-adoption">Explicit target adoption</h2>
+<p>This optional migration is unnecessary for a working single-target report-v1 producer. Agree
+on the new consumer contract before renaming directories or emitted identities.</p>
+<ol>
+<li>Deploy report-v2 consumer support while the existing producer still emits v1.</li>
+<li>Register the exact old target object (<code>id</code>, <code>console</code>, executable <code>sha1</code>) in the canonical
+   target's <code>legacyTargets</code>. Keep its old policy in that target's <code>archives</code> and preserve every
+   original package byte, receipt, checksum and timeline row. The site adopts the pointer only
+   through this explicit same-binary alias. It never guesses a revision from a game ID.</li>
+<li>Migrate producer/private-original paths and generated outputs, approve the pinned environment,
+   implement target-specific CI, and pin a reviewed v2 packager. Coordinate required-check names
+   with the owner. Preserve existing compiler profiles and measurement methodology when their
+   meaning has not changed. Known targets without validated builds remain archived metadata.</li>
+<li>Review the new policy and workflow blob for each publishing target. Produce and authenticate
+   a real main package, compare old/new totals and geometry, and prove history retention with
+   zero lost/changed rows. Switch that producer to report-v2 only after these checks pass.</li>
+<li>Update policy-sync source paths and completion notifier pins/format. Keep single-target
+   projects on their existing wire contract. Do not retain duplicate legacy build/report pipelines.</li>
+</ol>
+<p>Legacy rows remain records of their original execution. Function identifiers in newly generated
+v2 reports use the explicit target ID; never rewrite already accepted v1 packages to update IDs.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/starter-kit/"><small>Previous</small><span>Starter kit</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#map-existing-responsibilities">Map existing responsibilities</a><a href="#adopt-policy-without-overriding-authority">Adopt policy without overriding authority</a><a href="#branch-and-trigger-conventions">Branch and trigger conventions</a><a href="#recovering-past-credit">Recovering past credit</a><a href="#import-legacy-history">Import legacy history</a><a href="#adoption-acceptance">Adoption acceptance</a><a href="#changing-an-accepted-report-format">Changing an accepted report format</a><a href="#tracked-policy-sources">Tracked policy sources</a><a href="#explicit-target-adoption">Explicit target adoption</a></nav></aside></main>

@@ -54,3 +54,11 @@ Deliver the changes with commands, tested revisions, artifacts, capability setti
 | Website | Shared presentation, configured modules, direct route, deployment and subsequent refresh |
 
 The [integration checklist](/docs/reporting/onboarding.md) repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.
+
+## Explicit-target overlay
+
+The starter download includes `optional-targets/`: editable target/CI-dependency registries, a
+changed-path planner, a target matrix workflow and exact adapter operations. Use it when starting
+a revision-aware project. It preserves shared source and separates originals, generated outputs,
+reports and histories by canonical target ID. Its README names every operation an agent must
+implement; it contains no fake-success build adapter. Single-target v1 integrations need no change.

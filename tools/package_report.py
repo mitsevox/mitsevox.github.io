@@ -16,7 +16,9 @@ def package(source,metadata,policy,output):
     source,output=Path(source),Path(output)
     require(not output.exists(),'Package output must be new')
     require(SLUG.fullmatch(metadata['project']),'Invalid project slug')
-    schema(policy,'producer-v1.schema.json')
+    version=policy.get('schemaVersion')
+    require(type(version) is int and version in (1,2),'Unsupported producer version')
+    schema(policy,'producer-v'+str(version)+'.schema.json')
     require(metadata['repository']==policy['repository'] and metadata['target']==policy['target'],'Producer identity differs')
     allowed={'summary.json',*INPUTS.values()}
     require({p.name for p in source.iterdir()}<=allowed and (source/'summary.json').exists()
@@ -27,15 +29,15 @@ def package(source,metadata,policy,output):
                  if name in payloads else {'status':'unsupported','reason':'Not supplied by this producer.'})
             for key,name in INPUTS.items()}
     identity={k:metadata[k] for k in ('repository','target','revision','tree','methodology','generation','measuredAt','publishedAt')}
-    receipt={'schemaVersion':1,**identity,'mode':metadata.get('mode','full'),'source':metadata.get('source'),**{k:metadata[k] for k in ('runId','attempt','workflowBlob')},
+    receipt={'schemaVersion':version,**identity,'mode':metadata.get('mode','full'),'source':metadata.get('source'),**{k:metadata[k] for k in ('runId','attempt','workflowBlob')},
              'files':{name:digest(raw) for name,raw in payloads.items()}}
     payloads['receipt.json']=encoded(receipt)
-    manifest={'schemaVersion':1,'origin':'measured','project':metadata['project'],**identity,'tools':metadata['tools'],
+    manifest={'schemaVersion':version,'origin':'measured','project':metadata['project'],**identity,'tools':metadata['tools'],
               'validation':{'mode':receipt['mode'],'runId':metadata['runId'],'attempt':metadata['attempt'],
                             'workflowRevision':metadata['revision'],
-                            'receipt':{'path':'receipt.json','schema':'execution-v1','sha256':digest(payloads['receipt.json'])}},
+                            'receipt':{'path':'receipt.json','schema':'execution-v'+str(version),'sha256':digest(payloads['receipt.json'])}},
               'summary':summary,'modules':assets}
-    schema(manifest,'report-v1.schema.json');payloads['manifest.json']=encoded(manifest)
+    schema(manifest,'report-v'+str(version)+'.schema.json');payloads['manifest.json']=encoded(manifest)
     output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.report-',dir=output.parent) as temp:
         stage=Path(temp)

@@ -229,3 +229,17 @@ variables/secrets, five-minute fallback and recovery behavior are documented in
 [Producer policy sync](/docs/reporting/policy-sync.md#prompt-report-refresh).
 These are optional delivery automation; the report contract and manual import
 remain the same. Keep the notifier separate from the approved report workflow.
+
+## Multiple game IDs and revisions
+
+Use [report-v2](/docs/reporting/contract-v2.md) when a game has multiple executable targets, or
+when starting a project with explicit revision identities. Keep one game slug/artwork entry and
+publish an independent package, policy and history per target. `config/targets.json` separates
+known/archived identities from verified build/report support. The site selects game ID/region
+and disc revision without combining their numbers. An archived target without a report has no
+fabricated progress.
+
+The versioned schemas, exact registry/registration examples, target-scoped authentication,
+optional capabilities, immutable storage layout and rollout order are specified in that contract.
+Report-v1 single-target producers keep working unchanged. Declare the report format explicitly;
+do not insert new target fields into a v1 object.

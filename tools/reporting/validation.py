@@ -61,7 +61,9 @@ def validate_package(directory, root=ROOT):
     directory = Path(directory)
     require(not directory.is_symlink() and directory.is_dir(), 'Unsafe package directory')
     manifest = decode((directory/'manifest.json').read_bytes())
-    schema(manifest, 'report-v1.schema.json')
+    version=manifest.get('schemaVersion')
+    require(type(version) is int and version in (1,2),'Unsupported report version')
+    schema(manifest, 'report-v'+str(version)+'.schema.json')
     ref=manifest['validation']['receipt']
     receipt_path=directory/'receipt.json'
     require(ref['path']=='receipt.json' and receipt_path.is_file() and not receipt_path.is_symlink(), 'Unsafe receipt reference')

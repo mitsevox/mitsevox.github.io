@@ -10,6 +10,7 @@ import tempfile
 from reporting.validation import ROOT, decode, digest, encoded, require, validate_package
 from reporting.github import GitHub
 from reporting.registry import producer, registrations, site_config, snapshot_path, snapshot_directory
+from reporting.targets import entries, selected, normalize_lock, default_target, validate_selection
 from reporting.state import LOCK, read_lock, check_update, install
 
 BRANCH = 'report-data'
@@ -33,20 +34,22 @@ def remote_head(root):
 
 def stored_lock(root, head):
     lock=decode(git(root,'show',head+':'+LOCK))
-    require(set(lock)=={'schemaVersion','projects'} and lock['schemaVersion']==1
+    require(set(lock)=={'schemaVersion','projects'} and type(lock['schemaVersion']) is int and lock['schemaVersion'] in (1,2)
             and isinstance(lock['projects'],dict), 'Invalid store contract')
-    for slug,entry in lock['projects'].items():
-        producer(root,slug)  # Older source cannot erase a newly registered project.
-        snapshot_path(slug,entry)
+    normalize_lock(root,lock,lambda entry:git(root,'show',head+':'+entry['path']+'/manifest.json'))
+    for slug,target,entry in entries(lock):
+        producer(root,slug,target)  # Older source cannot erase a newly registered project.
+        snapshot_path(slug,entry,target)
     return lock
 
 
-def stored_package(root, head, slug=None):
+def stored_package(root, head, slug=None,target=None):
     lock=stored_lock(root,head)
     if slug is None:
         require(len(lock['projects'])==1,'Select a project in a multi-project store')
         slug=next(iter(lock['projects']))
-    entry=lock['projects'][slug];path=snapshot_path(slug,entry)
+    target=target or default_target(root,slug)
+    entry=selected(lock,slug,target);require(entry is not None,'Missing stored target');path=snapshot_path(slug,entry,target)
     rows=git(root,'ls-tree','-r',head,'--',path).decode().splitlines()
     require(3<=len(rows)<=20,'Unexpected stored payload count')
     payloads={};total=0
@@ -61,7 +64,7 @@ def stored_package(root, head, slug=None):
     with tempfile.TemporaryDirectory() as temp:
         for name,raw in payloads.items():(Path(temp)/name).write_bytes(raw)
         manifest,_,activity=validate_package(temp,root)
-    require(manifest['project']==slug and manifest['revision']==entry['revision'],'Stored identity differs')
+    validate_selection(root,slug,target,entry,manifest)
     return entry,manifest,activity,payloads
 
 
@@ -71,19 +74,19 @@ def restore(root):
         print('No report store yet; using the reviewed bootstrap packages.')
         return
     stored=stored_lock(root,head)
-    for slug in stored['projects']:
-        entry,manifest,activity,payloads=stored_package(root,head,slug)
-        api=GitHub(producer(root,slug)['repository'])
-        local_entry=read_lock(root)['projects'].get(slug)
+    for slug,target,_ in entries(stored):
+        entry,manifest,activity,payloads=stored_package(root,head,slug,target)
+        api=GitHub(producer(root,slug,target)['repository'])
+        local_entry=selected(read_lock(root),slug,target)
         if local_entry:
-            directory=snapshot_directory(root,slug,local_entry)
+            directory=snapshot_directory(root,slug,local_entry,target)
             require(digest((directory/'manifest.json').read_bytes())==local_entry['manifestSha256'],'Local manifest differs')
             local,_,local_activity=validate_package(directory,root)
-            require(local['revision']==local_entry['revision'],'Local revision differs')
+            validate_selection(root,slug,target,local_entry,local)
             if local['revision']!=manifest['revision']:
                 relation=api.get(f"compare/{manifest['revision']}...{local['revision']}")['status']
                 if relation=='ahead':
-                    check_update(manifest,local,activity,local_activity,relation)
+                    check_update(manifest,local,activity,local_activity,relation,root)
                     print('Retaining newer reviewed local package:',slug)
                     continue
                 require(relation=='behind','Local and stored reports diverge')
@@ -106,24 +109,25 @@ def require_current_main(root):
 
 def publish(root, site):
     source_revision = require_current_main(root)
-    lock=read_lock(site)
+    lock=read_lock(site,root)
     require(lock['projects'],'No reports to publish')
     parent=remote_head(root)
     old_lock=stored_lock(root,parent) if parent else {'projects':{}}
-    require(set(old_lock['projects'])<=set(lock['projects']),'Publication would erase a stored project')
+    require({(s,t) for s,t,_ in entries(old_lock)}<={(s,t) for s,t,_ in entries(lock)},'Publication would erase a stored project or target')
     files={LOCK:encoded(lock)}
-    for slug,entry in lock['projects'].items():
-        policy=producer(root,slug);directory=snapshot_directory(site,slug,entry)
+    for slug,target,entry in entries(lock):
+        policy=producer(root,slug,target);directory=snapshot_directory(site,slug,entry,target)
         freeze=policy.get('freeze')
         require(freeze is None or all(entry.get(k)==v for k,v in freeze.items()),'Publication would advance a frozen producer')
         manifest,_,activity=validate_package(directory,root)
         require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256']
                 and manifest['project']==slug and manifest['revision']==entry['revision'],'Publication lock differs')
-        if slug in old_lock['projects']:
-            _,old,old_activity,_=stored_package(root,parent,slug)
+        validate_selection(root,slug,target,entry,manifest)
+        if selected(old_lock,slug,target):
+            _,old,old_activity,_=stored_package(root,parent,slug,target)
             relation='identical' if old['revision']==manifest['revision'] else GitHub(policy['repository']).get(
                 f"compare/{old['revision']}...{manifest['revision']}")['status']
-            check_update(old,manifest,old_activity,activity,relation)
+            check_update(old,manifest,old_activity,activity,relation,root)
         files.update({entry['path']+'/'+p.name:p.read_bytes() for p in directory.iterdir()})
     with tempfile.TemporaryDirectory() as temp:
         env = {**os.environ, 'GIT_INDEX_FILE':str(Path(temp)/'index'),

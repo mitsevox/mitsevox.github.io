@@ -7,20 +7,27 @@ import tempfile
 from urllib.parse import quote
 
 from reporting.validation import ROOT, decode, digest, require, schema, validate_package, timestamp
-from reporting.registry import producer, registrations, snapshot_path, snapshot_directory
+from reporting.registry import producer, producers, registrations, snapshot_path, snapshot_directory
 from reporting.github import GitHub, artifact_bytes, select_artifact, zip_members
+from reporting.targets import selected as selected_entry, default_target
 from reporting.state import read_lock, accepted_package, frozen_snapshot, install, latest_commit
 
 
 def authenticate(policy,run,jobs,blob,candidate=False):
     require(run['repository']['full_name']==policy['repository'] and run['head_repository']['full_name']==policy['repository']
             and run['path']==policy['workflow'] and (candidate or run['head_branch']==policy['branch'])
-            and run['event'] in (('push','workflow_dispatch','pull_request') if candidate else ('push','workflow_dispatch')) and run['status']=='completed' and run['conclusion']=='success',
+            and run['event'] in (('push','workflow_dispatch','pull_request') if candidate else ('push','workflow_dispatch')) and run['status']=='completed'
+            and run['conclusion'] in (('success','failure') if policy.get('schemaVersion')==2 else ('success',)),
             'Run is not an eligible registered publication')
     require(blob in policy['workflowBlobs'],'Producer workflow changed; review its policy')
     selected=[j for j in jobs if j['name']==policy['job']]
     require(len(selected)==1,'Missing or ambiguous producer job');job=selected[0]
     require(job['conclusion']=='success' and job['run_attempt']==run['run_attempt'] and job['head_sha']==run['head_sha'],'Wrong producer job/attempt')
+    for name in policy.get('requiredJobs',[]):
+        matches=[j for j in jobs if j['name']==name]
+        require(len(matches)==1 and matches[0]['conclusion']=='success'
+                and matches[0]['run_attempt']==run['run_attempt'] and matches[0]['head_sha']==run['head_sha'],
+                'Missing successful shared prerequisite: '+name)
     for name in policy['requiredSteps']:
         require(sum(s['name']==name and s['conclusion']=='success' for s in job['steps'])==1,'Missing producer validation step: '+name)
     return job
@@ -92,31 +99,51 @@ def verify_reuse(root,api,policy,manifest,receipt,trusted_proof=None):
     return captured
 
 
-def refresh(root,slug,run_id=None):
-    root=Path(root);policy=producer(root,slug)
+def publication_run(api,policy):
+    """Newest target artifact; skipped/failed targets cannot hide a prior success."""
+    workflow=quote(policy['workflow'].rsplit('/',1)[1],safe='')
+    query=f"actions/workflows/{workflow}/runs?branch={quote(policy['branch'],safe='')}&status="
+    if policy['schemaVersion']==1:
+        rows=api.get(query+'success&per_page=10')['workflow_runs']
+        run=next((r for r in rows if r['event'] in ('push','workflow_dispatch') and r['conclusion']=='success'),None)
+        require(run is not None,'No successful producer publication')
+        return run
+    # A target may be untouched for many repository commits. Paginate the bounded
+    # completed run history rather than assuming the latest global run produced it.
+    for run in api.iter_pages(query+'completed','workflow_runs'):
+        if run['event'] not in ('push','workflow_dispatch') or run['conclusion'] not in ('success','failure'):continue
+        artifacts=api.pages(f"actions/runs/{run['id']}/artifacts",'artifacts')
+        if not any(a['name']==policy['artifact'] for a in artifacts):continue
+        jobs=api.pages(f"actions/runs/{run['id']}/attempts/{run['run_attempt']}/jobs",'jobs')
+        matches=[j for j in jobs if j['name']==policy['job'] and j['conclusion']=='success']
+        if len(matches)!=1:continue
+        return run
+    raise ValueError('No successful target publication within retained workflow runs')
+
+
+def refresh(root,slug,run_id=None,target=None):
+
+    root=Path(root);target=target or default_target(root,slug);policy=producer(root,slug,target)
     require(run_id is None or type(run_id) is int and run_id>0,'Run ID must be a positive integer')
-    frozen=frozen_snapshot(root,slug)
+    frozen=frozen_snapshot(root,slug,target)
     if frozen is not None:
         require(run_id is None,'Explicit producer import is frozen')
         return frozen
-    require(policy['format']=='report-v1','Legacy import is archived; only stored snapshots may be read')
+    require(policy['format'] in ('report-v1','report-v2'),'Legacy import is archived; only stored snapshots may be read')
     api=GitHub(policy['repository'])
-    if run_id is None:
-        workflow=policy['workflow'].rsplit('/',1)[1]
-        runs=api.get(f"actions/workflows/{workflow}/runs?branch={quote(policy['branch'],safe='')}&status=success&per_page=10")['workflow_runs']
-        require(runs,'No successful producer publication');run_id=runs[0]['id']
+    if run_id is None:run_id=publication_run(api,policy)['id']
     run=api.get(f'actions/runs/{run_id}')
     jobs=api.pages(f"actions/runs/{run_id}/attempts/{run['run_attempt']}/jobs",'jobs')
     blob=api.get(f"contents/{policy['workflow']}?ref={run['head_sha']}")['sha']
     job=authenticate(policy,run,jobs,blob)
     require(api.get(f"compare/{run['head_sha']}...{quote(policy['branch'],safe='')}")['status'] in ('ahead','identical'),'Measured revision is no longer eligible')
-    entry=read_lock(root)['projects'].get(slug);payloads=None;cached=False
+    entry=selected_entry(read_lock(root),slug,target);payloads=None;cached=False
     if entry:
-        directory=snapshot_directory(root,slug,entry)
+        directory=snapshot_directory(root,slug,entry,target)
         require(digest((directory/'manifest.json').read_bytes())==entry['manifestSha256'],'Cached manifest differs')
         manifest,_,_=validate_package(directory,root)
         if (manifest['validation']['runId']==run_id and manifest['validation']['attempt']==run['run_attempt']
-                and manifest['revision']==run['head_sha'] and accepted_package(root,slug,entry)):
+                and manifest['revision']==run['head_sha'] and accepted_package(root,slug,entry,target)):
             payloads={p.name:p.read_bytes() for p in directory.iterdir()};cached=True
     if payloads is None:
         artifacts=api.pages(f'actions/runs/{run_id}/artifacts','artifacts')
@@ -126,7 +153,7 @@ def refresh(root,slug,run_id=None):
             directory=Path(temp)
             for name,raw in payloads.items():(directory/name).write_bytes(raw)
             manifest,_,_=validate_package(directory,root)
-    require(manifest['validation']['receipt']['schema']=='execution-v1','Report differs from active producer format')
+    require(manifest['validation']['receipt']['schema']=='execution-v'+str(policy['schemaVersion']),'Report differs from active producer format')
     require(manifest['tools']==policy['tools'] and manifest['target']==policy['target']
             and manifest['repository']==policy['repository'],'Report differs from active producer identity/tools')
     require(manifest['revision']==run['head_sha'] and manifest['validation']['runId']==run_id
@@ -140,7 +167,7 @@ def refresh(root,slug,run_id=None):
     source_proof=entry.get('sourceProof') if cached and entry else None
     if manifest['validation']['mode']=='reused' and not cached:
         trusted=None
-        if entry and (entry.get('sourceProofs') or entry.get('sourceProof')) and accepted_package(root,slug,entry):
+        if entry and (entry.get('sourceProofs') or entry.get('sourceProof')) and accepted_package(root,slug,entry,target):
             trusted=entry.get('sourceProofs',{}).get(receipt['source']['artifactSha256'],entry.get('sourceProof'))
         source_proof=verify_reuse(root,api,policy,manifest,receipt,trusted)
     destination=install(root,api,manifest,payloads,latest_commit(api,policy['branch']),source_proof=source_proof)
@@ -150,10 +177,10 @@ def refresh(root,slug,run_id=None):
 
 def refresh_all(root):
     failures=[]
-    for slug in registrations(root):
-        try:refresh(root,slug)
+    for slug,target,policy in producers(root):
+        try:refresh(root,slug,target=target)
         except Exception as error:
-            failures.append(slug);print(f'{slug}: refresh failed: {error}',file=sys.stderr)
+            failures.append(slug+('/'+target if target else ''));print(f'{slug}: refresh failed: {error}',file=sys.stderr)
     return failures
 
 
@@ -162,8 +189,15 @@ if __name__=='__main__':
     choice=parser.add_mutually_exclusive_group(required=True)
     choice.add_argument('--project');choice.add_argument('--all',action='store_true')
     parser.add_argument('--run',type=int)
+    parser.add_argument('--allow-target-failures',action='store_true',help='Retain last-good v2 targets on refresh failure; static assembly still requires a validated default')
+    parser.add_argument('--target',help='Explicit target ID for a report-v2 producer')
     args=parser.parse_args()
     if args.all:
-        if args.run is not None:parser.error('--run requires --project')
-        sys.exit(bool(refresh_all(ROOT)))
-    refresh(ROOT,args.project,args.run)
+        if args.run is not None or args.target is not None:parser.error('--run/--target require --project')
+        failures=refresh_all(ROOT)
+        if args.allow_target_failures:
+            for key in failures:
+                if '/' in key:print('::warning::Target refresh retained last-good state: '+key)
+            failures=[key for key in failures if '/' not in key]
+        sys.exit(bool(failures))
+    refresh(ROOT,args.project,args.run,args.target)

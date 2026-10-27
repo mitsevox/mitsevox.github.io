@@ -1,3 +1,4 @@
+import {selectTarget} from './targets.js';
 import {projects} from './projects.js';
 import {createHeader,createFooter} from './shell.js?v=3';
 import {mountHub} from './hub.js';
@@ -25,7 +26,7 @@ function route(url){
   const wiki=path.match(/^\/wiki\/([a-z0-9-]+)$/);
   if(wiki&&wikiChapters.includes(wiki[1]))return {project:null,wiki:wiki[1]};
   const project=projects.find(p=>p.href.replace(/\/$/,'')===path);
-  return project?{project}:null;
+  return project?{project:selectTarget(project,url)}:null;
 }
 function template(name){
   // Keep chapter HTML in the same immutable release as its scripts and styles.
@@ -45,7 +46,7 @@ function restorePosition(url,scrollY,{smooth=false}={}){
 }
 function templateFor(match){return match.wiki?(match.wiki==='start-here'?'/wiki/content.html':'/wiki/'+match.wiki+'/content.html'):match.project?'game':'hub';}
 async function navigate(url,{push=false,scrollY=0,focus=false}={}){
-  const match=route(url);if(!match)return;
+  let match;try{match=route(url);}catch(error){console.error(error);return;}if(!match)return;
   const version=++generation;
   navigationLabel.textContent='Loading '+(match.wiki?'wiki':match.project?.title||'projects');navigationStatus.hidden=false;content.setAttribute('aria-busy','true');
   try{
@@ -69,13 +70,14 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
       const optional = {functionCounts:'[data-stats="function"]',fileCounts:'[data-stats="file"]',timeline:'.history-section',contributors:'.people-section'};
       for(const [key,selector] of Object.entries(optional))if(project.modules?.[key]===false)main.querySelector(selector)?.remove();
       if(!main.querySelector('.function-stats'))main.querySelector('.stats-grid').remove();
+      if(project.available===false){for(const section of main.querySelectorAll('section,.stats-grid'))section.remove();}
 
     }else delete document.body.dataset.project;
     if(wikiController){wikiController.update(main);main=wikiController.main;content.querySelector('.route-error')?.remove();}
     else content.replaceChildren(main);
     header.update(project,{wiki:!!match.wiki});footer.update(project);
     document.title=match.wiki?main.querySelector('h1').textContent+' · Wiki · mitsevox':project?project.title+' · mitsevox':'mitsevox · Decompilations';
-    if(project)controllers=[mountIdentity(main,project),mountProgress(main,project,footer.buildLink),mountActivity(main,project)];
+    if(project)controllers=project.available===false?[mountIdentity(main,project)]:[mountIdentity(main,project),mountProgress(main,project,footer.buildLink),mountActivity(main,project)];
     else controllers=[wikiController||(match.wiki?mountWiki(main):mountHub(main))];
     navigationStatus.hidden=true;content.removeAttribute('aria-busy');
     if(focus&&focusedInContent)main.focus({preventScroll:true});
@@ -113,7 +115,7 @@ document.addEventListener('click',event=>{
   if(!link||link.hasAttribute('download')||(link.target&&link.target!=='_self'))return;
   const url=new URL(link.href);
   if(url.origin!==location.origin||!route(url))return;
-  if(url.pathname===location.pathname&&url.hash){
+  if(url.pathname===location.pathname&&url.search===location.search&&url.hash){
     if(route(url).wiki){
       let id;try{id=decodeURIComponent(url.hash.slice(1));}catch{return;}
       if(!document.getElementById(id))return;
@@ -129,7 +131,7 @@ document.addEventListener('click',event=>{
 });
 window.addEventListener('popstate',event=>{
   const url=new URL(location.href);
-  if(displayedURL&&new URL(displayedURL).pathname===url.pathname){++generation;navigationStatus.hidden=true;content.removeAttribute('aria-busy');displayedURL=url.href;restoring=false;restorePosition(url,event.state?.scrollY||0,{smooth:!!route(url)?.wiki});return;}
+  if(displayedURL&&new URL(displayedURL).pathname===url.pathname&&new URL(displayedURL).search===url.search){++generation;navigationStatus.hidden=true;content.removeAttribute('aria-busy');displayedURL=url.href;restoring=false;restorePosition(url,event.state?.scrollY||0,{smooth:!!route(url)?.wiki});return;}
   navigate(url,{scrollY:event.state?.scrollY||0,focus:true});
 });
 navigate(new URL(location.href),{scrollY:history.state?.scrollY||0});

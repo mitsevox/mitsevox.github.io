@@ -57,7 +57,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           uv run --locked python tools/report_store.py restore
-          uv run --locked python tools/import_reports.py --all
+          uv run --locked python tools/import_reports.py --all --allow-target-failures
       - name: Assemble verified static output
         run: uv run --locked python tools/build_site.py
       - name: Preserve validated site candidate

@@ -1,0 +1,134 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "defaultTarget": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+              },
+              "platform": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "gameId": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+              },
+              "region": {
+                "type": "string",
+                "minLength": 1
+              },
+              "discRevision": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 255
+              },
+              "sha1": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$"
+              }
+            },
+            "required": [
+              "id",
+              "platform",
+              "gameId",
+              "region",
+              "discRevision",
+              "sha1"
+            ]
+          },
+          "status": {
+            "enum": [
+              "active",
+              "archived"
+            ]
+          },
+          "support": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "build": {
+                "type": "boolean"
+              },
+              "reportFormats": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "report-v1",
+                    "report-v2"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "build",
+              "reportFormats"
+            ]
+          },
+          "legacyTargets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "console": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "sha1": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$"
+                }
+              },
+              "required": [
+                "id",
+                "console",
+                "sha1"
+              ]
+            }
+          }
+        },
+        "required": [
+          "target",
+          "status",
+          "support",
+          "legacyTargets"
+        ]
+      },
+      "minItems": 1
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "project",
+    "defaultTarget",
+    "targets"
+  ]
+}

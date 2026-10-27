@@ -258,6 +258,15 @@ The separators are tabs. Addresses are hexadecimal and end-exclusive. Use `-` wh
 
 The project’s `config/README.md` defines the vocabulary, allowed claim types and validation rules. Version that schema and provide a validator before CI relies on it.
 
+## Explicit target layout
+
+For revision-aware projects, place the registry at `config/targets.json` and target-specific
+configuration at `config/<targetId>/`. Use the same ID for private `orig/<targetId>/` and generated
+`build/<targetId>/` directories. Keep reusable source in the shared source tree; isolate actual
+revision differences without duplicating the entire codebase. Git commit `revision` remains
+separate from a disc's numeric `discRevision`. The
+[report-v2 contract](/docs/reporting/contract-v2.md) gives exact schemas and CI/storage rules.
+
 
 ---
 
@@ -661,6 +670,20 @@ The website side must reject unapproved workflow blobs, wrong run attempts, miss
 
 For a UI rollback, revert reviewed site source while retaining current accepted measurement history. For a producer failure, fix the failing layer; do not weaken checks, reset history or change private dependency access to get green.
 
+## Multiple targets
+
+Plan an explicit matrix from changed paths and a reviewed dependency map. A target-only config
+change validates that target; shared source, headers and toolchain inputs validate their actual
+dependents. Include deleted/renamed paths and conservatively validate all buildable targets for
+unknown inputs. An archived revision without build support is not a zero-percent build target.
+
+Use independent target jobs with `fail-fast: false`, isolated `build/<targetId>/` outputs and
+unique report artifacts. Each job verifies its whole executable before measuring and packaging.
+A stable aggregate check blocks a PR if a required target fails. A successful target on main may
+publish despite a failed sibling, after its shared prerequisite checks pass. See the complete
+[report-v2 CI contract](/docs/reporting/contract-v2.md#target-scoped-ci-and-repository-layout).
+Caches remain optional and must bind target ID/hash as well as actual inputs.
+
 
 ---
 
@@ -1062,6 +1085,20 @@ variables/secrets, five-minute fallback and recovery behavior are documented in
 These are optional delivery automation; the report contract and manual import
 remain the same. Keep the notifier separate from the approved report workflow.
 
+## Multiple game IDs and revisions
+
+Use [report-v2](/docs/reporting/contract-v2.md) when a game has multiple executable targets, or
+when starting a project with explicit revision identities. Keep one game slug/artwork entry and
+publish an independent package, policy and history per target. `config/targets.json` separates
+known/archived identities from verified build/report support. The site selects game ID/region
+and disc revision without combining their numbers. An archived target without a report has no
+fabricated progress.
+
+The versioned schemas, exact registry/registration examples, target-scoped authentication,
+optional capabilities, immutable storage layout and rollout order are specified in that contract.
+Report-v1 single-target producers keep working unchanged. Declare the report format explicitly;
+do not insert new target fields into a v1 object.
+
 
 ---
 
@@ -1171,6 +1208,14 @@ Deliver the changes with commands, tested revisions, artifacts, capability setti
 
 The [integration checklist](/docs/reporting/onboarding.md) repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.
 
+## Explicit-target overlay
+
+The starter download includes `optional-targets/`: editable target/CI-dependency registries, a
+changed-path planner, a target matrix workflow and exact adapter operations. Use it when starting
+a revision-aware project. It preserves shared source and separates originals, generated outputs,
+reports and histories by canonical target ID. Its README names every operation an agent must
+implement; it contains no fake-success build adapter. Single-target v1 integrations need no change.
+
 
 ---
 
@@ -1275,3 +1320,26 @@ list. All other schema, identity, successful-package and review checks are the
 same. A template must omit that field; a complete policy must declare its own
 approved blobs. Template mode is an optional adoption aid, outside the starter
 checklist. Prefer a complete tracked policy for a new repository.
+
+## Explicit target adoption
+
+This optional migration is unnecessary for a working single-target report-v1 producer. Agree
+on the new consumer contract before renaming directories or emitted identities.
+
+1. Deploy report-v2 consumer support while the existing producer still emits v1.
+2. Register the exact old target object (`id`, `console`, executable `sha1`) in the canonical
+   target's `legacyTargets`. Keep its old policy in that target's `archives` and preserve every
+   original package byte, receipt, checksum and timeline row. The site adopts the pointer only
+   through this explicit same-binary alias. It never guesses a revision from a game ID.
+3. Migrate producer/private-original paths and generated outputs, approve the pinned environment,
+   implement target-specific CI, and pin a reviewed v2 packager. Coordinate required-check names
+   with the owner. Preserve existing compiler profiles and measurement methodology when their
+   meaning has not changed. Known targets without validated builds remain archived metadata.
+4. Review the new policy and workflow blob for each publishing target. Produce and authenticate
+   a real main package, compare old/new totals and geometry, and prove history retention with
+   zero lost/changed rows. Switch that producer to report-v2 only after these checks pass.
+5. Update policy-sync source paths and completion notifier pins/format. Keep single-target
+   projects on their existing wire contract. Do not retain duplicate legacy build/report pipelines.
+
+Legacy rows remain records of their original execution. Function identifiers in newly generated
+v2 reports use the explicit target ID; never rewrite already accepted v1 packages to update IDs.

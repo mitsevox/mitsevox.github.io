@@ -8,7 +8,7 @@ function summaryView(project){
     return [kind,{total:m.totalBytes,linked:m.linkedBytes,matched:m.matchedBytes,
       ...(m.fuzzyEquivalentBytes===null?{}:{fuzzy:m.fuzzyEquivalentBytes})}];
   }));
-  return {schema:1,baseline:'verified',basis:'measured-bytes',target:report.target.id,
+  return {schema:1,baseline:'verified',basis:'measured-bytes',target:project.target,
     target_sha1:report.target.sha1,revision:report.revision,built_at:report.publishedAt,
     measures,functions:report.summary.functions,file_counts:report.summary.files};
 }
@@ -104,7 +104,7 @@ export async function fetchProgress(project,signal){
 export async function fetchActivity(project,signal){
   if(!project.report)return read(project.activityUrl,signal);
   const report=project.report,files=new Map();
-  const a={schema:1,revision:report.revision,target:report.target.id,target_sha1:report.target.sha1};
+  const a={schema:1,revision:report.revision,target:project.target,target_sha1:report.target.sha1};
   await Promise.all([['timeline','snapshots'],['contributors','contributors']].map(async ([module,field])=>{
     if(project.modules?.[module]===false)return;
     const asset=report.modules[module].asset;

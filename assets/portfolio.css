@@ -160,3 +160,15 @@ nav.project-menu.hub-popover { right:auto;top:calc(100% + 10px);transform-origin
   .identity-commit { flex-basis:auto;width:100%; }
   .game-identity + .progress { padding-top:24px; }
 }
+
+/* A game's revisions share identity and artwork, never measurement state. */
+.target-pickers { display:flex;flex-wrap:wrap;gap:8px; }
+.target-picker { position:relative; }
+.target-trigger { display:flex;align-items:center;gap:10px;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font:inherit;font-size:14px;cursor:pointer;transition:background .16s,border-color .16s; }
+.target-trigger:hover,.target-trigger[aria-expanded="true"] { background:#242b33;border-color:#616c78; }
+.target-trigger svg { width:16px;height:16px; }
+.target-menu.hub-popover { left:0;right:auto;transform-origin:top left;min-width:200px; }
+.target-menu .popover-option { color:var(--ink);text-decoration:none; }
+.target-menu [aria-checked="true"] { background:#303944; }
+.target-menu small { color:var(--muted);font-size:12px; }
+.target-unavailable { margin:12px 0 64px;color:var(--muted);font-size:15px; }

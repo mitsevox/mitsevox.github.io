@@ -1,0 +1,351 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": {
+      "const": 2
+    },
+    "origin": {
+      "enum": [
+        "measured",
+        "fixture"
+      ]
+    },
+    "project": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repository": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+        },
+        "platform": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "gameId": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$"
+        },
+        "region": {
+          "type": "string",
+          "minLength": 1
+        },
+        "discRevision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        },
+        "sha1": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{40}$"
+        }
+      },
+      "required": [
+        "id",
+        "platform",
+        "gameId",
+        "region",
+        "discRevision",
+        "sha1"
+      ]
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "tree": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "methodology": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "measuredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "identity": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name",
+          "identity"
+        ]
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "full",
+            "reused"
+          ]
+        },
+        "runId": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "workflowRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "receipt": {
+          "$ref": "#/$defs/asset"
+        }
+      },
+      "required": [
+        "mode",
+        "runId",
+        "attempt",
+        "workflowRevision",
+        "receipt"
+      ]
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/metrics"
+        },
+        "data": {
+          "$ref": "#/$defs/metrics"
+        },
+        "functions": {
+          "$ref": "#/$defs/counts"
+        },
+        "files": {
+          "$ref": "#/$defs/counts"
+        }
+      },
+      "required": [
+        "code",
+        "data",
+        "functions",
+        "files"
+      ]
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "map": {
+          "$ref": "#/$defs/module"
+        },
+        "timeline": {
+          "$ref": "#/$defs/module"
+        },
+        "contributors": {
+          "$ref": "#/$defs/module"
+        }
+      },
+      "required": [
+        "map",
+        "timeline",
+        "contributors"
+      ]
+    },
+    "publishedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "origin",
+    "project",
+    "repository",
+    "target",
+    "revision",
+    "tree",
+    "methodology",
+    "generation",
+    "measuredAt",
+    "tools",
+    "validation",
+    "summary",
+    "modules",
+    "publishedAt"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Public report manifest v1",
+  "$defs": {
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_-]+(?:/[a-zA-Z0-9_-]+)*\\.json$"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "path",
+        "sha256",
+        "schema"
+      ]
+    },
+    "module": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "const": "supported"
+            },
+            "asset": {
+              "$ref": "#/$defs/asset"
+            }
+          },
+          "required": [
+            "status",
+            "asset"
+          ]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "status": {
+              "const": "unsupported"
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "status",
+            "reason"
+          ]
+        }
+      ]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "totalBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "linkedBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "matchedBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fuzzyEquivalentBytes": {
+          "anyOf": [
+            {
+              "type": "number",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "totalBytes",
+        "linkedBytes",
+        "matchedBytes",
+        "fuzzyEquivalentBytes"
+      ]
+    },
+    "counts": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "exact": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "named": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "basis": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "total",
+            "exact",
+            "named",
+            "basis"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

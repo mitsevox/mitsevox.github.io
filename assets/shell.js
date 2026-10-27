@@ -52,7 +52,7 @@ export function createFooter(){
   node.innerHTML='<span>made by <a href="https://github.com/mitsevox">@mitsevox</a></span><span><a id="build-link"></a><span class="build-target"></span></span>';
   const buildLink=node.querySelector('#build-link'),target=node.querySelector('.build-target');
   function update(project){
-    buildLink.hidden=!project;
+    buildLink.hidden=!project||project.available===false;
     if(project){buildLink.href=project.repo;buildLink.textContent='Loading progress…';buildLink.removeAttribute('title');}
     target.textContent=project?' · '+project.target:'Decompilation projects';
   }

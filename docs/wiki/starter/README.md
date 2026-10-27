@@ -34,3 +34,8 @@ Document exact local commands for inputs, baseline, source build, inventory, com
 ledger-only preflight when enabled, export, tests and packaging. Record supported hosts and
 private reference setup so a fresh runner or agent does not depend on one developer's machine.
 Start with fresh validation; optional caches and publication reuse need separate acceptance.
+
+For explicit game IDs/disc revisions, use the editable `optional-targets/` overlay and bundled
+`reporting/contract-v2.md`. It includes registry/dependency examples, a target planner, matrix
+workflow and exact adapter operations. Use one validation workflow; the v1 template remains
+available for projects that only need their current single target.

@@ -20,15 +20,16 @@ class GitHub:
     def get(self, path):
         return decode(self.raw(path))
 
-    def pages(self, path, field=None):
-        rows = []
-        for page in range(1, 11):
-            result = self.get(path + ('&' if '?' in path else '?') + f'per_page=100&page={page}')
-            batch = result[field] if field else result
-            rows.extend(batch)
-            if len(batch) < 100:
-                return rows
+    def iter_pages(self,path,field=None):
+        for page in range(1,11):
+            result=self.get(path+('&' if '?' in path else '?')+f'per_page=100&page={page}')
+            batch=result[field] if field else result
+            yield from batch
+            if len(batch)<100:return
         raise ValueError('GitHub response exceeds pagination bound')
+
+    def pages(self,path,field=None):
+        return list(self.iter_pages(path,field))
 
 
 def artifact_bytes(api, artifact):
