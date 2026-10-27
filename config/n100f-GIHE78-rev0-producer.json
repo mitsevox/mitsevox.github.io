@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "repository": "mitsevox/n100f",
+  "target": {
+    "id": "GIHE78-rev0",
+    "platform": "gamecube",
+    "gameId": "GIHE78",
+    "region": "USA",
+    "discRevision": 0,
+    "sha1": "c77fb29d39b5898933e8ef4d1ccd2ddac404554e"
+  },
+  "workflow": ".github/workflows/validate.yml",
+  "branch": "main",
+  "workflowBlobs": [
+    "f63795faa13e21a5ec7f7ec9742c32b2fae07ecc"
+  ],
+  "artifact": "report-v2-GIHE78-rev0",
+  "job": "Validate GIHE78-rev0",
+  "requiredSteps": [
+    "Provide and verify target original",
+    "Build, verify complete executable and measure progress",
+    "Check ProDG wrapper against the driver",
+    "Export public report inputs",
+    "Package and validate public report",
+    "Upload public report"
+  ],
+  "lanes": {
+    "full": [
+      "Build, verify complete executable and measure progress"
+    ]
+  },
+  "tools": [
+    {
+      "name": "build-environment",
+      "identity": "ghcr.io/mitsevox/n100f-build@sha256:502c957567a21fd77283fad6d437ae3b6cf19856a8b456157040b6d36cb83773"
+    },
+    {
+      "name": "dtk",
+      "identity": "v1.8.3 + rom-copy-info patch sha256:09125d19ff103165c9dbd397543381a269b44eb84061c8418e1870555fb1adcf"
+    },
+    {
+      "name": "objdiff",
+      "identity": "v3.6.1"
+    }
+  ],
+  "requiredJobs": [
+    "Plan affected targets",
+    "Tool tests"
+  ]
+}

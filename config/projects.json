@@ -77,11 +77,10 @@
     }
   },
   {
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "slug": "n100f",
     "title": "Scooby-Doo! Night of 100 Frights",
     "repository": "mitsevox/n100f",
-    "target": "GIHE78",
     "modules": {
       "map": true,
       "functionCounts": true,
@@ -99,6 +98,7 @@
       "cover": "/assets/covers/n100f.webp",
       "width": 1112,
       "height": 1600
-    }
+    },
+    "targetRegistry": "n100f-targets.json"
   }
 ]
