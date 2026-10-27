@@ -86,7 +86,9 @@ def install(root,api,manifest,payloads,latest,source_proof=None,source_proofs=No
         lock=read_lock(root);slug=manifest['project']
         target=canonical_target(root,slug,manifest['target'])['id'] if registered_catalog(root,slug) else None
         parent=root/'data'/slug
-        if target:parent=parent/'targets'/target
+        # Historical v1 packages keep their original immutable public path.
+        # Only new v2 packages enter the target-scoped snapshot namespace.
+        if target and manifest['schemaVersion']==2:parent=parent/'targets'/target
         parent=parent/'snapshots'
         freeze=producer(root,slug,target).get('freeze')
         if freeze is not None:
