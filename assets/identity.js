@@ -11,10 +11,11 @@ export function mountIdentity(root,project){
   heading.append(title);
   if(!project.targetCatalog)heading.append(target);
   heading.insertAdjacentHTML('afterbegin',consoleIcon(project.console));
-  root.prepend(identity);identity.append(heading);
+  const headingRow=document.createElement('div');headingRow.className='game-heading-row';
+  root.prepend(identity);identity.append(headingRow);headingRow.append(heading);
   const commit=document.createElement('a');commit.className='identity-commit';commit.href=project.repo;
   commit.innerHTML='<svg class="commit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg><span class="commit-title">Loading latest commit…</span><time class="commit-time" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><span></span></time>';
-  const picker=mountTargetPicker(identity,project);
+  const picker=mountTargetPicker(headingRow,project);
   identity.append(commit);
   if(project.available===false){commit.remove();const message=document.createElement('p');message.className='target-unavailable';message.textContent=project.selectedTarget?.status==='archived'?'Archived revision · No validated report available.':'No validated report available.';if(project.unknownTarget){message.textContent='Unknown target. ';const recovery=document.createElement('a');recovery.href=project.href;recovery.textContent='Open the default target';message.append(recovery);}identity.append(message);}
   let date=null;

@@ -172,3 +172,9 @@ nav.project-menu.hub-popover { right:auto;top:calc(100% + 10px);transform-origin
 .target-menu [aria-checked="true"] { background:#303944; }
 .target-menu small { color:var(--muted);font-size:12px; }
 .target-unavailable { margin:12px 0 64px;color:var(--muted);font-size:15px; }
+
+.game-heading-row { display:flex;align-items:center;flex-wrap:wrap;gap:12px; }
+.game-heading-row .game-identity-title { flex:0 1 auto; }
+.region-flag { display:inline-flex;align-items:center;font-size:16px;line-height:1; }
+.target-option-label { display:flex;align-items:center;gap:8px; }
+@media(max-width:700px) { .game-heading-row .target-pickers { flex-basis:100%; } }
