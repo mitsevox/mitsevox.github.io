@@ -57,6 +57,9 @@ class MultiTargetTests(unittest.TestCase):
             self.assertEqual(selected(migrated,SLUG,TARGET['id']),old)
             self.assertEqual({p.name:p.read_bytes() for p in (root/old['path']).iterdir()},payloads)
             validate_package(root/old['path'],root)
+            restored=install(root,API(),manifest,payloads,{'title':'old'})
+            self.assertEqual(restored.relative_to(root.resolve()).as_posix(),old['path'])
+            self.assertEqual(selected(read_lock(root),SLUG,TARGET['id']),old)
             new={**manifest,'target':TARGET}
             check_update(manifest,new,{'snapshots':[]},{'snapshots':[]},'identical',root)
             with self.assertRaises(ValueError):check_update(manifest,{**new,'target':{**TARGET,'sha1':'f'*40}},{},{},'identical',root)
