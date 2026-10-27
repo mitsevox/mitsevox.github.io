@@ -1,0 +1,75 @@
+name: Publish decomp progress
+description: >-
+  Convert one target's objdiff report.json into the site's data contract (contract/README.md),
+  check it, and push it to the data repository. Run it in the per-target CI job, on push to main only.
+inputs:
+  target:
+    description: Target id, as listed in the targets file.
+    required: true
+  report:
+    description: objdiff report.json for this target.
+    required: true
+  targets:
+    description: The producer's targets file.
+    default: config/targets.json
+  site:
+    description: The producer's site presentation file.
+    default: config/site.json
+  tools:
+    description: Measured-with tools, one name=version per line (shown on the page as provenance).
+    default: ''
+  measured-at:
+    description: UTC time of the measurement (default now).
+    default: ''
+  code-sections:
+    description: Comma-separated code section names; every other section counts as data.
+    default: .init,.text
+  unit-prefix:
+    description: Prefix stripped from objdiff unit names for display.
+    default: main/
+  data-repository:
+    description: owner/name of the data repository.
+    default: mitsevox/decomp-data
+  app-client-id:
+    description: Client id of the GitHub App installed on the data repository.
+    required: true
+  app-private-key:
+    description: Private key of that GitHub App.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Split data repository name
+      id: repo
+      shell: bash
+      env:
+        DATA_REPOSITORY: ${{ inputs.data-repository }}
+      run: |
+        echo "owner=${DATA_REPOSITORY%%/*}" >> "$GITHUB_OUTPUT"
+        echo "name=${DATA_REPOSITORY#*/}" >> "$GITHUB_OUTPUT"
+    - name: Mint a data-repository token
+      id: token
+      uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+      with:
+        client-id: ${{ inputs.app-client-id }}
+        private-key: ${{ inputs.app-private-key }}
+        owner: ${{ steps.repo.outputs.owner }}
+        repositories: ${{ steps.repo.outputs.name }}
+        permission-contents: write
+    - name: Publish
+      shell: bash
+      env:
+        DATA_TOKEN: ${{ steps.token.outputs.token }}
+        TARGET: ${{ inputs.target }}
+        REPORT: ${{ inputs.report }}
+        TARGETS: ${{ inputs.targets }}
+        SITE: ${{ inputs.site }}
+        TOOLS: ${{ inputs.tools }}
+        MEASURED_AT: ${{ inputs.measured-at }}
+        CODE_SECTIONS: ${{ inputs.code-sections }}
+        UNIT_PREFIX: ${{ inputs.unit-prefix }}
+        DATA_REPOSITORY: ${{ inputs.data-repository }}
+      run: |
+        python3 "$GITHUB_ACTION_PATH/publish.py" publish --target "$TARGET" --report "$REPORT" \
+          --targets "$TARGETS" --site "$SITE" --tools "$TOOLS" --measured-at "$MEASURED_AT" \
+          --code-sections "$CODE_SECTIONS" --unit-prefix "$UNIT_PREFIX" --data-repository "$DATA_REPOSITORY"
