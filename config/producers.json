@@ -24,6 +24,10 @@
       {
         "format": "report-v1",
         "policy": "n100f-producer-initial.json"
+      },
+      {
+        "format": "report-v1",
+        "policy": "n100f-producer-1b38fd11d5324877.json"
       }
     ]
   }

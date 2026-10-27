@@ -10,7 +10,8 @@
   "branch": "main",
   "workflowBlobs": [
     "4358db0f428d68ba6e99fd332dd27b2505c278c9",
-    "2b36a13322246c158f3159dc6f34328d86828f44"
+    "2b36a13322246c158f3159dc6f34328d86828f44",
+    "1d672d7fb38d9bee23c49fb1aeac0978812f105b"
   ],
   "artifact": "public-report",
   "job": "Site report",
