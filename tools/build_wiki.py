@@ -40,7 +40,7 @@ for i, chapter in enumerate(chapters):
             paging.append(f'<a href="{href}"><small>{label}</small><span>{escape(chapters[n]["title"])}</span></a>')
     main = f'''<main class="wiki-layout" data-chapter="{slug}">
 <aside class="wiki-sidebar">
-<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<div data-ui="wiki-search"></div>
 <p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
 <details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters">{''.join(nav)}</nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>{escape(chapter["group"])} <span aria-hidden="true">/</span> {i+1:02}</span><a href="/docs/wiki/{slug}.md" download>Markdown ↓</a></div>

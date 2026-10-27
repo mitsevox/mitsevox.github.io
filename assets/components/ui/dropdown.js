@@ -1,4 +1,6 @@
 import {pageScope} from '../../lifecycle.js';
+import {createAction} from './action.js';
+import {componentScope} from './scope.js';
 
 const checkmark='<svg class="dropdown-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg>';
 
@@ -125,9 +127,9 @@ function leading(parent,option){
 
 /** Build the complete primitive before attaching it to a page. @param {DropdownProps} props */
 export function createDropdown(props){
-  const componentScope=pageScope();
+  const scope=componentScope(props.scope);
   const node=document.createElement('div');node.className='ui-dropdown '+(props.className||'');
-  const trigger=document.createElement('button');trigger.type='button';trigger.id=props.id;trigger.className='dropdown-trigger '+(props.triggerClass||'');
+  const trigger=createAction({id:props.id,className:'dropdown-trigger '+(props.triggerClass||'')});
   const menu=document.createElement('div');menu.id=props.id+'-menu';menu.className='hub-popover '+(props.menuClass||'');menu.hidden=true;menu.setAttribute('aria-label',props.label);
   trigger.setAttribute('aria-controls',menu.id);
   let value=props.value,label=props.triggerLabel,ariaLabel=props.ariaLabel;
@@ -135,8 +137,7 @@ export function createDropdown(props){
   for(const option of props.options){
     if(choices.has(option.value))throw Error('Duplicate dropdown value: '+option.value);
     choices.set(option.value,option);
-    const item=document.createElement(option.href?'a':'button');item.className='popover-option';item.dataset.value=option.value;
-    if(option.href)item.href=option.href;else item.type='button';
+    const item=createAction({href:option.href,className:'popover-option'});item.dataset.value=option.value;
     if(option.ariaLabel)item.setAttribute('aria-label',option.ariaLabel);
     leading(item,option);
     const text=document.createElement('span');text.className='dropdown-option-text';text.textContent=option.label;
@@ -144,7 +145,7 @@ export function createDropdown(props){
     item.append(text);menu.append(item);
   }
   node.append(trigger,menu);
-  const control=createDropdownController(trigger,menu,{scope:componentScope,
+  const control=createDropdownController(trigger,menu,{scope,
     isSelected:item=>item.dataset.value===value,
     onSelect:item=>{const option=choices.get(item.dataset.value);if(!option.href)setValue(option.value);props.onSelect?.(option);}});
   function renderTrigger(){
@@ -162,8 +163,7 @@ export function createDropdown(props){
     value=next;if(triggerLabel!==undefined)label=triggerLabel;if(nextAria!==undefined)ariaLabel=nextAria;
     control.sync();renderTrigger();
   }
-  function destroy(){props.scope?.signal.removeEventListener('abort',destroy);componentScope.destroy();node.remove();}
-  if(props.scope?.signal.aborted)destroy();else props.scope?.signal.addEventListener('abort',destroy,{once:true});
+  function destroy(){scope.destroy();node.remove();}
   renderTrigger();
   return {node,trigger,menu,setValue,destroy,open:control.open,close:control.close,get isOpen(){return control.isOpen;}};
 }

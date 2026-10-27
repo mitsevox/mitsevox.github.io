@@ -1,3 +1,8 @@
+import {createAction} from './components/ui/action.js';
+import {createProgressBar} from './components/ui/progress-bar.js';
+import {createSearchField} from './components/ui/search-field.js';
+import {createTooltip} from './components/ui/tooltip.js';
+import {createCommitLine} from './components/ui/commit-line.js';
 import {createDropdown} from './components/ui/dropdown.js';
 import {fetchSummary} from './reports.js';
 import {projects} from './projects.js';
@@ -5,24 +10,15 @@ import {consoleIcon} from './console-icon.js';
 import {pageScope} from './lifecycle.js';
 export function mountHub(root) {
 const scope=pageScope();
-const {signal,listen,frame,animate}=scope;
+const {signal,listen}=scope;
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 const pending=[];
 const grid=root.querySelector('.project-grid');
-const tooltip=root.querySelector('#card-tooltip');
-const search=root.querySelector('#project-search');
+const tooltip=createTooltip({id:'card-tooltip',variant:'hub',scope});root.append(tooltip.node);
+const searchField=createSearchField({id:'project-search',label:'Search games',placeholder:'Search games',variant:'hub'});
+root.querySelector('[data-ui="project-search"]').replaceWith(searchField.node);
+const search=searchField.input;
 const entries=[];
-const relativeTime=new Intl.RelativeTimeFormat('en',{numeric:'always'});
-function updateCommitTimes(){
-  for(const entry of entries){
-    if(!entry.commitDate)continue;
-    const seconds=Math.max(0,(Date.now()-Date.parse(entry.commitDate))/1000);
-    let text='just now';
-    for(const [unit,size] of [['year',31536000],['month',2592000],['day',86400],['hour',3600],['minute',60]])if(seconds>=size){text=relativeTime.format(-Math.floor(seconds/size),unit);break;}
-    entry.card.querySelector('.commit-time span').textContent=text;
-  }
-}
-const timeRefresh=setInterval(updateCommitTimes,60000);
 let filterValue='all',sortValue='latest';
 
 const controls=[
@@ -59,77 +55,32 @@ function updateEntries(){
   root.querySelector('#project-results').textContent=visible+' '+(visible===1?'game':'games');
 }
 listen(search,'input',updateEntries);
-listen(root.querySelector('#project-reset'),'click',()=>{search.value='';filterValue='all';syncControls();updateEntries();search.focus();});
-const kindLabel=kind=>kind==='code'?'Code':'Data';
-let clearLift=null;
-function hideTooltip(){tooltip.hidden=true;clearLift?.();clearLift=null;}
+const reset=createAction({id:'project-reset',label:'Clear filters'});root.querySelector('[data-ui="project-reset"]').replaceWith(reset);
+listen(reset,'click',()=>{search.value='';filterValue='all';syncControls();updateEntries();search.focus();});
+function hideTooltip(){tooltip.hide();}
 for(const project of projects){
-  const card=document.createElement('a');card.className='project-card';card.href=project.href;card.setAttribute('aria-label','Explore '+project.title);
-  const cover=`<img class="project-cover" src="${project.cover}" alt="" width="${project.coverWidth}" height="${project.coverHeight}" ${entries.length===0?'fetchpriority="high"':'loading="lazy"'}>`;
-  card.innerHTML=`${cover}<div class="entry-details"><h2 class="entry-title">${consoleIcon(project.console)}<span>${project.title}</span></h2><div class="card-progress">${['code','data'].map(kind=>`<div class="card-measure progress-element" data-progress="${kind}"><div class="card-measure-label"><span>${kindLabel(kind)}</span><strong>—</strong></div><div class="card-track" role="progressbar" aria-label="${project.title} ${kind} matched progress" aria-valuemin="0" aria-valuemax="100"><i class="progress-fuzzy"></i><i class="progress-matched"></i><i class="progress-linked"></i></div></div>`).join('')}</div></div><div class="entry-commit" aria-label="Latest commit"><svg class="commit-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg><span class="commit-title">Loading latest commit…</span><time class="commit-time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3 2"/></svg><span></span></time></div>`;
-  grid.append(card);
-  const entry={project,card,index:entries.length,progress:{}};entries.push(entry);
+  const card=createAction({href:project.href,className:'project-card',ariaLabel:'Explore '+project.title});
+  const cover=document.createElement('img');cover.className='project-cover';cover.src=project.cover;cover.alt='';cover.width=project.coverWidth;cover.height=project.coverHeight;
+  if(entries.length===0)cover.setAttribute('fetchpriority','high');else cover.loading='lazy';
+  const details=document.createElement('div');details.className='entry-details';
+  const title=document.createElement('h2');title.className='entry-title';title.insertAdjacentHTML('afterbegin',consoleIcon(project.console));const name=document.createElement('span');name.textContent=project.title;title.append(name);
+  const measures=document.createElement('div');measures.className='card-progress';
+  const bars=Object.fromEntries(['code','data'].map(kind=>{const bar=createProgressBar({kind,variant:'compact',ariaLabel:project.title+' '+kind+' matched progress',tooltip,scope});measures.append(bar.node);return [kind,bar];}));
+  details.append(title,measures);
+  const commit=createCommitLine({variant:'compact',repository:project.repo,scope});
+  card.append(cover,details,commit.node);grid.append(card);
+  const entry={project,card,bars,commit,index:entries.length,progress:{}};entries.push(entry);
   pending.push(fetchSummary(project, signal).then(data=>{
     if(signal.aborted)return;
-    const commit=data.latest_commit;
-    card.querySelector('.commit-title').textContent=commit?.title||'Latest commit unavailable';
-    if(commit?.date&&Number.isFinite(Date.parse(commit.date))){
-      entry.commitDate=commit.date;
-      const time=card.querySelector('.commit-time');time.dateTime=commit.date;
-      time.setAttribute('aria-label',new Date(commit.date).toLocaleString());
-      updateCommitTimes();
-    }
-    for(const kind of ['code','data']){
-      const measure=data.measures[kind],element=card.querySelector(`[data-progress="${kind}"]`),track=element.querySelector('.card-track');
-      const available=measure.total>0;
-      const values={linked:available?measure.linked/measure.total*100:0,matched:available?measure.matched/measure.total*100:0,
-        ...(measure.fuzzy===undefined?{}:{fuzzy:available?measure.fuzzy/measure.total*100:0})};
-      track.querySelector('.progress-fuzzy').hidden=measure.fuzzy===undefined;
-      entry.progress[kind]=available?values.matched:null;
-      element.querySelector('strong').textContent=available?values.matched.toFixed(2)+'%':'Unavailable';
-      if(available)track.setAttribute('aria-valuenow',values.matched);else track.removeAttribute('aria-valuenow');
-      track.setAttribute('aria-valuetext',available?Object.entries(values).map(([key,value])=>`${key} ${value.toFixed(2)}%`).join(', '):'Unavailable');
-      frame(()=>frame(()=>{for(const field of Object.keys(values))track.querySelector('.progress-'+field).style.width=values[field]+'%';}));
-      const lift=document.createElement('div');lift.className='progress-hover';lift.hidden=true;lift.setAttribute('aria-hidden','true');track.append(lift);
-      let liftedStrip=null,stripAnimation=null;
-      function clearHover(){stripAnimation?.cancel();liftedStrip=null;lift.hidden=true;}
-      function hoverStrip(event){
-        if(event.pointerType==='touch')return;
-        const rect=track.getBoundingClientRect(),x=event.clientX-rect.left;
-        let start=0;
-        for(const field of ['linked','matched',...(values.fuzzy===undefined?[]:['fuzzy'])]){
-          const end=track.querySelector('i.progress-'+field).getBoundingClientRect().width;
-          if(x>=start&&x<end){
-            if(clearLift&&clearLift!==clearHover)hideTooltip();
-            clearLift=clearHover;
-            if(liftedStrip!==field||lift.style.width!==(end-start)+'px'){
-              stripAnimation?.cancel();liftedStrip=field;lift.hidden=false;
-              lift.className='progress-hover progress-'+field;lift.style.left=start+'px';lift.style.width=(end-start)+'px';
-              if(!motionPreference.matches)stripAnimation=animate(lift,[
-                {transform:'translateY(-50%) scale(1)',opacity:.5},
-                {transform:'translateY(-50%) scale(1.008,1.3)',opacity:1}
-              ],{duration:160,easing:'cubic-bezier(.22,1,.36,1)'});
-            }
-            tooltip.textContent=field[0].toUpperCase()+field.slice(1)+' '+values[field].toFixed(2)+'%';tooltip.hidden=false;
-            tooltip.style.left=Math.max(12,Math.min(event.clientX+12,innerWidth-tooltip.offsetWidth-12))+'px';
-            tooltip.style.top=Math.max(12,event.clientY-tooltip.offsetHeight-12)+'px';
-            return;
-          }
-          start=Math.max(start,end);
-        }
-        hideTooltip();
-      }
-      listen(track, 'pointerenter',hoverStrip);
-      listen(track, 'pointermove',hoverStrip);
-      listen(track, 'pointerleave',hideTooltip);
-    }
+    entry.commit.update(data.latest_commit);entry.commitDate=entry.commit.date;
+    for(const kind of ['code','data']){entry.bars[kind].update(data.measures[kind]);entry.progress[kind]=entry.bars[kind].matched;}
     if(['latest','code','data'].includes(sortValue))updateEntries();
-  }).catch(()=>{if(!signal.aborted)card.querySelector('.commit-title').textContent='Latest commit unavailable';if(!signal.aborted)for(const measure of card.querySelectorAll('.card-measure')){measure.querySelector('strong').textContent='Unavailable';measure.querySelector('.card-track').setAttribute('aria-valuetext','Progress unavailable');}}));
+  }).catch(()=>{if(signal.aborted)return;entry.commit.update(null);for(const bar of Object.values(entry.bars))bar.unavailable();}));
 }
 updateEntries();
 listen(window, 'scroll',hideTooltip,{passive:true});
 listen(window, 'resize',hideTooltip);
 listen(motionPreference,'change',hideTooltip);
 
-return {ready:Promise.allSettled(pending),destroy(){clearInterval(timeRefresh);scope.destroy();}};
+return {ready:Promise.allSettled(pending),destroy(){scope.destroy();}};
 }
