@@ -10,8 +10,8 @@ import {icon} from './icons.js';
 /** Native search behavior, with one shared label/icon/input structure. @param {SearchFieldProps} props */
 export function createSearchField({label,placeholder,variant='map',id}) {
   const node=document.createElement('label');
-  node.className=variant==='wiki'?'wiki-search':'map-search'+(variant==='hub'?' hub-search':'');
-  node.append(icon('search',{className:variant==='wiki'?'':'icon',rounded:variant==='map'}));
+  node.className='ui-search '+(variant==='wiki'?'wiki-search':'map-search'+(variant==='hub'?' hub-search':''));
+  node.append(icon('search',{className:'icon',rounded:variant==='map'}));
   const input=document.createElement('input');input.type='search';
   if(id)input.id=id;
   input.placeholder=placeholder;input.setAttribute('aria-label',label);input.autocomplete='off';
