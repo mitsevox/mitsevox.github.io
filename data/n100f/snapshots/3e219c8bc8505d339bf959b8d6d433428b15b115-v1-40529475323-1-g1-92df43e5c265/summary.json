@@ -1,0 +1,26 @@
+{
+  "code": {
+    "fuzzyEquivalentBytes": 267503.08005632,
+    "linkedBytes": 203672,
+    "matchedBytes": 240764,
+    "totalBytes": 1618968
+  },
+  "data": {
+    "fuzzyEquivalentBytes": 82142.8308084,
+    "linkedBytes": 34196,
+    "matchedBytes": 56648,
+    "totalBytes": 870056
+  },
+  "files": {
+    "basis": "objdiff-units, provisional boundaries (not yet checked against Heavy Iron objects); named = not a dtk auto-generated address range; exact = named, all code and data bytes matched",
+    "exact": 114,
+    "named": 372,
+    "total": 525
+  },
+  "functions": {
+    "basis": "objdiff-functions; named = symbol name other than an fn_ address label",
+    "exact": 1186,
+    "named": 2516,
+    "total": 4746
+  }
+}
