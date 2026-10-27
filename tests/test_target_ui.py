@@ -3,6 +3,8 @@ from pathlib import Path
 import json
 import subprocess
 import unittest
+import sys
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
 from reporting.validation import ROOT
 
 
