@@ -115,9 +115,15 @@ def migrate(slug, tree, ref):
         map_doc['schema'] = 1
         map_doc.pop('schemaVersion', None)
         directory = tree / 'data' / slug / target
-        write_json(directory / 'latest.json', latest_document(slug, target, manifest, entry))
         write_json(directory / 'history.json', history_rows(timeline), rows=True)
         write_json(directory / 'map.json', map_doc, compact=True)
+        latest = latest_document(slug, target, manifest, entry)
+        if manifest['modules'].get('contributors', {}).get('status') == 'supported':
+            contributors = load(ref, entry['path'] + '/contributors.json')
+            contributors['schema'] = contributors.pop('schemaVersion')
+            write_json(directory / 'contributors.json', contributors, compact=True)
+            latest['modules']['contributors'] = 'contributors.json'
+        write_json(directory / 'latest.json', latest)
         report.append((target, verify(tree, slug, target, timeline)))
 
     index_path = tree / 'index.json'
