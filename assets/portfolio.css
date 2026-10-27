@@ -128,8 +128,8 @@ html { scrollbar-gutter: stable; }
 
 .commit-icon { width:13px;height:13px;flex-shrink:0;color:var(--muted);margin-right:-5px; }
 
-.game-identity { display:flex;flex-direction:column;align-items:stretch;gap:10px;padding-top:24px; }
-.game-identity-title { display:flex;align-items:center;gap:10px;flex:0 1 auto;margin:0;color:var(--ink);font-size:18px;font-weight:500;line-height:1.35;letter-spacing:-.25px; }
+.game-identity { --identity-title-size:18px;--identity-title-leading:1.35;display:flex;flex-direction:column;align-items:stretch;gap:10px;padding-top:24px; }
+.game-identity-title { display:flex;align-items:center;gap:10px;flex:0 1 auto;margin:0;color:var(--ink);font-size:var(--identity-title-size);font-weight:500;line-height:var(--identity-title-leading);letter-spacing:-.25px; }
 .game-identity-title { flex-wrap:wrap; }
 .game-identity-title .game-name { min-width:0; }
 .game-target { display:inline-flex;align-items:center;padding:3px 7px;border:1px solid var(--line);border-radius:5px;background:var(--surface);color:#bbc4cf;font-size:11px;font-weight:500;line-height:1.3;letter-spacing:.3px;white-space:nowrap; }
@@ -157,6 +157,10 @@ html { scrollbar-gutter: stable; }
 
 .game-heading-row { display:flex;align-items:center;flex-wrap:wrap;gap:12px; }
 .game-heading-row .game-identity-title { flex:0 1 auto; }
+/* Keep desktop controls centered on the title without enlarging its layout row. */
+@media(min-width:701px) {
+  .game-heading-row .target-pickers { block-size:calc(var(--identity-title-size) * var(--identity-title-leading));align-items:center;align-content:center; }
+}
 .region-flag { display:inline-flex;align-items:center;font-size:16px;line-height:1; }
 @media(max-width:700px) { .game-heading-row .target-pickers { flex-basis:100%; } }
 
