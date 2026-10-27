@@ -46,11 +46,15 @@ def now():
 
 
 def timestamp(value):
+    # Writers emit TIME; readers accept any UTC ISO 8601 form, because imported history keeps its
+    # original timestamps verbatim (some carry microseconds or +00:00).
     require(isinstance(value, str), 'Timestamp is not a string')
     try:
-        return datetime.datetime.strptime(value, TIME)
+        parsed = datetime.datetime.fromisoformat(value)
     except ValueError:
-        raise ContractError('Timestamp is not UTC ISO 8601: ' + value)
+        raise ContractError('Timestamp is not ISO 8601: ' + value)
+    require(parsed.utcoffset() == datetime.timedelta(0), 'Timestamp is not UTC: ' + value)
+    return parsed
 
 
 def read_json(path):
@@ -60,12 +64,14 @@ def read_json(path):
         raise ContractError('%s: %s' % (path, error))
 
 
-def write_json(path, document, rows=False):
+def write_json(path, document, rows=False, compact=False):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if rows:
         # One row per line keeps history diffs readable in the data repository.
         text = '[\n' + ',\n'.join(json.dumps(r, sort_keys=True, separators=(',', ':')) for r in document) + '\n]\n'
+    elif compact:
+        text = json.dumps(document, sort_keys=True, separators=(',', ':')) + '\n'
     else:
         text = json.dumps(document, sort_keys=True, indent=1) + '\n'
     path.write_text(text)
@@ -453,7 +459,7 @@ def write_target(tree, game, latest, map_doc):
     current = read_json(current_path) if current_path.exists() else None
     if current is None or (current['source']['revision'] != latest['source']['revision'] and
                            timestamp(current['source']['committedAt']) <= timestamp(latest['source']['committedAt'])):
-        write_json(directory / 'map.json', map_doc)
+        write_json(directory / 'map.json', map_doc, compact=True)
         write_json(current_path, latest)
     write_json(history_path, rows, rows=True)
     write_json(tree / 'data' / slug / 'game.json', game)

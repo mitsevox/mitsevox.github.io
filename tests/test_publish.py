@@ -87,6 +87,17 @@ class ConversionTests(unittest.TestCase):
             publish.check_map(m, s)
 
 
+class TimestampTests(unittest.TestCase):
+    def test_accepts_any_utc_iso_form(self):
+        for value in ('2026-10-26T20:57:37Z', '2026-10-26T20:57:37.624145+00:00'):
+            publish.timestamp(value)
+
+    def test_rejects_offsets_and_garbage(self):
+        for value in ('2026-10-26T20:57:37+02:00', '2026-10-26T20:57:37', 'yesterday', None):
+            with self.assertRaises(publish.ContractError, msg=value):
+                publish.timestamp(value)
+
+
 class TargetTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
