@@ -12,7 +12,8 @@
   "workflow": ".github/workflows/validate.yml",
   "branch": "main",
   "workflowBlobs": [
-    "f63795faa13e21a5ec7f7ec9742c32b2fae07ecc"
+    "f63795faa13e21a5ec7f7ec9742c32b2fae07ecc",
+    "816bae66929a4bb7f1cdfba92f06784995175637"
   ],
   "artifact": "report-v2-GIHE78-rev0",
   "job": "Validate GIHE78-rev0",
