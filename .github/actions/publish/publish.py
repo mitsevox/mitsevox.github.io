@@ -222,11 +222,6 @@ def load_targets(path):
             'targets.json lists no targets')
     targets = []
     for entry in document['targets']:
-        if 'target' in entry:
-            # Transitional: the nested registry shape (gameId/discRevision) predating schema 1.
-            t = entry['target']
-            entry = {'id': t['id'], 'platform': t['platform'], 'label': t['gameId'], 'region': t.get('region'),
-                     'revision': str(t['discRevision']), 'sha1': t['sha1'], 'status': entry['status']}
         targets.append({k: entry.get(k) for k in ('id', 'platform', 'label', 'region', 'revision', 'sha1', 'status')})
     default = document.get('defaultTarget', targets[0]['id'])
     check_targets(targets, default)
