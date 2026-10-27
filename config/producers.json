@@ -18,21 +18,31 @@
     "policy": "tw2004-producer.json"
   },
   "n100f": {
-    "format": "report-v1",
-    "policy": "n100f-producer.json",
-    "archives": [
-      {
-        "format": "report-v1",
-        "policy": "n100f-producer-initial.json"
-      },
-      {
-        "format": "report-v1",
-        "policy": "n100f-producer-1b38fd11d5324877.json"
-      },
-      {
-        "format": "report-v1",
-        "policy": "n100f-producer-4c2ce4421276c5d8.json"
+    "format": "report-v2",
+    "catalog": "n100f-targets.json",
+    "targets": {
+      "GIHE78-rev0": {
+        "format": "report-v2",
+        "policy": "n100f-GIHE78-rev0-producer.json",
+        "archives": [
+          {
+            "format": "report-v1",
+            "policy": "n100f-producer.json"
+          },
+          {
+            "format": "report-v1",
+            "policy": "n100f-producer-initial.json"
+          },
+          {
+            "format": "report-v1",
+            "policy": "n100f-producer-1b38fd11d5324877.json"
+          },
+          {
+            "format": "report-v1",
+            "policy": "n100f-producer-4c2ce4421276c5d8.json"
+          }
+        ]
       }
-    ]
+    }
   }
 }

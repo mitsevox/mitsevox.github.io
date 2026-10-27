@@ -10,8 +10,12 @@
       "mode": "policy"
     },
     "n100f": {
-      "policyPath": "config/GIHE78/producer.json",
-      "mode": "policy"
+      "targets": {
+        "GIHE78-rev0": {
+          "policyPath": "config/GIHE78-rev0/producer.json",
+          "mode": "policy"
+        }
+      }
     },
     "tw2004": {
       "policyPath": "config/GW4E69/producer.json",

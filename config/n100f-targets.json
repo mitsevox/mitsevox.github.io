@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "project": "n100f",
+  "defaultTarget": "GIHE78-rev0",
+  "targets": [
+    {
+      "target": {
+        "id": "GIHE78-rev0",
+        "platform": "gamecube",
+        "gameId": "GIHE78",
+        "region": "USA",
+        "discRevision": 0,
+        "sha1": "c77fb29d39b5898933e8ef4d1ccd2ddac404554e"
+      },
+      "status": "active",
+      "support": {
+        "build": true,
+        "reportFormats": [
+          "report-v2"
+        ]
+      },
+      "legacyTargets": [
+        {
+          "id": "GIHE78",
+          "console": "GameCube",
+          "sha1": "c77fb29d39b5898933e8ef4d1ccd2ddac404554e"
+        }
+      ]
+    },
+    {
+      "target": {
+        "id": "GIHE78-rev1",
+        "platform": "gamecube",
+        "gameId": "GIHE78",
+        "region": "USA",
+        "discRevision": 1,
+        "sha1": "cc84bc42b1054b572b5bb65968cf80b71ff41d0b"
+      },
+      "status": "archived",
+      "support": {
+        "build": false,
+        "reportFormats": []
+      },
+      "legacyTargets": []
+    }
+  ]
+}
