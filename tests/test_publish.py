@@ -176,7 +176,7 @@ class ConversionTests(unittest.TestCase):
         publish.check_map(m, s)
         m['files'][0]['fuzzy'] += 1.5e-6
         self.assertTrue(self.page_rejects(m, s))
-        with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
+        with self.assertRaisesRegex(publish.ContractError, 'fuzzy'):  # off the summary and off its children
             publish.check_map(m, s)
         # The page needs a name on every node.
         m = publish.map_document(r, SECTIONS)
