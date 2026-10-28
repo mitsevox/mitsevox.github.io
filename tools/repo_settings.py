@@ -6,7 +6,7 @@
     python3 tools/repo_settings.py --all --check                        every listed repository
 
 --check exits 1 when anything drifts. --apply sets repository fields, merge settings, features,
-Actions permissions, token defaults, retention, the ruleset by name and the security features, then
+Actions permissions, token defaults, retention, the default branch's ruleset and the security features, then
 prints the hand steps it cannot do (secrets and variables, package access, the GitHub App). Both are
 idempotent. The token comes from GH_TOKEN or `gh auth token`; --check works with a fine-grained token
 limited to Administration: read and Metadata: read. Standard library only."""
@@ -22,13 +22,14 @@ import urllib.request
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / 'config/repo-standard.json'
 API = 'https://api.github.com'
+KINDS = ('source', 'build', 'site')
 MERGE = {'squash': ('allow_squash_merge', True, 'allow_merge_commit', False),
          'merge': ('allow_merge_commit', True, 'allow_squash_merge', False)}
 
 
 def load_config(path=CONFIG):
     config = json.loads(Path(path).read_text())
-    if config.get('schema') != 1 or set(config['kinds']) != {'source', 'build'}:
+    if config.get('schema') != 1 or set(config['kinds']) != set(KINDS):
         raise ValueError('Invalid repository standard')
     return config
 
@@ -38,20 +39,23 @@ def standard(config, repo, kind=None):
     entry = config['repositories'].get(repo, {})
     kind = kind or entry.get('kind')
     if kind not in config['kinds']:
-        raise ValueError('%s: unknown repository; pass --kind source or --kind build' % repo)
+        raise ValueError('%s: unknown repository; pass --kind %s' % (repo, ' or --kind '.join(KINDS)))
     result = json.loads(json.dumps(config['kinds'][kind]))
     result.update(entry.get('overrides', {}))
+    result['kind'] = kind
     values = {'owner': repo.split('/')[0], 'repo': repo.split('/')[-1]}
     values.update({k: v for k, v in entry.items() if isinstance(v, str)})
 
     def fill(text):
+        if text is None:
+            return None
         for key, value in values.items():
             text = text.replace('<%s>' % key, value)
         return text
     if entry:
         result['description'] = fill(result['description'])
         result['homepage'] = fill(result['homepage'])
-        result['topics'] = [fill(t) for t in result['topics']]
+        result['topics'] = [fill(t) for t in result['topics']] if result['topics'] is not None else None
     else:
         # An unlisted repository is held to its kind only; its presentation is its own.
         result['description'] = result['homepage'] = result['topics'] = None
@@ -94,15 +98,23 @@ def expected(std):
     if std['forkPullRequestApproval']:
         items['actions.fork_pr_approval_policy'] = std['forkPullRequestApproval']
     rules = std['ruleset']
+    if rules is None:
+        # A kind whose plan cannot hold a ruleset (private repositories on GitHub Free).
+        return items
     items.update({
         'ruleset.exists': True,
+        'ruleset.name': rules['name'],
         'ruleset.enforcement': 'active',
         'ruleset.bypass_actors': rules['bypassActors'],
         'ruleset.rule.deletion': rules['blockDeletion'],
         'ruleset.rule.non_fast_forward': rules['blockForcePush'],
         'ruleset.rule.pull_request': rules['requirePullRequest'],
         'ruleset.required_status_checks': [rules['requiredCheck']],
+        'ruleset.checks_up_to_date': False,
     })
+    if rules['requirePullRequest']:
+        items['ruleset.pull_request.dismiss_stale_reviews'] = True
+        items['ruleset.pull_request.merge_methods'] = [std['merge']]
     return items
 
 
@@ -111,10 +123,15 @@ def rules_summary(rules, prefix='ruleset'):
     types = {rule['type'] for rule in rules}
     checks = [c['context'] for rule in rules if rule['type'] == 'required_status_checks'
               for c in rule.get('parameters', {}).get('required_status_checks', [])]
+    status = next((rule.get('parameters', {}) for rule in rules if rule['type'] == 'required_status_checks'), {})
+    pull = next((rule.get('parameters', {}) for rule in rules if rule['type'] == 'pull_request'), {})
     return {prefix + '.rule.deletion': 'deletion' in types,
             prefix + '.rule.non_fast_forward': 'non_fast_forward' in types,
             prefix + '.rule.pull_request': 'pull_request' in types,
-            prefix + '.required_status_checks': sorted(checks)}
+            prefix + '.required_status_checks': sorted(checks),
+            prefix + '.checks_up_to_date': bool(status.get('strict_required_status_checks_policy')),
+            prefix + '.pull_request.dismiss_stale_reviews': bool(pull.get('dismiss_stale_reviews_on_push')),
+            prefix + '.pull_request.merge_methods': sorted(pull.get('allowed_merge_methods') or [])}
 
 
 def repository_summary(repo_json):
@@ -164,17 +181,33 @@ def current(api, repo, std):
     found['actions.variables'] = sorted(v['name'] for v in variables.get('variables', [])) if status == 200 else None
     status, secrets = api('GET', '/repos/%s/actions/secrets' % repo)
     found['actions.secrets'] = sorted(s['name'] for s in secrets.get('secrets', [])) if status == 200 else None
-    status, rulesets = api('GET', '/repos/%s/rulesets' % repo)
-    ruleset = next((r for r in (rulesets if status == 200 else []) if r['name'] == std['ruleset']['name']), None)
-    found['ruleset.exists'] = ruleset is not None
-    if ruleset:
-        status, detail = api('GET', '/repos/%s/rulesets/%s' % (repo, ruleset['id']))
-        if status == 200:
-            found['ruleset.id'] = detail['id']
-            found['ruleset.enforcement'] = detail.get('enforcement')
-            found['ruleset.bypass_actors'] = detail.get('bypass_actors') or []
-            found.update(rules_summary(detail.get('rules', [])))
+    if std['ruleset'] is None:
+        return found
+    detail = default_branch_ruleset(api, repo, std['ruleset']['name'])
+    found['ruleset.exists'] = detail is not None
+    if detail:
+        found['ruleset.id'] = detail['id']
+        found['ruleset.name'] = detail.get('name')
+        found['ruleset.enforcement'] = detail.get('enforcement')
+        found['ruleset.bypass_actors'] = detail.get('bypass_actors') or []
+        found.update(rules_summary(detail.get('rules', [])))
     return found
+
+
+def default_branch_ruleset(api, repo, name):
+    """The ruleset that protects the default branch: the one with the standard's name, or else the
+    first that targets the default branch under another name, so that apply renames it instead of
+    adding a second one."""
+    status, rulesets = api('GET', '/repos/%s/rulesets' % repo)
+    rulesets = rulesets if status == 200 else []
+    for ruleset in sorted(rulesets, key=lambda r: r['name'] != name):
+        status, detail = api('GET', '/repos/%s/rulesets/%s' % (repo, ruleset['id']))
+        if status != 200:
+            continue
+        include = (detail.get('conditions') or {}).get('ref_name', {}).get('include', [])
+        if detail.get('name') == name or '~DEFAULT_BRANCH' in include or 'refs/heads/main' in include:
+            return detail
+    return None
 
 
 def diff(wanted, found):
@@ -248,7 +281,7 @@ def apply(api, repo, std, drift, found):
         api('PUT' if std['security']['dependabotAlerts'] else 'DELETE', '/repos/%s/vulnerability-alerts' % repo)
     if 'security.private_vulnerability_reporting' in keys:
         api('PUT' if std['security']['privateVulnerabilityReporting'] else 'DELETE', '/repos/%s/private-vulnerability-reporting' % repo)
-    if any(k.startswith('ruleset.') for k in keys):
+    if std['ruleset'] is not None and any(k.startswith('ruleset.') for k in keys):
         body = ruleset_body(std, std['defaultBranch'])
         if found.get('ruleset.id'):
             api('PUT', '/repos/%s/rulesets/%s' % (repo, found['ruleset.id']), body)
@@ -260,8 +293,9 @@ def apply(api, repo, std, drift, found):
                     % (', '.join(std['variables']) or 'none', ', '.join(std['secrets']) or 'none'))
     if 'security.dependabot_version_updates' in keys:
         hand.append('Remove .github/dependabot.yml; pinned actions are bumped by hand.')
-    hand.append('Confirm package access: the private build image grants the source repository Read under Manage Actions access.')
-    hand.append('Confirm the GitHub App that writes the data repository is installed there with Contents: read and write.')
+    if std['kind'] == 'source':
+        hand.append('Confirm package access: the private build image grants the source repository Read under Manage Actions access.')
+        hand.append('Confirm the GitHub App that writes the data repository is installed there with Contents: read and write.')
     return hand
 
 
@@ -305,7 +339,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--repo', action='append', default=[])
     parser.add_argument('--all', action='store_true', help='every repository listed in the config')
-    parser.add_argument('--kind', choices=['source', 'build'])
+    parser.add_argument('--kind', choices=KINDS)
     parser.add_argument('--config', default=str(CONFIG))
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument('--check', action='store_true')

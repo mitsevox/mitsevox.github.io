@@ -22,7 +22,7 @@
     },
     "build": {
       "defaultBranch": "main",
-      "ruleset": {"name": "main", "requiredCheck": "Build environment image", "requirePullRequest": true, "blockForcePush": true, "blockDeletion": true, "bypassActors": []},
+      "ruleset": null,
       "merge": "squash",
       "autoDeleteHeadBranches": true,
       "allowedActions": {"githubOwned": true, "verified": false, "patterns": []},
@@ -37,9 +37,28 @@
       "description": "Private build environment for <source>",
       "homepage": "",
       "topics": []
+    },
+    "site": {
+      "defaultBranch": "main",
+      "ruleset": {"name": "main", "requiredCheck": "Test", "requirePullRequest": true, "blockForcePush": true, "blockDeletion": true, "bypassActors": []},
+      "merge": "squash",
+      "autoDeleteHeadBranches": true,
+      "allowedActions": {"githubOwned": true, "verified": false, "patterns": []},
+      "defaultTokenPermissions": "read",
+      "actionsApprovePullRequests": false,
+      "forkPullRequestApproval": "all_external_contributors",
+      "retentionDays": 30,
+      "variables": [],
+      "secrets": ["SETTINGS_READ_TOKEN"],
+      "security": {"secretScanning": true, "pushProtection": true, "dependabotAlerts": true, "privateVulnerabilityReporting": true, "dependabotVersionUpdates": false},
+      "features": {"issues": true, "wiki": false, "projects": false, "discussions": false},
+      "description": null,
+      "homepage": null,
+      "topics": null
     }
   },
   "repositories": {
+    "mitsevox/mitsevox.github.io": {"kind": "site"},
     "mitsevox/n100f": {"kind": "source", "title": "Scooby-Doo! Night of 100 Frights", "console": "GameCube", "year": "2002", "slug": "n100f", "platform": "gamecube"},
     "mitsevox/n100f-build": {"kind": "build", "source": "mitsevox/n100f"},
     "mitsevox/tw2004": {"kind": "source", "title": "Tiger Woods PGA Tour 2004", "console": "GameCube", "year": "2003", "slug": "tw2004", "platform": "gamecube",

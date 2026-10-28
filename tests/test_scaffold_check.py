@@ -115,8 +115,10 @@ class ScaffoldCheckTests(unittest.TestCase):
 
     def test_settings_read_compares_the_readable_half(self):
         check = scaffold_check.Check(self.clean)
-        rules = [{'type': 'deletion'}, {'type': 'non_fast_forward'}, {'type': 'pull_request'},
-                 {'type': 'required_status_checks', 'parameters': {'required_status_checks': [{'context': 'Validate targets'}]}}]
+        rules = [{'type': 'deletion'}, {'type': 'non_fast_forward'},
+                 {'type': 'pull_request', 'parameters': {'dismiss_stale_reviews_on_push': True, 'allowed_merge_methods': ['squash']}},
+                 {'type': 'required_status_checks', 'parameters': {'strict_required_status_checks_policy': False,
+                  'required_status_checks': [{'context': 'Validate targets'}]}}]
         repo = {'default_branch': 'main', 'description': 'Scooby-Doo! Night of 100 Frights (GameCube, 2002) decompilation',
                 'homepage': 'https://mitsevox.github.io/games/n100f/', 'topics': ['decompilation', 'gamecube', 'n100f'],
                 'has_issues': True, 'has_wiki': False, 'has_projects': False, 'has_discussions': False,
