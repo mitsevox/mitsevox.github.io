@@ -61,6 +61,10 @@
 <td><code>tools/evidence.py check</code>: the row breaks the format in <code>config/README.md</code> (columns, address form, kind, origin, edges).</td>
 </tr>
 <tr>
+<td><code>settings: repository.&lt;field&gt;: expected ..., found unreadable</code> in <code>Check the scaffold</code></td>
+<td>The job's default token cannot read that setting, so the scaffold check cannot compare it; the warning says nothing about the setting's value. The owner checks it with <code>python3 tools/repo_settings.py --repo owner/game --check</code> from a site repository checkout (<a href="/wiki/repository-settings/">Repository settings</a>), where unreadable does count as drift. Not a failed gate.</td>
+</tr>
+<tr>
 <td><code>::warning file=...::</code> lines in <code>Check the scaffold</code></td>
 <td>The checkout drifts from the kit or the spec (<a href="/wiki/starter-kit/#the-scaffold-spec">Starter kit</a>). Warnings do not fail the job until the owner sets <code>strict: true</code>.</td>
 </tr>

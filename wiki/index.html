@@ -1,1 +1,192 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Three repositories, one data contract and the order in which to set them up."><title>Start here · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Three repositories, one data contract and the order in which to set them up."><title>Start here · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><noscript><article class="wiki-article"><h1 id="start-here">Start here</h1>
+<p>How to set up a decompilation repository that builds in a private environment, accepts reviewed contributions and publishes its progress to this site.</p>
+<p>Every page of this wiki carries its text in its HTML for readers that do not run JavaScript, and the whole guide is one Markdown file at <a href="/wiki/downloads/handbook.md"><code>/wiki/downloads/handbook.md</code></a>.</p>
+<p>This guide is written for someone, or some agent, dropped into an empty repository with a game binary and no other context. Followed in order, it ends with a repository whose every push to <code>main</code> builds each target, verifies it byte for byte, measures it with objdiff and publishes the measurement to the progress site. The only things it cannot decide for you are your project's parameters: the platform, the compiler versions and tooling, the split configuration, the target ids and the presentation. Everything else is specified exactly, every command, file name, field and secret named here matches the shipped code, and a scaffold check in CI keeps the repository matching the guide afterwards.</p>
+<h2 id="the-three-repositories">The three repositories</h2>
+<p>Each game is three repositories. Two are yours; the third is shared by every game on the site.</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Repository</th>
+<th>Visibility</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>owner/game</code></td>
+<td>public</td>
+<td>Source, headers, target configuration, tools and CI. The only place contributors work.</td>
+</tr>
+<tr>
+<td><code>owner/game-build</code></td>
+<td>private</td>
+<td>The original executables and the toolchain, built into a container image on GitHub Container Registry. Also private.</td>
+</tr>
+<tr>
+<td><a href="https://github.com/mitsevox/decomp-data"><code>mitsevox/decomp-data</code></a></td>
+<td>public, shared</td>
+<td>The published measurements of every game, served by GitHub Pages at <code>https://mitsevox.github.io/decomp-data/</code>.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The site itself, <a href="https://github.com/mitsevox/mitsevox.github.io"><code>mitsevox/mitsevox.github.io</code></a>, is a static page that reads the data repository at view time. It also hosts the publish action, the scaffold check, the starter kit, the scaffold spec, the repository settings standard and the data contract. Adding a game changes nothing in the site repository.</p>
+<pre><code class="language-text">owner/game (public)                        owner/game-build (private)
+  push to main                               push to main
+  validate.yml                               image.yml
+    plan: which targets changed                docker build: /orig/&lt;target&gt;/..., toolchain
+    tests: tool tests, scaffold check          push ghcr.io/owner/game-build:main, print digest
+    Validate &lt;target&gt;, inside the image  &lt;---  referenced by digest
+      copy the original
+      configure, build, check the executable hash
+      objdiff report -&gt; build/&lt;target&gt;/report.json
+      publish action (main only) -----------&gt; mitsevox/decomp-data (public)
+                                                data/game/&lt;target&gt;/latest.json, history.json, map.json
+                                                data/game/game.json, index.json
+                                                deploy.yml -&gt; GitHub Pages
+                                                       ^
+mitsevox.github.io/games/game/  reads  /decomp-data/ at view time
+</code></pre>
+<h2 id="placeholders-used-throughout">Placeholders used throughout</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Placeholder</th>
+<th>Stands for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>owner/game</code></td>
+<td>your public source repository</td>
+</tr>
+<tr>
+<td><code>owner/game-build</code></td>
+<td>your private build-image repository</td>
+</tr>
+<tr>
+<td><code>OWNER_LOGIN</code></td>
+<td>the owner's GitHub login</td>
+</tr>
+<tr>
+<td><code>game</code></td>
+<td>the game's slug on the site, <code>[a-z0-9][a-z0-9-]*</code></td>
+</tr>
+<tr>
+<td><code>GAME01-rev0</code></td>
+<td>a target id, <code>[A-Za-z0-9._-]+</code>; <code>GAME01</code> is its label, <code>0</code> its revision</td>
+</tr>
+<tr>
+<td><code>VERSION_GAME01_REV0</code></td>
+<td>that target's preprocessor define, derived from the id</td>
+</tr>
+<tr>
+<td><code>ghcr.io/owner/game-build@sha256:...</code></td>
+<td>the build image, always referenced by digest</td>
+</tr>
+<tr>
+<td><code>DATA_APP_CLIENT_ID</code>, <code>DATA_APP_PRIVATE_KEY</code></td>
+<td>the repository variable and the <code>publish</code> environment secret that hold the publishing credential</td>
+</tr>
+</tbody>
+</table></div>
+<p>The examples are for a GameCube target built with decomp-toolkit and dtk-template, because that is what the reference repositories use. Another platform changes the toolchain, the original's path inside the image and the build commands; it changes nothing in the layout, the CI structure, publishing or the site.</p>
+<h2 id="the-setup-path">The setup path</h2>
+<ol>
+<li><a href="/wiki/repository-layout/">Repository layout</a>: create the public repository with the tracked and ignored paths and the root allowlist.</li>
+<li><a href="/wiki/targets/">Targets</a>: write <code>config/targets.json</code>, <code>config/site.json</code> and <code>config/ci-targets.json</code>; scaffold <code>config/&lt;id&gt;/</code> with <code>tools/new_target.py</code>.</li>
+<li><a href="/wiki/build-environment/">Build environment</a>: create the private repository, build the image, make the package readable by the public repository, note the digest.</li>
+<li><a href="/wiki/build-verify-measure/">Build, verify, measure</a>: get a byte-identical relink locally and an objdiff <code>report.json</code>; learn how version differences are written and read.</li>
+<li><a href="/wiki/evidence/">Evidence</a> and the <a href="/wiki/contribution-workflow/">contribution workflow</a>: adopt <code>AGENTS.md</code>, <code>CONTRIBUTING.md</code> and the PR template.</li>
+<li><a href="/wiki/ci/">CI</a>: install <code>validate.yml</code> with your image digest and build commands; the scaffold check runs in it.</li>
+<li><a href="/wiki/publishing/">Publishing</a>: create the GitHub App credential, add the variable and the <code>publish</code> environment with its secret, push to <code>main</code>.</li>
+<li><a href="/wiki/repository-settings/">Repository settings</a>: apply the settings standard to both repositories.</li>
+<li><a href="/wiki/site/">The site</a>: check the page, commit cover art to the data repository.</li>
+</ol>
+<p><a href="/wiki/multi-target/">Multiple targets</a> is the procedure for a second original, once the first is published. <a href="/wiki/data-contract/">Data contract</a> describes what the publish action writes; <a href="/wiki/troubleshooting/">Troubleshooting</a> lists the failure messages; <a href="/wiki/starter-kit/">Starter kit</a> is the download with every copyable file and the scaffold spec.</p>
+<h2 id="what-done-looks-like">What done looks like</h2>
+<ul>
+<li>A push to <code>main</code> runs <code>Validate</code> with the jobs <code>Plan affected targets</code>, <code>Tool tests</code>, <code>Validate &lt;target id&gt;</code> for each affected active target and <code>Validate targets</code>.</li>
+<li>The <code>Tool tests</code> job's <code>Check the scaffold</code> step reports no warnings.</li>
+<li>The <code>Validate &lt;target id&gt;</code> job ends with <code>Publish to the site</code>, and the data repository gains a commit titled <code>game GAME01-rev0: &lt;sha&gt;, &lt;n&gt;% code linked</code>.</li>
+<li>The data repository's <code>Deploy</code> workflow runs, and <code>https://mitsevox.github.io/games/game/</code> shows the new measurement within a few minutes.</li>
+<li>A pull request runs the same build, checks that the report converts and skips the publish step; it cannot merge until <code>Validate targets</code> passes and the owner merges it.</li>
+<li><code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift.</li>
+</ul>
+<h2 id="glossary">Glossary</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>target</td>
+<td>One original binary the project matches: a game id plus a disc revision, region or platform. Identified by a stable id.</td>
+</tr>
+<tr>
+<td>active</td>
+<td>A target that is built, verified and measured. <code>planned</code> and <code>archived</code> targets are listed on the page but never built.</td>
+</tr>
+<tr>
+<td>define</td>
+<td><code>VERSION_&lt;ID&gt;</code>: the id upper-cased with <code>-</code> and <code>.</code> replaced by <code>_</code>. The preprocessor symbol under which a target's differences live.</td>
+</tr>
+<tr>
+<td>group</td>
+<td>A macro in <code>include/version.h</code> naming two or more targets that share a difference, such as a region.</td>
+</tr>
+<tr>
+<td>original</td>
+<td>The unmodified executable, kept in the private image and never in the public repository.</td>
+</tr>
+<tr>
+<td>build image</td>
+<td>The private container image with the originals and the toolchain, referenced by digest.</td>
+</tr>
+<tr>
+<td>objdiff report</td>
+<td><code>report.json</code>, written by <code>objdiff-cli report generate</code>; the only measurement input the publish action reads.</td>
+</tr>
+<tr>
+<td>linked</td>
+<td>Bytes of units that compile from source into the byte-identical executable (<code>Matching</code> objects).</td>
+</tr>
+<tr>
+<td>matched</td>
+<td>Bytes that match exactly whether linked or not (exact functions in <code>NonMatching</code> units count).</td>
+</tr>
+<tr>
+<td>fuzzy</td>
+<td>Size-weighted similarity of every function and data section.</td>
+</tr>
+<tr>
+<td>tier</td>
+<td>A, B or C: what a PR touches decides which review records it needs.</td>
+</tr>
+<tr>
+<td>review record</td>
+<td>A PR comment that starts with <code>Revision:</code>, <code>Targets:</code> and an <code>Accuracy:</code> or <code>Hostile:</code> verdict.</td>
+</tr>
+<tr>
+<td>scaffold check</td>
+<td>The composite action in the site repository that compares a checkout with the kit and the spec, in warn mode.</td>
+</tr>
+<tr>
+<td>publish action</td>
+<td><code>mitsevox/mitsevox.github.io/.github/actions/publish</code>, which converts the report into the contract files and pushes them.</td>
+</tr>
+<tr>
+<td>data repository</td>
+<td><code>mitsevox/decomp-data</code>: one directory per game and target, served by Pages.</td>
+</tr>
+<tr>
+<td>contract</td>
+<td>The schema-1 file format (<code>contract/README.md</code>); <code>publish.py check</code> is its executable form.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="using-this-guide-with-an-agent">Using this guide with an agent</h2>
+<p>Give the agent the <a href="/wiki/downloads/handbook.md">whole guide as one Markdown file</a>, the <a href="/wiki/downloads/repository-starter.zip">starter archive</a> and the project parameters. The <a href="/wiki/starter-kit/#prompt-for-an-agent">starter kit</a> has a prompt. An agent cannot obtain the original, create the private repository, install the GitHub App or set repository settings on its own; the guide marks those steps as the owner's.</p></article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>

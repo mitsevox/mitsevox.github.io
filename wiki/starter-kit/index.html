@@ -1,1 +1,220 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="The downloadable files, their parameters, the acceptance checklist and an agent prompt."><title>Starter kit · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="The downloadable files, their parameters, the acceptance checklist and an agent prompt."><title>Starter kit · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><noscript><article class="wiki-article"><h1 id="starter-kit">Starter kit</h1>
+<p>The downloadable files, their parameters, the scaffold spec, the acceptance checklist and an agent prompt.</p>
+<p>Download the <a href="/wiki/downloads/repository-starter.zip">repository starter archive</a>. It unpacks to <code>repository-starter/</code> and contains every copyable file this guide refers to, the scaffold spec, the data contract, and nothing that pretends to be a build system. The same files are browsable in the site repository under <a href="https://github.com/mitsevox/mitsevox.github.io/tree/main/docs/wiki/starter"><code>docs/wiki/starter/</code></a>.</p>
+<h2 id="contents">Contents</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>Copy to</th>
+<th>Chapter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>README.md</code></td>
+<td>nowhere; it lists the parameters</td>
+<td>this one</td>
+</tr>
+<tr>
+<td><code>README.md.template</code></td>
+<td><code>README.md</code></td>
+<td><a href="/wiki/contribution-workflow/">Contribution workflow</a></td>
+</tr>
+<tr>
+<td><code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>CONTRIBUTING.md</code>, <code>CREDITS.md</code>, <code>.gitignore</code>, <code>.gitattributes</code>, <code>.github/pull_request_template.md</code></td>
+<td>the repository root and <code>.github/</code></td>
+<td><a href="/wiki/contribution-workflow/">Contribution workflow</a>, <a href="/wiki/repository-layout/">Repository layout</a></td>
+</tr>
+<tr>
+<td><code>.github/workflows/validate.yml.template</code></td>
+<td><code>.github/workflows/validate.yml</code></td>
+<td><a href="/wiki/ci/">CI</a></td>
+</tr>
+<tr>
+<td><code>config/targets.json</code>, <code>config/site.json</code>, <code>config/ci-targets.json</code>, <code>config/README.md</code></td>
+<td><code>config/</code></td>
+<td><a href="/wiki/targets/">Targets</a>, <a href="/wiki/evidence/">Evidence</a></td>
+</tr>
+<tr>
+<td><code>include/version.h</code></td>
+<td><code>include/</code></td>
+<td><a href="/wiki/build-verify-measure/">Build, verify, measure</a></td>
+</tr>
+<tr>
+<td><code>tools/__init__.py</code>, <code>tools/targets.py</code>, <code>tools/ci_targets.py</code>, <code>tools/versions.py</code>, <code>tools/evidence.py</code>, <code>tools/new_target.py</code>, <code>tools/matching_scope.py</code>, <code>tools/measuring_tools.py</code>, <code>tools/tier.py</code>, <code>tools/credits.py</code></td>
+<td><code>tools/</code></td>
+<td><a href="/wiki/targets/">Targets</a>, <a href="/wiki/build-verify-measure/">Build, verify, measure</a>, <a href="/wiki/ci/">CI</a>, <a href="/wiki/contribution-workflow/">Contribution workflow</a>, <a href="/wiki/publishing/">Publishing</a></td>
+</tr>
+<tr>
+<td><code>tests/test_targets.py</code></td>
+<td><code>tests/</code></td>
+<td><a href="/wiki/ci/">CI</a></td>
+</tr>
+<tr>
+<td><code>build-image/Dockerfile</code>, <code>build-image/.github/workflows/image.yml</code>, <code>build-image/README.md</code></td>
+<td>the root of the private repository</td>
+<td><a href="/wiki/build-environment/">Build environment</a></td>
+</tr>
+<tr>
+<td><code>scaffold.json</code></td>
+<td>nowhere; the scaffold check reads it</td>
+<td>this one</td>
+</tr>
+<tr>
+<td><code>contract/README.md</code></td>
+<td>reference only</td>
+<td><a href="/wiki/data-contract/">Data contract</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Not included, because they are the project's own: <code>configure.py</code> and the rest of dtk-template, <code>config/&lt;target id&gt;/</code> (scaffolded by <code>tools/new_target.py</code>), <code>src/</code> and <code>include/</code> beyond <code>version.h</code>.</p>
+<h2 id="parameters">Parameters</h2>
+<p>Every project-specific value, and where it goes:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+<th>Files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Public repository</td>
+<td><code>owner/game</code></td>
+<td><code>CONTRIBUTING.md</code>, <code>build-image/README.md</code></td>
+</tr>
+<tr>
+<td>Owner login</td>
+<td><code>OWNER_LOGIN</code></td>
+<td><code>CONTRIBUTING.md</code>, <code>README.md.template</code></td>
+</tr>
+<tr>
+<td>Slug</td>
+<td><code>game</code></td>
+<td><code>config/site.json</code>, <code>README.md.template</code></td>
+</tr>
+<tr>
+<td>Target ids</td>
+<td><code>GAME01-rev0</code>, <code>GAME01-rev1</code></td>
+<td><code>config/targets.json</code>, <code>.github/pull_request_template.md</code>, <code>README.md.template</code>, <code>build-image/*</code></td>
+</tr>
+<tr>
+<td>Target display strings</td>
+<td><code>label</code>, <code>region</code>, <code>revision</code></td>
+<td><code>config/targets.json</code></td>
+</tr>
+<tr>
+<td>Original SHA-1</td>
+<td>40 lower-case hex digits</td>
+<td><code>config/targets.json</code>, <code>build-image/Dockerfile</code></td>
+</tr>
+<tr>
+<td>Presentation</td>
+<td><code>title</code>, <code>shortTitle</code>, <code>console</code>, <code>year</code>, <code>contributions</code>, <code>contributors</code>, <code>artwork</code></td>
+<td><code>config/site.json</code></td>
+</tr>
+<tr>
+<td>Build image</td>
+<td><code>owner/game-build</code> and its digest</td>
+<td><code>validate.yml.template</code> PARAMETER 1 (<code>BUILD_IMAGE</code>), <code>build-image/README.md</code></td>
+</tr>
+<tr>
+<td>Original path</td>
+<td><code>sys/main.dol</code></td>
+<td><code>validate.yml.template</code> PARAMETER 2, <code>build-image/*</code>, <code>config/&lt;id&gt;/config.yml</code></td>
+</tr>
+<tr>
+<td>Configure and build commands</td>
+<td>your toolchain's</td>
+<td><code>validate.yml.template</code> PARAMETER 3</td>
+</tr>
+<tr>
+<td>Project checks</td>
+<td>optional step and its command</td>
+<td><code>validate.yml.template</code></td>
+</tr>
+<tr>
+<td>Credential names</td>
+<td><code>DATA_APP_CLIENT_ID</code> (repository variable), <code>DATA_APP_PRIVATE_KEY</code> (secret of the <code>publish</code> environment)</td>
+<td><code>validate.yml.template</code> PARAMETER 4</td>
+</tr>
+<tr>
+<td>Reported and verified tool versions</td>
+<td><code>TAGS</code> (the <code>configure.py</code> lines) or <code>PINS</code> (JSON pin files), and <code>VERIFY</code> (the command that prints each image-installed tool's version)</td>
+<td><code>tools/measuring_tools.py</code></td>
+</tr>
+<tr>
+<td>Project agent rules</td>
+<td>the <code>## Project</code> section</td>
+<td><code>AGENTS.md</code></td>
+</tr>
+<tr>
+<td>Toolchain archives, toolkit tag and commit</td>
+<td></td>
+<td><code>build-image/Dockerfile</code>, <code>build-image/.github/workflows/image.yml</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="the-scaffold-spec">The scaffold spec</h2>
+<p><code>scaffold.json</code> says which of these files must stay byte-identical to the kit, which are checked by outline, and which are free, and the scaffold check in CI enforces it (<a href="/wiki/ci/">CI</a>).</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Files</th>
+<th>Checked</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Byte-identical</td>
+<td><code>tools/targets.py</code>, <code>tools/ci_targets.py</code>, <code>tools/versions.py</code>, <code>tools/evidence.py</code>, <code>tools/new_target.py</code>, <code>tools/matching_scope.py</code>, <code>tools/tier.py</code>, <code>tools/credits.py</code>, <code>tests/test_targets.py</code>, <code>config/README.md</code></td>
+<td>Equal to the kit at the action's revision</td>
+</tr>
+<tr>
+<td>Outline</td>
+<td><code>README.md</code> (the seven headings in order), <code>CONTRIBUTING.md</code> (the section headings), <code>AGENTS.md</code> (the kit header verbatim, then <code>## Project</code>), <code>.github/pull_request_template.md</code> (contains <code>## Targets</code>), <code>validate.yml</code> (job names, step names, the publish, report-check and scaffold-check actions, <code>BUILD_IMAGE</code> by digest, the target job's environment line)</td>
+<td>Headings or the fixed part; the body is free</td>
+</tr>
+<tr>
+<td>Free</td>
+<td>Everything else</td>
+<td>Nothing</td>
+</tr>
+</tbody>
+</table></div>
+<p>The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every <code>MatchingFor</code> argument and <code>VERSION_</code> token known, <code>ci-targets.json</code> without a <code>targets</code> key, <code>evidence.tsv</code> well formed, no <code>docs/dtk/</code> or <code>config.example.yml</code>, no file in <code>references/</code> over 4 MB, <code>.gitignore</code> covering <code>orig/*/*</code>, <code>build/</code>, <code>*.dol</code> and <code>*.elf</code>, no second workflow, and the readable half of the <a href="/wiki/repository-settings/">settings standard</a>. There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under <code>docs/</code>, <code>tools/</code> or <code>references/</code>.</p>
+<h2 id="acceptance-checklist">Acceptance checklist</h2>
+<p>The repository is set up when each line is true and can be shown with a run, a commit or a URL.</p>
+<ul>
+<li>The public repository has the layout in <a href="/wiki/repository-layout/">Repository layout</a>; <code>git status</code> after a local build shows no original or generated file.</li>
+<li><code>python3 -m unittest discover -s tests -p 'test_*.py'</code>, <code>python3 tools/targets.py check</code>, <code>python3 tools/versions.py check</code> and <code>python3 tools/evidence.py check</code> pass locally.</li>
+<li><code>ninja -f build/&lt;id&gt;/build.ninja</code> produces the byte-identical executable for every active target.</li>
+<li>The measurement command of the README writes <code>build/&lt;id&gt;/report.json</code>, and <code>publish.py publish --dry-run --no-credits</code> converts it (<a href="/wiki/publishing/">Publishing</a>).</li>
+<li>The private repository's image workflow is green on <code>main</code>, the package is private, the public repository has Read access, and <code>validate.yml</code> names the digest in <code>BUILD_IMAGE</code>.</li>
+<li>A pull request runs <code>Plan affected targets</code>, <code>Tool tests</code>, <code>Validate &lt;id&gt;</code> and <code>Validate targets</code>, all green, and the <code>Check the scaffold</code> step prints no warning.</li>
+<li>The <code>main</code> ruleset requires a pull request and <code>Validate targets</code>, and the <code>merges</code> ruleset restricts merging to the Repository admin role; <code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift for either repository.</li>
+<li>The GitHub App is installed on the data repository; the producer holds the variable and the <code>publish</code> environment with the secret.</li>
+<li>The first <code>main</code> run's <code>Publish to the site</code> step printed <code>published &lt;slug&gt;/&lt;id&gt; &lt;sha&gt;</code>; the data repository has the commit; <code>https://mitsevox.github.io/games/&lt;slug&gt;/</code> shows it.</li>
+<li>Cover art is committed to the data repository and <code>artwork</code> is in <code>config/site.json</code>, or the owner has decided to go without.</li>
+</ul>
+<h2 id="prompt-for-an-agent">Prompt for an agent</h2>
+<pre><code class="language-text">Set up a decompilation repository by following the guide in handbook.md exactly, using the files
+in repository-starter/. The project parameters are: &lt;platform&gt;, &lt;toolchain and versions&gt;, &lt;target
+ids with labels, regions, revisions and SHA-1s&gt;, &lt;slug and presentation&gt;, &lt;owner login&gt;,
+&lt;public repository&gt;, &lt;private build repository&gt;. Do not invent any other value.
+
+Work through the chapters in the order Start here gives. Copy each starter file to its destination
+and fill only the marked parameters; put the project's own rules under the Project section of
+AGENTS.md and nowhere else. Where the guide names a command, run it and report its output; where a
+step needs the owner (creating the private repository, committing the original, installing the
+GitHub App, setting repository variables, secrets, package access or repository settings), stop
+and list exactly what the owner must do.
+
+Finish with the acceptance checklist from the Starter kit chapter: for each line, the evidence
+(command output, commit, run or URL) or the reason it is not yet true. Never substitute a
+placeholder for a real value to make a check pass, never commit an original, and never change the
+build image, the workflow skeleton or the repository settings on your own.
+</code></pre></article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>

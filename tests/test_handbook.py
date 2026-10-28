@@ -60,6 +60,11 @@ class HandbookTests(unittest.TestCase):
             route = ROOT / 'wiki' if slug == 'start-here' else ROOT / 'wiki' / slug
             self.assertTrue((route / 'index.html').is_file())
             self.assertTrue((route / 'content.html').is_file())
+            # Readers without JavaScript get the chapter from the route page itself.
+            page = (route / 'index.html').read_text()
+            self.assertEqual(page.count('<noscript>'), 1, slug)
+            fallback = page.split('<noscript>', 1)[1].split('</noscript>', 1)[0]
+            self.assertIn('<h1', fallback, slug)
         for stale in (ROOT / 'wiki').iterdir():
             if stale.is_dir() and stale.name != 'downloads':
                 self.assertIn(stale.name, slugs, 'wiki/%s has no chapter' % stale.name)

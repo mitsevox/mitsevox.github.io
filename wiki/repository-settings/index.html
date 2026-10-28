@@ -1,1 +1,172 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Branch rules, merge method, Actions permissions, credentials and presentation: the standard, the script that applies it and the monthly check."><title>Repository settings · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Branch rules, merge method, Actions permissions, credentials and presentation: the standard, the script that applies it and the monthly check."><title>Repository settings · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><noscript><article class="wiki-article"><h1 id="repository-settings">Repository settings</h1>
+<p>Branch rules, merge method, Actions permissions, credentials, security features and presentation, applied by a script and re-checked monthly.</p>
+<p>Settings are part of the standard because they are what makes the rest enforceable: a required check means nothing on a branch that accepts direct pushes, and a read-only default token is what keeps a workflow from approving its own PR. Three kinds of repository are in scope: the public source repository, the private build repository and the site. The data repository receives pushes from the publishing App and has its own settings.</p>
+<h2 id="the-standard">The standard</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Source repository</th>
+<th>Build repository</th>
+<th>Site repository</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Default branch</td>
+<td><code>main</code></td>
+<td><code>main</code></td>
+<td><code>main</code></td>
+</tr>
+<tr>
+<td>Ruleset <code>main</code></td>
+<td>require a pull request; required check <code>Validate targets</code>; block force pushes and deletion; no bypass actors</td>
+<td>none: rulesets on a private repository need a paid plan, and only the owner can push there</td>
+<td>require a pull request; required check <code>Test</code>; block force pushes and deletion; no bypass actors</td>
+</tr>
+<tr>
+<td>Ruleset <code>merges</code></td>
+<td>one <code>update</code> rule; its only bypass actor is the Repository admin role with bypass mode "pull requests only"</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Merge method</td>
+<td>squash only</td>
+<td>squash only</td>
+<td>squash only</td>
+</tr>
+<tr>
+<td>Auto-delete head branches</td>
+<td>on</td>
+<td>on</td>
+<td>on</td>
+</tr>
+<tr>
+<td>Allowed actions</td>
+<td>GitHub-owned, plus <code>mitsevox/mitsevox.github.io/.github/actions/*</code></td>
+<td>GitHub-owned only</td>
+<td>GitHub-owned only</td>
+</tr>
+<tr>
+<td>Default <code>GITHUB_TOKEN</code></td>
+<td>read-only; workflows declare their own <code>permissions</code></td>
+<td>read-only</td>
+<td>read-only</td>
+</tr>
+<tr>
+<td>Actions may approve pull requests</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>Fork pull request approval</td>
+<td>required for all outside collaborators (the fork guard in <code>validate.yml</code> is the second line)</td>
+<td>not applicable</td>
+<td>required for all outside collaborators</td>
+</tr>
+<tr>
+<td>Artifact and log retention</td>
+<td>30 days</td>
+<td>30 days</td>
+<td>30 days</td>
+</tr>
+<tr>
+<td>Variable and secret</td>
+<td>the repository variable <code>DATA_APP_CLIENT_ID</code>; no repository secret</td>
+<td>none; <code>GITHUB_TOKEN</code> publishes the image</td>
+<td><code>SETTINGS_READ_TOKEN</code> for the monthly check</td>
+</tr>
+<tr>
+<td>Environments</td>
+<td><code>publish</code>: deployment branches <code>main</code> only (no tag rule), the secret <code>DATA_APP_PRIVATE_KEY</code>, nothing else; <code>validate</code>: every branch, no secrets</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Package</td>
+<td>not applicable</td>
+<td>private; <code>Manage Actions access</code> grants the source repository <code>Read</code></td>
+<td>not applicable</td>
+</tr>
+<tr>
+<td>Secret scanning, push protection, Dependabot alerts, private vulnerability reporting</td>
+<td>on</td>
+<td>on where the plan allows</td>
+<td>on</td>
+</tr>
+<tr>
+<td>Dependabot version updates</td>
+<td>off; pinned actions are bumped by hand twice a year</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>Issues</td>
+<td>on</td>
+<td>off</td>
+<td>on (the drift issue)</td>
+</tr>
+<tr>
+<td>Wiki, Projects, Discussions</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>Description, homepage, topics</td>
+<td><code>&lt;Title&gt; (&lt;console&gt;, &lt;year&gt;) decompilation</code>; <code>https://mitsevox.github.io/games/&lt;slug&gt;/</code>; <code>decompilation</code>, <code>&lt;platform&gt;</code>, <code>&lt;slug&gt;</code></td>
+<td><code>Private build environment for &lt;owner&gt;/&lt;game&gt;</code>; none; none</td>
+<td>the repository's own</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two rulesets protect <code>main</code> in a source repository. <code>main</code> makes every change a pull request that passed <code>Validate targets</code>. <code>merges</code> decides who may merge: contributors hold write access, because CI refuses a fork's pull request (a fork's build would reach the private image), and write access alone would let a contributor merge a pull request that passed CI. The <code>update</code> rule restricts updates of <code>main</code> to the ruleset's bypass actors, and the only one is the Repository admin role in "pull requests only" mode: a writer pushes branches and opens pull requests but cannot merge, the owner merges through a pull request, and nobody, the owner included, pushes to <code>main</code> directly. GitHub shows the rule as "Restrict updates" and the bypass as "Repository admin, Pull requests only".</p>
+<p>Each ruleset <code>--check</code> reads is the one with the standard's name, or else the one of that shape that targets the default branch under another name (<code>merges</code> is the ruleset whose only rule is <code>update</code>), never the same ruleset for both; <code>--apply</code> then renames it rather than adding a second one. An <code>update</code> rule inside <code>main</code> is drift: with no bypass actor there, nobody could merge. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: <code>main</code> rebuilds and verifies after every merge.</p>
+<p>A single setting may differ for one repository (a merge method, say) when its process needs it; that is a row in the per-repository overrides of the configuration file, never a change to the table.</p>
+<h2 id="the-script">The script</h2>
+<p>The standard is data: <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json"><code>config/repo-standard.json</code></a> in the site repository holds the table keyed by kind, a <code>repositories</code> block that names each repository with the values its description, homepage and topics are built from, and the overrides. <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py"><code>tools/repo_settings.py</code></a> reads it and talks to the GitHub REST API; standard-library Python, idempotent.</p>
+<pre><code class="language-sh">export GH_TOKEN=&quot;$(gh auth token)&quot;
+python3 tools/repo_settings.py --repo owner/game --check
+python3 tools/repo_settings.py --repo owner/game --apply
+python3 tools/repo_settings.py --all --check
+</code></pre>
+<p><code>--check</code> prints one line per setting that differs (<code>expected ..., found ...</code>) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. <code>--apply</code> sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the <code>main</code> and <code>merges</code> rulesets (each created or updated by name), the environments with their deployment branch policies, and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (<code>--kind source</code> or <code>--kind build</code>), and its description, homepage and topics are its own.</p>
+<p>What the script cannot set, and prints as hand steps:</p>
+<ul>
+<li>the variable (Settings, Secrets and variables, Actions) and the environment secret (Settings, Environments, <code>publish</code>), and deleting any others; a <code>DATA_APP_PRIVATE_KEY</code> repository secret goes only at its step of the move order below;</li>
+<li>the private package's <code>Manage Actions access</code> grant to the source repository;</li>
+<li>the GitHub App that writes the data repository (<a href="/wiki/publishing/">Publishing</a>);</li>
+<li>removing a <code>.github/dependabot.yml</code> if one exists.</li>
+</ul>
+<p>The owner runs <code>--apply</code> with their own token once per repository after it adopts the standard, and after any deliberate change to the table.</p>
+<h2 id="keeping-it-true">Keeping it true</h2>
+<p>Two readers keep the settings from drifting back:</p>
+<ol>
+<li><strong>The scaffold check</strong>, in every repository's <code>Tool tests</code> job (<a href="/wiki/ci/">CI</a>), reads what the default <code>GITHUB_TOKEN</code> can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to <code>main</code> (<code>GET /repos/{owner}/{repo}/rules/branches/main</code>, the union of both rulesets, so a missing <code>update</code> rule shows there). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.</li>
+<li><strong>The monthly check</strong> in the site repository, <code>.github/workflows/settings-check.yml</code>, runs <code>--check</code> for every listed repository with a fine-grained personal access token on those repositories, expiring yearly, stored as the secret <code>SETTINGS_READ_TOKEN</code>. The token holds read access, and nothing more, for: Administration (the Actions permissions), Metadata (the rulesets), Actions (the environments and their deployment branch policies), Environments (the environment secrets), Secrets and Variables (the repository's own); a permission missing from the token reads as permanent drift, because unreadable counts as drift. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.</li>
+</ol>
+<p>The monthly workflow is committed with manual dispatch only. Once the token exists, the owner creates the secret and adds the <code>schedule</code> block that the file's comment shows; nothing else changes. When the token expires, the check fails loudly at its first step rather than passing silently.</p>
+<h2 id="owner-steps-when-adopting-the-standard">Owner steps when adopting the standard</h2>
+<ol>
+<li>Merge the repository's scaffold PR, so that <code>validate.yml</code> and the <code>Validate targets</code> check exist before the ruleset requires them.</li>
+<li>Run <code>python3 tools/repo_settings.py --repo owner/game --apply</code> and <code>--repo owner/game-build --apply</code> from a site repository checkout.</li>
+<li>Do the printed hand steps: create the <code>DATA_APP_CLIENT_ID</code> variable and the <code>DATA_APP_PRIVATE_KEY</code> environment secret, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.</li>
+<li>Once, for the site repository: create the read-only token and the <code>SETTINGS_READ_TOKEN</code> secret, then enable the monthly schedule.</li>
+</ol>
+<p>A repository that still holds the key as a repository secret moves it in this order. A job that references an environment reads the environment's secret when it has one of that name and otherwise falls back to the repository secret, so while both exist a <code>published</code> line proves nothing about the environment secret; the order below deletes the repository secret first and then demands a publish.</p>
+<ol>
+<li>Create the <code>publish</code> environment with its branch policy and the environment secret, and the empty <code>validate</code> environment (<a href="/wiki/publishing/">Publishing</a>); <code>--apply</code> creates both environments and the policy, the secret is by hand.</li>
+<li>Merge the <code>validate.yml</code> change that references the environments (the kit sync).</li>
+<li>Delete the repository secret <code>DATA_APP_PRIVATE_KEY</code> (Settings, Secrets and variables, Actions, Secrets).</li>
+<li>Run the workflow on <code>main</code> by hand (Actions, Validate, Run workflow, branch <code>main</code>) and require <code>Publish to the site</code> to print <code>published ...</code>. A failure at <code>Mint a data-repository token</code> means the environment secret is wrong: fix it and run again; nothing was published in between, and the next run publishes.</li>
+<li>Prove the branch policy, with both probes; they are the only evidence that it applies with <code>deployment: false</code>: GitHub's text on <code>deployment: false</code> says that wait timers and required reviewers still apply and does not list deployment branch policies among the rules that apply. On a throwaway branch change the environment line to <code>name: publish</code>, then (a) open a draft pull request: every <code>Validate &lt;target id&gt;</code> job must be refused before its first step with an environment protection message; (b) run the workflow by hand on that branch (Actions, Validate, Run workflow, choose the branch): refused the same way. Close the pull request and delete the branch. A probe that runs instead of being refused means the key is reachable from branches: delete the environment secret at once and report it.</li>
+<li><code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift.</li>
+</ol>
+<h2 id="assumptions-to-confirm">Assumptions to confirm</h2>
+<ul>
+<li>The actions-allowlist, retention and fork-approval endpoints behave as documented for personal accounts.</li>
+<li><code>Manage Actions access</code> is still the package-level grant that lets the source repository pull the image.</li>
+<li>Every agent authors under the owner's login. That is what makes a native approval rule pointless and the procedural merge authority of <a href="/wiki/contribution-workflow/">Contribution workflow</a> the right shape. If agents ever get their own accounts, add one required approving review from the owner with stale approvals dismissed, and nothing else changes.</li>
+</ul></article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>

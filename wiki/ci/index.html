@@ -1,1 +1,135 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="validate.yml: plan the affected targets, run the tool tests and the scaffold check, build each target in the image, publish on main."><title>CI · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="validate.yml: plan the affected targets, run the tool tests and the scaffold check, build each target in the image, publish on main."><title>CI · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><noscript><article class="wiki-article"><h1 id="ci">CI</h1>
+<p><code>validate.yml</code>: plan the affected targets, run the tool tests and the scaffold check, build each target in the image, publish on <code>main</code>.</p>
+<p>One workflow does everything. It runs on every push to <code>main</code>, every pull request and on manual dispatch. Pull requests get the full build and nothing else; pushes to <code>main</code> additionally publish. There is no cache, no artifact and no second workflow to keep in step: the starter <code>validate.yml.template</code> is the whole thing, the four parameters marked in it are the only edits, and one optional step is the only addition. The scaffold check compares the file's job and step names with the kit on every run.</p>
+<h2 id="jobs">Jobs</h2>
+<pre><code class="language-text">Plan affected targets ──┐
+                        ├──&gt; Validate &lt;target id&gt;  (one job per affected active target, in the image)
+Tool tests ─────────────┘            │
+                                     └──&gt; Validate targets  (the aggregate check the ruleset requires)
+</code></pre>
+<h3 id="plan-affected-targets">Plan affected targets</h3>
+<p>Checks out with <code>fetch-depth: 0</code> (the planner diffs two commits) and runs <code>python3 tools/ci_targets.py</code>. The planner reads the event: for a pull request it diffs GitHub's test merge commit against that commit's first parent, the base branch as the merge was built on it (the event's base SHA can lag the branch, and diffing from it would count the base's newer commits as the pull request's; <code>tools/tier.py</code> uses the same base), for a push it diffs <code>before</code> against the pushed commit, and for <code>workflow_dispatch</code>, a push without a usable <code>before</code> (first push, force push) or <code>--force-all</code> it selects every active target. It applies <code>config/ci-targets.json</code> (<a href="/wiki/targets/">Targets</a>), with each target's <code>config/&lt;id&gt;/**</code> and <code>orig/&lt;id&gt;/**</code> derived from the registry, and writes two outputs:</p>
+<ul>
+<li><code>matrix</code>: <code>{"include":[{"target":"GAME01-rev0"}, ...]}</code></li>
+<li><code>has_targets</code>: <code>true</code> or <code>false</code></li>
+</ul>
+<p>On a pull request the job's second step, <code>Check the declared tier</code>, runs <code>python3 tools/tier.py</code>: it reads the first <code>Tier A</code>, <code>Tier B</code> or <code>Tier C</code> in the PR body and fails when the diff needs more (<code>config/&lt;id&gt;/splits.txt</code> or <code>symbols.txt</code>, an <code>inferred</code> evidence row, or a <code>cflags</code>, <code>ldflags</code>, <code>asflags</code> or <code>mw_version</code> line in <code>configure.py</code> need A; other source or <code>configure.py</code> changes need B). Outside pull requests it passes. Editing the body does not re-run it; the next push does.</p>
+<p>The third step, <code>Check the credits</code>, runs <code>python3 tools/credits.py</code>. It does nothing unless <code>config/site.json</code> sets <code>"contributors": true</code>; then it checks the PR body's <code>Credits:</code> line and every target's <code>credits.tsv</code> and confirms each login exists on GitHub (<a href="/wiki/publishing/">Publishing</a>, "Credits").</p>
+<p>Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every <code>include/**</code> change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.</p>
+<h3 id="tool-tests">Tool tests</h3>
+<p>Runs on the plain runner, outside the image, on every event, in two steps:</p>
+<pre><code class="language-sh"># Run tool tests
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 tools/targets.py check
+python3 tools/versions.py check
+python3 tools/evidence.py check
+python3 tools/matching_scope.py check
+# Check the scaffold
+uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
+</code></pre>
+<p>The first step runs the project's tests (add yours under <code>tests/test_*.py</code>) and the four kit checks: the hashes agree per target, the version blocks use known tokens only, the evidence records are well formed, and, once two or more targets are active, every <code>Matching</code> claim in <code>configure.py</code> names its targets (<a href="/wiki/multi-target/">Multiple targets</a>). The second is the scaffold check, a composite action in the site repository. GitHub clones the whole site repository to run it, so the check compares the checkout against the starter kit and the scaffold spec at the action's own revision, and the kit, the spec and the check can never disagree. It prints one <code>::warning::</code> per finding and exits 0; <code>with: strict: true</code> makes it fail instead, which the owner flips once every repository has been clean for a month. With the default token it also reads the repository's description, topics, features and the rules on <code>main</code> and warns where they differ from the <a href="/wiki/repository-settings/">settings standard</a>; the merge settings are not readable with that token, so it reports them as <code>found unreadable</code>. Keep anything that needs the toolchain out of this job.</p>
+<h3 id="validate-target-id">Validate <code>&lt;target id&gt;</code></h3>
+<p>One job per selected target, <code>fail-fast: false</code>, so one target's failure does not cancel another's build or publish. It runs inside the private image, named once at the top of the file. GitHub does not make the <code>env</code> context available to <code>container.image</code>, so the plan job passes the value on as its <code>image</code> output:</p>
+<pre><code class="language-yaml">env:
+  BUILD_IMAGE: ghcr.io/owner/game-build@sha256:&lt;digest&gt;     # PARAMETER 1
+...
+  plan:
+    outputs:
+      image: ${{ env.BUILD_IMAGE }}
+...
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: read
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' &amp;&amp; (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &amp;&amp; 'publish' || 'validate' }}
+      deployment: false
+    container:
+      image: ${{ needs.plan.outputs.image }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      TARGET_ID: ${{ matrix.target }}
+</code></pre>
+<p>The job references a deployment environment: <code>publish</code> on a push or manual run of <code>main</code>, <code>validate</code> otherwise. <code>publish</code> holds the publishing key as an environment secret and its deployment branch policy allows <code>main</code> only, so a run of any other branch that names <code>publish</code> is refused by GitHub before its first step; <code>validate</code> holds nothing. <code>deployment: false</code> uses the environment's secrets without recording a deployment per run; that the branch policy still applies with it is proven per repository by the two refused probe runs of the move order (<a href="/wiki/repository-settings/">Repository settings</a>, <a href="/wiki/publishing/">Publishing</a>).</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Require a repository contribution branch</code></td>
+<td><code>test "$SOURCE_REPOSITORY" = "$GITHUB_REPOSITORY"</code>, where <code>SOURCE_REPOSITORY</code> is the PR head repository or, outside PRs, the repository itself. A fork's PR fails here, before the original is touched.</td>
+</tr>
+<tr>
+<td><code>actions/checkout</code></td>
+<td><code>persist-credentials: false</code>; the default depth is enough because the publish step only needs <code>HEAD</code>.</td>
+</tr>
+<tr>
+<td><code>Provide target original</code></td>
+<td><code>mkdir -p orig/$TARGET_ID/sys</code>, <code>cp /orig/$TARGET_ID/sys/main.dol orig/$TARGET_ID/sys/main.dol</code>. PARAMETER 2 is the path. The toolkit checks the hash against <code>config.yml</code> when it splits; a third check of the same bytes is not needed.</td>
+</tr>
+<tr>
+<td><code>Configure target</code></td>
+<td><code>python3 configure.py --version "$TARGET_ID" --dtk /usr/local/bin/dtk --binutils /binutils --compilers /compilers</code>. PARAMETER 3.</td>
+</tr>
+<tr>
+<td><code>Build, verify complete executable and measure progress</code> (<code>id: measure</code>)</td>
+<td><code>ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"</code>, then writes the output <code>measured-at</code> as the current UTC time in <code>%Y-%m-%dT%H:%M:%SZ</code>. PARAMETER 3. The build fails unless the executable's hash matches.</td>
+</tr>
+<tr>
+<td><code>Check the report</code></td>
+<td><code>uses: mitsevox/mitsevox.github.io/.github/actions/check-report@main</code> with <code>target</code> and <code>report</code>, on every event. It converts the report into the contract files with the same code as the publish step, into an empty tree, and checks them, without a credential and without credits. A report the site would refuse fails the pull request here, not the <code>main</code> publish. A repository that passes <code>code-sections</code> or <code>unit-prefix</code> to the publish step passes the same values here.</td>
+</tr>
+<tr>
+<td><code>Project checks</code>, optional</td>
+<td>The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name.</td>
+</tr>
+<tr>
+<td><code>List measuring tools</code> (<code>id: tools</code>)</td>
+<td>Runs <code>python3 tools/measuring_tools.py --verify</code> on every event. The tool reads <code>BUILD_IMAGE</code> from the environment and the tool versions the repository pins (the tags in <code>configure.py</code>, or the JSON pin files its <code>PINS</code> parameter names); <code>--verify</code> runs each command its <code>VERIFY</code> parameter names inside the image (<code>dtk --version</code> in the kit) and fails the job unless the command exits 0 and the pinned version appears in its output as a whole word (<code>1.8.3</code> is not found in <code>1.8.30</code>), so the provenance published on <code>main</code> names what measured the report, and a pull request that bumps the image digest without the pin, or the pin without the image, fails here. The lines are captured in the output <code>lines</code> with a random heredoc delimiter.</td>
+</tr>
+<tr>
+<td><code>Publish to the site</code>, <code>main</code> only</td>
+<td><code>uses: mitsevox/mitsevox.github.io/.github/actions/publish@main</code> with <code>target</code>, <code>report: build/&lt;target&gt;/report.json</code>, <code>tools</code>, <code>measured-at</code>, <code>app-client-id</code> and <code>app-private-key</code>. PARAMETER 4 names the repository variable and the <code>publish</code> environment's secret.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The publish step and the job's environment use the same condition, <code>github.ref == 'refs/heads/main' &amp;&amp; (github.event_name == 'push' || github.event_name == 'workflow_dispatch')</code>: a push and a manual run on <code>main</code> publish, and nothing else does, the events being named rather than excluded so that an event added later never publishes by accident. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.</p>
+<h3 id="validate-targets">Validate targets</h3>
+<p>Runs always, after the others, and fails unless <code>plan</code> and <code>tests</code> succeeded and the target jobs either all succeeded (when <code>has_targets</code> was <code>true</code>) or were skipped (when it was <code>false</code>). Its name, <code>Validate targets</code>, is the single check the <code>main</code> ruleset requires; the per-target job names vary with the matrix and cannot be required one by one.</p>
+<h2 id="workflow-level-settings">Workflow-level settings</h2>
+<pre><code class="language-yaml">permissions:
+  contents: read
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+</code></pre>
+<p>A new push to a PR cancels that PR's running validation; pushes to <code>main</code> queue instead, so every <code>main</code> commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential, read from the <code>publish</code> environment on <code>main</code> runs only. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to <code>BUILD_IMAGE</code>.</p>
+<h2 id="installing-it">Installing it</h2>
+<ol>
+<li>Copy <code>validate.yml.template</code> to <code>.github/workflows/validate.yml</code>.</li>
+<li>Fill PARAMETER 1 with the digest from the image workflow (<a href="/wiki/build-environment/">Build environment</a>).</li>
+<li>Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally (<a href="/wiki/build-verify-measure/">Build, verify, measure</a>). The image's tool paths replace the local ones.</li>
+<li>Fill PARAMETER 4 with the variable and environment secret names from <a href="/wiki/publishing/">Publishing</a>; the step is harmless until they exist, because it only runs on <code>main</code>. The owner creates both environments, <code>publish</code> and <code>validate</code>, before the first run.</li>
+<li>Copy the <code>tools/</code> and <code>tests/</code> starter files and <code>config/ci-targets.json</code>.</li>
+<li>Open a pull request with all of it and watch the four jobs. The first run of <code>Validate &lt;target id&gt;</code> proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure), the match (<code>build.sha1</code>) and, in <code>Check the report</code>, that the report converts into the site's contract. The <code>Check the scaffold</code> step lists what still differs from the kit.</li>
+<li>Merge. The first <code>main</code> run publishes, provided the credential is in place.</li>
+</ol>
+<h2 id="builds-without-configurepy">Builds without configure.py</h2>
+<p>A repository whose build is not dtk-template's (its own scripts, a Makefile) keeps the same workflow; only the parameter slots differ:</p>
+<ul>
+<li><strong>Entry point.</strong> <code>build.py</code> or a <code>Makefile</code> at the root (the scaffold accepts either in place of <code>configure.py</code>).</li>
+<li><strong>PARAMETER 2.</strong> The image still holds <code>/orig/&lt;target id&gt;/sys/main.dol</code>; the step copies it wherever the build reads it.</li>
+<li><strong>PARAMETER 3.</strong> <code>Configure target</code> runs the build's setup (or <code>true</code> when there is none). <code>Build, verify complete executable and measure progress</code> runs one command that fails unless the complete executable is byte-identical, prints <code>build/&lt;target id&gt;/main.dol: OK</code> (the line every repository's build ends with) and writes an objdiff-shaped <code>build/&lt;target id&gt;/report.json</code> that <code>Check the report</code> accepts (locally: <code>publish.py publish --dry-run --no-credits</code>, <a href="/wiki/publishing/">Publishing</a>): <code>measures</code> with <code>total_functions</code> and <code>matched_functions</code>, and units whose sections carry real names and <code>metadata.virtual_address</code>. The <code>code-sections</code> and <code>unit-prefix</code> the report needs go to both the report check and the publish step.</li>
+<li><strong>Measuring tools.</strong> Set <code>PINS</code> in <code>tools/measuring_tools.py</code> to the JSON files that pin the tools (<code>{"&lt;name&gt;": {"version": ...}}</code>), and <code>VERIFY</code> to the command that prints each image-installed tool's version, so that <code>--verify</code> confirms those pins against the image. List every tool whose <code>--version</code> prints the pinned version as a whole word and exits 0; a tool whose pin is not what it prints (binutils pinned as <code>2.42-2</code> prints <code>2.42</code>) cannot be listed, and only the version word is verified, never anything a pin says after it, such as a local patch's hash.</li>
+<li><strong>Tools.</strong> Every tool the build runs is baked into the build image, as in the kit's Dockerfile; the target job downloads nothing.</li>
+<li><strong>Tool tests.</strong> The <code>Tool tests</code> job runs on the bare runner; a test that needs the toolchain skips there and runs in <code>Project checks</code> instead.</li>
+<li><strong>Build inputs.</strong> <code>tests/**</code> is a <code>nonBuild</code> pattern in the kit because every test runs in <code>Tool tests</code>. A repository whose tests run in <code>Project checks</code> moves <code>tests/**</code> from <code>nonBuild</code> to <code>shared</code> in <code>config/ci-targets.json</code>, so that a test change rebuilds every target where that test runs (<a href="/wiki/targets/">Targets</a>).</li>
+</ul>
+<h2 id="what-a-pull-request-proves">What a pull request proves</h2>
+<p>A green <code>Validate targets</code> on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, objdiff produced a report, and that report converts into the site's contract. It does not mean the reconstruction is right; that is what the review tiers in <a href="/wiki/contribution-workflow/">Contribution workflow</a> are for. Pull requests publish nothing, so a PR cannot change the site.</p></article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
