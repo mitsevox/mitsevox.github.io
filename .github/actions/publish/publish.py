@@ -100,6 +100,41 @@ def data_fuzzy_bytes(unit, code_sections):
                      for s in unit.get('sections', []) if s['name'] not in code_sections)
 
 
+def other_code(unit, code_sections):
+    """The bytes of a unit's code sections that no function covers (alignment padding, code its
+    producer does not split into functions), as [(section, start, end, matched)] in address order.
+    objdiff counts every byte of a code section in matched_code; the matched bytes that no exact
+    function accounts for are given to these pieces in address order, so the map and the summary
+    agree. dtk-template reports have none."""
+    sections = sorted((s['name'], int(s['metadata']['virtual_address']), num(s.get('size')))
+                      for s in unit.get('sections', []) if s['name'] in code_sections and num(s.get('size')))
+    covered = merged((int(f['metadata']['virtual_address']), int(f['metadata']['virtual_address']) + num(f.get('size')))
+                     for f in unit.get('functions', []))
+    pieces = []
+    for name, start, size in sorted(sections, key=lambda s: s[1]):
+        cursor, end = start, start + size
+        for left, right in covered:
+            if right <= cursor or left >= end:
+                continue
+            if left > cursor:
+                pieces.append([name, cursor, left])
+            cursor = max(cursor, right)
+        if cursor < end:
+            pieces.append([name, cursor, end])
+    if not pieces:
+        return []
+    exact = sum(num(f.get('size')) for f in unit.get('functions', []) if f.get('fuzzy_match_percent', 0) >= 100)
+    rest = num(unit.get('measures', {}).get('matched_code')) - exact
+    total = sum(end - start for _, start, end in pieces)
+    require(0 <= rest <= total, '%s: matched_code does not fit its functions and other code' % unit['name'])
+    result = []
+    for name, start, end in pieces:
+        share = min(rest, end - start)
+        rest -= share
+        result.append((name, start, end, share))
+    return result
+
+
 def summary(report, code_sections, unnamed=UNNAMED):
     m = report.get('measures', {})
     total_code, total_data = num(m.get('total_code')), num(m.get('total_data'))
@@ -110,7 +145,8 @@ def summary(report, code_sections, unnamed=UNNAMED):
     require(exact == num(m.get('matched_functions')),
             'Report has %d exact functions, its measures say %s' % (exact, m.get('matched_functions')))
     named = sum(1 for f in functions if not re.fullmatch(unnamed, f['name']))
-    fuzzy = math.fsum(fuzzy_bytes(f) for f in functions)
+    fuzzy = math.fsum(fuzzy_bytes(f) for f in functions) + \
+        sum(matched for u in report.get('units', []) for _, _, _, matched in other_code(u, code_sections))
     data_fuzzy = math.fsum(data_fuzzy_bytes(u, code_sections) for u in report.get('units', []))
     units = report.get('units', [])
 
@@ -192,7 +228,14 @@ def map_document(report, code_sections, unit_prefix='main/'):
             require(section is not None, '%s: %s lies outside the code sections %s'
                     % (name, f['name'], ', '.join(code_sections)))
             code_by_section[section].append(dict(leaf))
+        for section, start, end, matched in other_code(unit, code_sections):
+            leaf = {'name': name + ' (other code)', 'kind': 'code', 'address': hexaddr(start), 'size': end - start,
+                    'linked': end - start if complete else 0, 'matched': matched, 'fuzzy': matched,
+                    '_ranges': [(start, end)]}
+            functions.append(leaf)
+            code_by_section[section].append(dict(leaf))
         if functions:
+            functions.sort(key=lambda f: f['_ranges'][0])
             files.append(group(name, 'code', functions))
         data = [(a, a + n) for s, a, n in sections if s not in code_sections]
         total_data = num(m.get('total_data'))
@@ -491,7 +534,8 @@ def credit(previous, exact, committed_at, authors, overrides, newer):
             known = current.get(fid) or retired.get(fid)
             if known is None:
                 continue
-        if timestamp(known['since']) > when:
+        # A credit without `since` predates it (an imported ledger) and is kept.
+        if 'since' in known and timestamp(known['since']) > when:
             known.update(fresh)
     if newer:
         for fid in [f for f in current if f not in exact]:
@@ -620,7 +664,7 @@ def write_target(tree, game, latest, map_doc, credits=None):
             document = credit(previous, exact_functions(map_doc, latest['target']), latest['source']['committedAt'],
                               authors, credits['overrides'], newer)
             check_contributors(document, latest['summary'] if newer else current['summary'])
-            write_json(credits_path, document)
+            write_json(credits_path, document, compact=True)
             latest['modules']['contributors'] = 'contributors.json'
     if newer:
         write_json(directory / 'map.json', map_doc, compact=True)

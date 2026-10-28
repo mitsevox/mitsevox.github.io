@@ -125,7 +125,9 @@ binary section (a cross-check). A node is
 (a leaf occupying `size` bytes from there) or `mapped_extents` (`[{"start", "end"}]`, hex), and
 optionally `children`. Function leaves add `"type": "function"`, `function_address` and
 `original_size`. Optional evidence fields: `source` and `comparison_source` (repository-relative
-paths), `complete`, `auto_generated`, `boundary`, `scope`.
+paths), `complete`, `auto_generated`, `boundary`, `scope`. Code a unit's functions do not cover (alignment padding, code
+the producer does not split into functions) is one leaf per section piece named `<unit> (other code)`,
+without a `type`; the matched bytes no exact function accounts for are given to it.
 
 The checker enforces: a parent's measures are its children's sums; extents never overlap; both views
 cover exactly the same bytes; per kind, the top-level nodes sum to the summary; every function is
@@ -147,6 +149,7 @@ producer's `site.json` sets `"contributors": true`.
 Every exact function is credited once; `credited_functions` equals the summary's exact function count,
 and each person's `functions` equals the number of credits naming them. `contributors` is the ranking:
 every person with at least one credit, most functions first, then by login. `since` is the commit time
-of the earliest measured build in which the function was exact. `retired` keeps the credits of
+of the earliest measured build in which the function was exact; a credit imported without one is kept as
+it is. `retired` keeps the credits of
 functions that are no longer exact, so a function that returns gets its first credit back; a retired id
 is never also current. `people` names every person any credit refers to.
