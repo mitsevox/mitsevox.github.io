@@ -183,6 +183,53 @@ class RepoSettingsTests(unittest.TestCase):
                          [('PUT', '/repos/mitsevox/nflstreet2/rulesets/7'), ('PUT', '/repos/mitsevox/nflstreet2/rulesets/8')])
         self.assertEqual({body['name'] for _, _, body in api.writes}, {'main', 'merges'})
 
+    def test_a_main_ruleset_holding_only_update_is_never_the_merges_ruleset(self):
+        # One ruleset named `main` whose only rule is `update`, no `merges`: both standard rulesets
+        # must not resolve to it, or apply would write the merges body over the main body.
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/rulesets'] = (200, [{'id': 7, 'name': 'main'}])
+        responses['/repos/mitsevox/n100f/rulesets/7'][1]['rules'] = [{'type': 'update'}]
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        self.assertEqual((found['ruleset.id'], found['merges.exists'], found['ruleset.rule.update']), (7, False, True))
+        drift = repo_settings.diff(repo_settings.expected(std), found)
+        keys = {k for k, _, _ in drift}
+        self.assertTrue({'ruleset.rule.update', 'ruleset.rule.pull_request', 'merges.exists'} <= keys, keys)
+        repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes],
+                         [('PUT', '/repos/mitsevox/n100f/rulesets/7'), ('POST', '/repos/mitsevox/n100f/rulesets')])
+        main_body, merges_body = (body for _, _, body in api.writes)
+        self.assertEqual([r['type'] for r in main_body['rules']], ['deletion', 'non_fast_forward', 'pull_request', 'required_status_checks'])
+        self.assertEqual((merges_body['name'], [r['type'] for r in merges_body['rules']]), ('merges', ['update']))
+
+    def test_an_update_rule_inside_main_is_drift(self):
+        # With no bypass actor on main, an update rule there would let nobody merge.
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/rulesets/7'][1]['rules'].insert(0, {'type': 'update'})
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        drift = repo_settings.diff(repo_settings.expected(std), found)
+        self.assertEqual({k for k, _, _ in drift}, {'ruleset.rule.update'})
+        repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [('PUT', '/repos/mitsevox/n100f/rulesets/7')])
+        self.assertNotIn('update', [r['type'] for r in api.writes[0][2]['rules']])
+
+    def test_merges_ruleset_must_target_the_default_branch_and_hold_only_update(self):
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/rulesets/8'][1]['conditions'] = {'ref_name': {'include': ['refs/heads/release'], 'exclude': []}}
+        drift = repo_settings.diff(repo_settings.expected(std), repo_settings.current(FakeApi(responses), 'mitsevox/n100f', std))
+        self.assertEqual({k for k, _, _ in drift}, {'merges.targets_default'})
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/rulesets/8'][1]['rules'] = [{'type': 'update'}, {'type': 'deletion'}]
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        drift = repo_settings.diff(repo_settings.expected(std), found)
+        self.assertEqual({k for k, _, _ in drift}, {'merges.rule.update'})
+        repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [('PUT', '/repos/mitsevox/n100f/rulesets/8')])
+        body = api.writes[0][2]
+        self.assertEqual(([r['type'] for r in body['rules']], body['conditions']['ref_name']['include']), (['update'], ['~DEFAULT_BRANCH']))
+
     def test_build_repositories_hold_no_ruleset(self):
         std, responses = ideal('mitsevox/n100f-build')
         self.assertNotIn('ruleset.exists', repo_settings.expected(std))

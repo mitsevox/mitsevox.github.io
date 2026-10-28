@@ -107,6 +107,7 @@ def expected(std):
             'merges.name': merges['name'],
             'merges.enforcement': 'active',
             'merges.bypass_actors': merges['bypassActors'],
+            'merges.targets_default': True,
             'merges.rule.update': True,
         })
     rules = std['ruleset']
@@ -118,9 +119,13 @@ def expected(std):
         'ruleset.name': rules['name'],
         'ruleset.enforcement': 'active',
         'ruleset.bypass_actors': rules['bypassActors'],
+        'ruleset.targets_default': True,
         'ruleset.rule.deletion': rules['blockDeletion'],
         'ruleset.rule.non_fast_forward': rules['blockForcePush'],
         'ruleset.rule.pull_request': rules['requirePullRequest'],
+        # An update rule inside main, with no bypass actor, would let nobody merge: it belongs
+        # to the merges ruleset alone.
+        'ruleset.rule.update': False,
         'ruleset.required_status_checks': [rules['requiredCheck']],
         'ruleset.checks_up_to_date': False,
     })
@@ -196,25 +201,26 @@ def current(api, repo, std):
     found['actions.secrets'] = sorted(s['name'] for s in secrets.get('secrets', [])) if status == 200 else None
     if std['ruleset'] is None and not std.get('mergeRuleset'):
         return found
-    rulesets = ruleset_details(api, repo)
+    main, merges = pick_rulesets(ruleset_details(api, repo), std['ruleset']['name'] if std['ruleset'] else None,
+                                 std['mergeRuleset']['name'] if std.get('mergeRuleset') else None)
     if std['ruleset'] is not None:
-        detail = pick_ruleset(rulesets, std['ruleset']['name'], merges=False)
-        found['ruleset.exists'] = detail is not None
-        if detail:
-            found['ruleset.id'] = detail['id']
-            found['ruleset.name'] = detail.get('name')
-            found['ruleset.enforcement'] = detail.get('enforcement')
-            found['ruleset.bypass_actors'] = detail.get('bypass_actors') or []
-            found.update(rules_summary(detail.get('rules', [])))
+        found['ruleset.exists'] = main is not None
+        if main:
+            found['ruleset.id'] = main['id']
+            found['ruleset.name'] = main.get('name')
+            found['ruleset.enforcement'] = main.get('enforcement')
+            found['ruleset.bypass_actors'] = main.get('bypass_actors') or []
+            found['ruleset.targets_default'] = targets_default(main)
+            found.update(rules_summary(main.get('rules', [])))
     if std.get('mergeRuleset'):
-        detail = pick_ruleset(rulesets, std['mergeRuleset']['name'], merges=True)
-        found['merges.exists'] = detail is not None
-        if detail:
-            found['merges.id'] = detail['id']
-            found['merges.name'] = detail.get('name')
-            found['merges.enforcement'] = detail.get('enforcement')
-            found['merges.bypass_actors'] = detail.get('bypass_actors') or []
-            found['merges.rule.update'] = merges_shaped(detail)
+        found['merges.exists'] = merges is not None
+        if merges:
+            found['merges.id'] = merges['id']
+            found['merges.name'] = merges.get('name')
+            found['merges.enforcement'] = merges.get('enforcement')
+            found['merges.bypass_actors'] = merges.get('bypass_actors') or []
+            found['merges.targets_default'] = targets_default(merges)
+            found['merges.rule.update'] = merges_shaped(merges)
     return found
 
 
@@ -234,20 +240,29 @@ def merges_shaped(detail):
     return [rule['type'] for rule in detail.get('rules', [])] == ['update']
 
 
-def pick_ruleset(rulesets, name, merges):
-    """The ruleset with the standard's name, or else the one of the wanted shape that targets the
-    default branch under another name, so that apply renames it instead of adding a second one.
-    The main ruleset and the merges ruleset both target the default branch; the shape tells them
-    apart."""
+def targets_default(detail):
+    include = (detail.get('conditions') or {}).get('ref_name', {}).get('include', [])
+    return '~DEFAULT_BRANCH' in include or 'refs/heads/main' in include
+
+
+def pick_rulesets(rulesets, main_name, merges_name):
+    """(main, merges): each is the ruleset with its standard name, or else the first of its shape
+    that targets the default branch under another name, so that apply renames it instead of
+    adding a second one. Never the same ruleset for both: a `main` holding only an `update` rule
+    is a broken main ruleset, not the merges ruleset. Among three or more rulesets on the default
+    branch, the first of each shape is taken; the check then reports the rest as drift in them."""
+    by_name = {detail.get('name'): detail for detail in rulesets}
+    main = by_name.get(main_name) if main_name else None
+    merges = by_name.get(merges_name) if merges_name else None
+    taken = {detail['id'] for detail in (main, merges) if detail}
     for detail in rulesets:
-        if detail.get('name') == name:
-            return detail
-    for detail in rulesets:
-        include = (detail.get('conditions') or {}).get('ref_name', {}).get('include', [])
-        targets_default = '~DEFAULT_BRANCH' in include or 'refs/heads/main' in include
-        if targets_default and merges_shaped(detail) == merges:
-            return detail
-    return None
+        if detail['id'] in taken or not targets_default(detail):
+            continue
+        if main_name and main is None and not merges_shaped(detail):
+            main, taken = detail, taken | {detail['id']}
+        elif merges_name and merges is None and merges_shaped(detail):
+            merges, taken = detail, taken | {detail['id']}
+    return main, merges
 
 
 def diff(wanted, found):
