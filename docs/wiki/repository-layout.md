@@ -36,7 +36,7 @@ game/
     versions.py                  view, diff and check version differences       (starter)
     evidence.py                  checks evidence.tsv                            (starter)
     new_target.py                scaffolds config/<id>/                         (starter)
-    matching_scope.py            shows and pins what each unit claims to link on (starter)
+    matching_scope.py            shows, pins and checks what each unit claims to link on (starter)
     measuring_tools.py           lists tool versions for provenance, verifies them (starter)
     tier.py                      the review tier a diff needs, checked in CI    (starter)
     credits.py                   the credits a merge will publish, checked in CI (starter)

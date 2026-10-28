@@ -72,6 +72,7 @@ jobs:
           python3 tools/targets.py check
           python3 tools/versions.py check
           python3 tools/evidence.py check
+          python3 tools/matching_scope.py check
       - name: Check the scaffold
         uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
 
