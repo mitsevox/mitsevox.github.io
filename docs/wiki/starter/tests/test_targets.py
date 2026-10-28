@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 from tools.targets import registry,select,build_targets,define,check as check_targets
-from tools.ci_targets import affected,target_patterns
+from tools.ci_targets import affected,target_patterns,pr_base
 from tools.evidence import check_text,COLUMNS
 from tools.measuring_tools import tools as measuring_tools,verify
 from tools.new_target import scaffold
@@ -75,6 +75,28 @@ class Targets(unittest.TestCase):
                 self.assertEqual(affected(['orig/%s/sys/main.dol'%target['id']],value,deps),expected)
         with self.assertRaises(ValueError):affected(['../escape'],value,deps)
         with self.assertRaises(ValueError):affected([],value,dict(deps,targets={}))
+
+    def test_pull_request_diff_starts_where_the_merge_commit_was_built(self):
+        # GitHub's test merge commit can sit on an older base than the event's base.sha; the
+        # commits the base gained since must not read as reverted by the pull request.
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            git=lambda *a:subprocess.check_output(['git','-c','user.name=t','-c','user.email=t@t',*a],cwd=tmp).decode().strip()
+            git('init','-q','-b','main')
+            def commit(path):
+                (Path(tmp)/path).parent.mkdir(parents=True,exist_ok=True);(Path(tmp)/path).write_text(path)
+                git('add','-A');git('commit','-q','-m',path);return git('rev-parse','HEAD')
+            old=commit('src/a.c')
+            git('switch','-q','-c','pr');commit('docs/b.md')
+            git('switch','-q','main');new=commit('config/GAME01-rev0/evidence.tsv')
+            git('switch','-q','--detach',old);git('merge','-q','--no-ff','-m','test merge','pr');stale=git('rev-parse','HEAD')
+            git('switch','-q','--detach',new);git('merge','-q','--no-ff','-m','test merge','pr');fresh=git('rev-parse','HEAD')
+            self.assertEqual(pr_base(new,stale,tmp),old)
+            self.assertEqual(pr_base(new,fresh,tmp),new)
+            changed=lambda b,h:git('diff','--name-only',b,h).split()
+            self.assertEqual(changed(pr_base(new,stale,tmp),stale),['docs/b.md'])
+            self.assertIn('config/GAME01-rev0/evidence.tsv',changed(new,stale))  # what the old diff saw
+        with self.assertRaises(ValueError):pr_base('main','0'*40)
 
     def test_new_target_refuses_unknown_ids_and_overwrites(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -52,12 +52,21 @@ def changed_paths(base,head):
     return [path.decode('utf-8') for path in raw.split(b'\0') if path]
 
 
+def pr_base(base,head,root=ROOT):
+    """The commit a pull request's merge commit was built on. GitHub can build the test merge
+    commit (GITHUB_SHA) on an older base than the event's base.sha when the base moved since;
+    diffing base.sha against it would read the newer base commits as reverted by the PR."""
+    if not SHA.fullmatch(base) or not SHA.fullmatch(head):raise ValueError('Diff endpoints must be full commit SHAs')
+    return subprocess.check_output(['git','merge-base',base,head],cwd=root).decode().strip()
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--force-all',action='store_true');args=parser.parse_args()
     event=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())
     kind=os.environ['GITHUB_EVENT_NAME'];head=os.environ['GITHUB_SHA']
     base=event.get('pull_request',{}).get('base',{}).get('sha') if kind=='pull_request' else event.get('before')
     force=args.force_all or kind=='workflow_dispatch' or not base or base=='0'*40
+    if kind=='pull_request' and not force:base=pr_base(base,head)
     paths=[] if force else changed_paths(base,head)
     targets=affected(paths,registry(),json.loads((ROOT/'config/ci-targets.json').read_text()),force)
     result={'include':[{'target':target} for target in targets]}
