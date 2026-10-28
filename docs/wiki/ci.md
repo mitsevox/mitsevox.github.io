@@ -74,7 +74,7 @@ env:
 | `Configure target` | `python3 configure.py --version "$TARGET_ID" --dtk /usr/local/bin/dtk --binutils /binutils --compilers /compilers`. PARAMETER 3. |
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
 | `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
-| `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool tags from `configure.py`, and captures its lines in the output `lines` with a random heredoc delimiter. |
+| `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names), and captures its lines in the output `lines` with a random heredoc delimiter. |
 | `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the variable and secret. |
 
 The two `main`-only steps use the condition `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`, so a push and a manual run on `main` both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
@@ -104,6 +104,17 @@ A new push to a PR cancels that PR's running validation; pushes to `main` queue 
 5. Copy the `tools/` and `tests/` starter files and `config/ci-targets.json`.
 6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (`build.sha1`). The `Check the scaffold` step lists what still differs from the kit.
 7. Merge. The first `main` run publishes, provided the credential is in place.
+
+## Builds without configure.py
+
+A repository whose build is not dtk-template's (its own scripts, a Makefile) keeps the same workflow; only the parameter slots differ:
+
+- **Entry point.** `build.py` or a `Makefile` at the root (the scaffold accepts either in place of `configure.py`).
+- **PARAMETER 2.** The image still holds `/orig/<target id>/sys/main.dol`; the step copies it wherever the build reads it.
+- **PARAMETER 3.** `Configure target` runs the build's setup (or `true` when there is none). `Build, verify complete executable and measure progress` runs one command that fails unless the complete executable is byte-identical, prints `build/<target id>/main.dol: OK` (the line every repository's build ends with) and writes an objdiff-shaped `build/<target id>/report.json` that `publish.py publish --dry-run` accepts: `measures` with `total_functions` and `matched_functions`, and units whose sections carry real names and `metadata.virtual_address`.
+- **Measuring tools.** Set `PINS` in `tools/measuring_tools.py` to the JSON files that pin the tools (`{"<name>": {"version": ...}}`).
+- **Tools.** Every tool the build runs is baked into the build image, as in the kit's Dockerfile; the target job downloads nothing.
+- **Tool tests.** The `Tool tests` job runs on the bare runner; a test that needs the toolchain skips there and runs in `Project checks` instead.
 
 ## What a pull request proves
 
