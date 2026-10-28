@@ -19,6 +19,7 @@ Tool tests ─────────────┘            │
 <li><code>matrix</code>: <code>{"include":[{"target":"GAME01-rev0"}, ...]}</code></li>
 <li><code>has_targets</code>: <code>true</code> or <code>false</code></li>
 </ul>
+<p>On a pull request the job's second step, <code>Check the declared tier</code>, runs <code>python3 tools/tier.py</code>: it reads the first <code>Tier A</code>, <code>Tier B</code> or <code>Tier C</code> in the PR body and fails when the diff needs more (<code>config/&lt;id&gt;/splits.txt</code> or <code>symbols.txt</code>, an <code>inferred</code> evidence row, or a <code>cflags</code>, <code>ldflags</code>, <code>asflags</code> or <code>mw_version</code> line in <code>configure.py</code> need A; other source or <code>configure.py</code> changes need B). Outside pull requests it passes. Editing the body does not re-run it; the next push does.</p>
 <p>Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every <code>include/**</code> change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.</p>
 <h3 id="tool-tests">Tool tests</h3>
 <p>Runs on the plain runner, outside the image, on every event, in two steps:</p>

@@ -6,7 +6,7 @@
     "config/targets.json", "config/site.json", "config/ci-targets.json", "config/README.md",
     "include/version.h",
     "tools/__init__.py", "tools/targets.py", "tools/ci_targets.py", "tools/measuring_tools.py",
-    "tools/versions.py", "tools/evidence.py", "tools/new_target.py",
+    "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/tier.py",
     "tests/test_targets.py",
     ".github/workflows/validate.yml", ".github/pull_request_template.md"
   ],
@@ -33,7 +33,7 @@
     "## Targets", "## Building", "## CI and the progress site", "## Contributing", "## Layout", "## Credits and licenses"
   ],
   "byteIdentical": [
-    "tools/targets.py", "tools/ci_targets.py", "tools/versions.py", "tools/evidence.py", "tools/new_target.py",
+    "tools/targets.py", "tools/ci_targets.py", "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/tier.py",
     "tests/test_targets.py", "config/README.md"
   ],
   "outline": {
@@ -48,7 +48,7 @@
     "path": ".github/workflows/validate.yml",
     "jobs": ["Plan affected targets", "Tool tests", "Validate ${{ matrix.target }}", "Validate targets"],
     "steps": [
-      "Select affected target inputs", "Run tool tests", "Check the scaffold",
+      "Select affected target inputs", "Check the declared tier", "Run tool tests", "Check the scaffold",
       "Require a repository contribution branch", "Provide target original", "Configure target",
       "Build, verify complete executable and measure progress", "List measuring tools", "Publish to the site",
       "Require all selected target validations"
