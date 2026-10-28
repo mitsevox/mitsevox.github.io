@@ -369,6 +369,14 @@ def check_latest(latest, game, target):
     timestamp(source.get('committedAt'))
     timestamp(latest.get('measuredAt'))
     check_summary(latest.get('summary', {}))
+    modules = latest.get('modules')
+    require(isinstance(modules, dict), 'latest.json: modules is missing')
+    for key in ('map', 'contributors'):
+        name = modules.get(key)
+        # A bare file name beside latest.json; never a path (a browser reads `\` as `/` in a URL).
+        require(name is None or (isinstance(name, str) and name and '/' not in name and '\\' not in name
+                                 and name not in ('.', '..')),
+                'latest.json: modules.%s is not a file name: %r' % (key, name))
 
 
 def check_history(rows):
@@ -425,6 +433,11 @@ def check_map(document, s):
     def walk(item, kind, inventory):
         require(isinstance(item.get('name'), str), 'map: a node has no name')
         require(item.get('kind') == kind, 'map: kind differs at %r' % item.get('name'))
+        # The page needs integer counts on every node, and a number where fuzzy is given; a null
+        # here is not a missing measure.
+        require(all(isinstance(item.get(k), int) and not isinstance(item.get(k), bool) for k in ('size', 'linked', 'matched'))
+                and ('fuzzy' not in item or (isinstance(item['fuzzy'], (int, float)) and not isinstance(item['fuzzy'], bool))),
+                'map: %r lacks a count' % item.get('name'))
         for key in ('source', 'comparison_source'):
             if key in item:
                 require(SOURCE_PATH.fullmatch(item[key]) and not any(p in ('.', '..') for p in item[key].split('/')),
@@ -435,10 +448,11 @@ def check_map(document, s):
             children = item['children']
             # The page reads an empty list as a group with nothing in it and refuses it.
             require(isinstance(children, list) and children, 'map: %r has no children in its list' % item.get('name'))
+            # The children are checked first, so that every count summed below is a number.
+            rs = merged_ranges([r for c in children for r in walk(c, kind, inventory)])
             for key in ('size', 'linked', 'matched', *(['fuzzy'] if 'fuzzy' in item else [])):
                 require(all(key in c for c in children) and close(added(c[key] for c in children), item[key]),
                         'map: %r children do not add up (%s)' % (item.get('name'), key))
-            rs = merged_ranges([r for c in children for r in walk(c, kind, inventory)])
             if 'address' in item or 'mapped_extents' in item:
                 require(rs == merged_ranges(node_extents(item)), 'map: %r extents differ from its children' % item.get('name'))
             return rs
@@ -457,12 +471,12 @@ def check_map(document, s):
         reference, m = None, s[kind]
         for field in ('sections', 'files'):
             items = [i for i in document[field] if i['kind'] == kind]
+            actual = merged_ranges([r for i in items for r in walk(i, kind, field == 'files')])
             for key, k in (('total', 'size'), ('linked', 'linked'), ('matched', 'matched'), ('fuzzy', 'fuzzy')):
                 if m.get(key) is None:
                     continue
                 require(all(k in x for x in items) and close(added(x[k] for x in items), m[key]),
                         'map: %s %s %s differs from the summary' % (field, kind, key))
-            actual = merged_ranges([r for i in items for r in walk(i, kind, field == 'files')])
             require(reference is None or actual == reference, 'map: sections and files cover different %s bytes' % kind)
             reference = actual
     for (start, size), rs in functions.items():
@@ -639,21 +653,34 @@ def check_tree(tree):
             directory = root / target['id']
             if not (directory / 'latest.json').exists():
                 continue
+            where = '%s/%s' % (slug, target['id'])
+            # Every target with a measurement is checked, archived ones too: more than the page
+            # shows, exactly what every publish enforces on the whole tree.
             latest = read_json(directory / 'latest.json')
-            check_latest(latest, slug, target['id'])
+            located(where + '/latest.json', check_latest, latest, slug, target['id'])
             rows = read_json(directory / 'history.json')
-            check_history(rows)
+            located(where + '/history.json', check_history, rows)
             row = next((r for r in rows if r['revision'] == latest['source']['revision']), None)
-            require(row is not None, '%s/%s: history lacks the latest revision' % (slug, target['id']))
+            require(row is not None, '%s: history lacks the latest revision' % where)
             for kind in ('code', 'data'):
                 require(all(row[kind][k] == latest['summary'][kind][k] for k in ('total', 'linked')),
-                        '%s/%s: history differs from latest' % (slug, target['id']))
+                        '%s: history differs from latest' % where)
             if latest.get('modules', {}).get('map'):
-                check_map(read_json(directory / latest['modules']['map']), latest['summary'])
+                name = latest['modules']['map']
+                located(where + '/' + name, check_map, read_json(directory / name), latest['summary'])
             if latest.get('modules', {}).get('contributors'):
-                check_contributors(read_json(directory / latest['modules']['contributors']), latest['summary'])
+                name = latest['modules']['contributors']
+                located(where + '/' + name, check_contributors, read_json(directory / name), latest['summary'])
             checked += 1
     return checked
+
+
+def located(where, check, *args):
+    """Run one file's check; a refusal names the game, target and file it is about."""
+    try:
+        check(*args)
+    except ContractError as error:
+        raise ContractError('%s: %s' % (where, error)) from None
 
 
 # Writing one measurement into a data tree.

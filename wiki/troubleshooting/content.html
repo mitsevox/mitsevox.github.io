@@ -217,6 +217,10 @@
 <td>The history chart has one point</td>
 <td>Expected after the first publish; every later <code>main</code> publish adds one.</td>
 </tr>
+<tr>
+<td>The site repository's <code>Live data</code> job fails</td>
+<td>A change to the site made a reader stricter than something already published, or the data repository holds a hand edit the checkers refuse, or the daily run found a bad publish. The log names the game, target and file, and the data repository's commit it checked. If the data is wrong, correct it (<a href="/wiki/publishing/">Publishing</a>); if the new check is wrong, fix the check. The deploy does not wait for this job.</td>
+</tr>
 </tbody>
 </table></div>
 <h2 id="settings">Settings</h2>
