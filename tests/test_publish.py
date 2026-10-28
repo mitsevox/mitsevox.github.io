@@ -360,6 +360,37 @@ class HistoryTests(unittest.TestCase):
         self.assertEqual(publish.check_tree(self.tree), 1)
         self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: history.json', 'game/GAME01-rev0: map.json'])
         self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json'})
+        # A module renamed in latest.json must be digested under its new name: no silent fallback.
+        renamed = self.current()
+        renamed['modules']['map'] = 'tiles.json'
+        (directory / 'map.json').rename(directory / 'tiles.json')
+        publish.write_json(directory / 'latest.json', renamed)
+        with self.assertRaisesRegex(publish.ContractError, 'tiles.json has no digest'):
+            publish.check_tree(self.tree)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: map.json', 'game/GAME01-rev0: tiles.json'])
+        self.assertEqual(set(self.current()['digests']), {'tiles.json', 'history.json'})
+        # A reseal never gives a valid digest to a file the checker refuses.
+        document = json.loads((directory / 'tiles.json').read_text())
+        document['files'][0]['children'][0]['matched'] = 0
+        publish.write_json(directory / 'tiles.json', document, compact=True)
+        with self.assertRaises(publish.ContractError):
+            publish.reseal_tree(self.tree)
+        # Files are written with LF whatever the platform, so the digest is over what Git commits.
+        self.assertNotIn(b'\r', (directory / 'latest.json').read_bytes())
+
+    def test_a_file_removed_from_the_target_drops_out_of_the_digests(self):
+        credits = {'authors': [(2, 'alice')], 'owner': (1, 'owner'), 'overrides': {}}
+        publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map, credits)
+        directory = self.tree / 'data/game/GAME01-rev0'
+        self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json', 'contributors.json'})
+        # The owner switches credits off and removes the file: a correction, resealed.
+        (directory / 'contributors.json').unlink()
+        current = self.current()
+        current['modules']['contributors'] = None
+        publish.write_json(directory / 'latest.json', current)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: contributors.json'])
+        self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json'})
+        self.assertEqual(publish.check_tree(self.tree), 1)
 
     def test_tree_check_catches_history_mismatch(self):
         publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
@@ -507,7 +538,8 @@ class CommandTests(unittest.TestCase):
             refused = subprocess.run([sys.executable, script, 'check', str(out)], capture_output=True, text=True)
             self.assertIn('map.json: digest differs from latest.json; run publish.py reseal', refused.stderr)
             resealed = subprocess.run([sys.executable, script, 'reseal', str(out)], capture_output=True, text=True)
-            self.assertEqual(resealed.stdout.strip(), 'resealed game/GAME01-rev0: map.json', resealed.stderr)
+            self.assertEqual(resealed.stdout.splitlines()[0], 'resealed game/GAME01-rev0: map.json', resealed.stderr)
+            self.assertIn('next: python3 tools/check_data_tree.py', resealed.stdout)  # the page's reader is the other half
             self.assertEqual(subprocess.run([sys.executable, script, 'check', str(out)], capture_output=True, text=True).returncode, 0)
 
 
