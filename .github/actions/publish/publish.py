@@ -320,7 +320,8 @@ def check_measure(m, label):
     # Exactly the page's bounds (assets/report-map-validation.js): no tolerance, or a measure
     # this check accepts can still be one the page refuses to draw.
     require(fuzzy is None or (isinstance(fuzzy, (int, float)) and math.isfinite(fuzzy)
-                              and (m.get('matched') or 0) <= fuzzy <= total), label + ': invalid fuzzy')
+                              and (m.get('matched') or 0) <= fuzzy <= total),
+            '%s: invalid fuzzy %r (matched %r, total %r)' % (label, fuzzy, m.get('matched'), total))
 
 
 def check_counts(c, label):
