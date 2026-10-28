@@ -50,6 +50,13 @@ let renderVersion = 0;
 const yieldWork = () => new Promise(resolve => setTimeout(resolve, 0));
 let mapLayout = [];
 let hoverTarget = null;
+// The map is one Tab stop; arrow keys, Home and End move within it.
+let tabStop = null;
+function rove(element) {
+  if (tabStop && tabStop !== element) tabStop.tabIndex = -1;
+  element.tabIndex = 0;
+  tabStop = element;
+}
 let hoverItem = null;
 function clearMapMotion() {
   if (mapFrame !== null) cancelFrame(mapFrame);
@@ -379,6 +386,7 @@ function targetItem(item) {
   hoverItem = item;
   if (!hoverTarget) {
     hoverTarget = createAction({className:'tile map-hit'});
+    hoverTarget.tabIndex = -1;
     mapListen(hoverTarget, 'blur', () => { if (tooltipUI.anchor === hoverTarget) hideTooltip(); });
     mapListen(hoverTarget, 'focus', () => {
       if (!hoverTarget.matches(':focus-visible')) return;
@@ -413,6 +421,7 @@ mapListen(canvas, 'keydown', event => {
     Math.max(0, Math.min(mapLayout.length - 1, index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1)));
   if (mapLayout[next]) {
     const target = targetItem(mapLayout[next]);
+    rove(target);
     target.focus();
     const rect = target.getBoundingClientRect();
     showTooltip(target, mapLayout[next], rect.left, rect.top);
@@ -448,6 +457,7 @@ async function render(direction = null, origin = null) {
   const layout = [];
   partition(items, 0, 0, canvas.clientWidth, canvas.clientHeight, layout);
   canvas.replaceChildren();
+  tabStop = null;
   hoverTarget = null;
   hoverItem = null;
   rippleSurface = null;
@@ -467,6 +477,7 @@ async function render(direction = null, origin = null) {
   const targets = search.value.trim() ? layout.slice(0, 128) : layout.slice(0, 64);
   for (const [index, item] of targets.entries()) {
     const block = createAction({className:'tile'});
+    block.tabIndex = -1;
     block.dataset.name = item.name;
     block.dataset.mapIndex = index;
     Object.assign(block.style, {left: item.x + 'px', top: item.y + 'px', width: item.w + 'px', height: item.h + 'px'});
@@ -482,6 +493,9 @@ async function render(direction = null, origin = null) {
     if (index === focusedIndex) block.focus();
   }
   if (focusedIndex !== null && focusedIndex >= targets.length && layout[focusedIndex]) targetItem(layout[focusedIndex]).focus();
+  const entry = canvas.contains(document.activeElement) && document.activeElement !== canvas ? document.activeElement : targets[0]?.target;
+  tabStop = null;
+  if (entry) rove(entry);
   for (const pulse of continuing) ripple(pulse.origin, pulse.start);
   if (direction !== 'search') ripple(origin);
   return true;
@@ -521,7 +535,10 @@ async function load() {
     sections=data.files||data.sections;
     await render();
   } catch {
-    if (!signal.aborted) canvas.textContent='Map unavailable';
+    if (signal.aborted) return;
+    canvas.textContent='Map unavailable ';
+    const retry=createAction({className:'inline-retry',label:'Retry'});
+    listen(retry,'click',()=>load(),{once:true});canvas.append(retry);
   } finally {
     if (!signal.aborted) canvas.removeAttribute('aria-busy');
   }

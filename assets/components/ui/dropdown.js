@@ -24,10 +24,14 @@ export function createDropdownController(trigger,menu,{scope=pageScope(),isSelec
     if(!tabStop&&items.length)items[0].tabIndex=0;
   }
   function position(){
-    menu.style.translate='0px 0px';
+    menu.style.translate='0px 0px';menu.style.maxHeight='';
     const rect=menu.getBoundingClientRect();
     const shift=Math.min(0,window.innerWidth-16-rect.right)+Math.max(0,16-rect.left);
     menu.style.translate=shift+'px 0px';
+    // Keep the menu inside a short viewport; it scrolls internally instead.
+    const room=window.innerHeight-16-rect.top;
+    if(rect.height>room){menu.style.maxHeight=Math.max(120,room)+'px';menu.style.overflowY='auto';}
+    else menu.style.overflowY='';
   }
   function cancel(){animation?.cancel();animation=null;}
   function close(restoreFocus=false){
