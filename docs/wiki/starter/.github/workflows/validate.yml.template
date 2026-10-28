@@ -25,7 +25,8 @@ concurrency:
 
 env:
   # PARAMETER 1: the private build image, always by digest (never by tag). The digest is printed
-  # in the image workflow's run summary. The target job runs in it, and tools/measuring_tools.py
+  # in the image workflow's run summary. The target job runs in it (through the plan job's
+  # `image` output, because a container image cannot read env), and tools/measuring_tools.py
   # reads this variable to record it as provenance.
   BUILD_IMAGE: ghcr.io/owner/game-build@sha256:0000000000000000000000000000000000000000000000000000000000000000
 
@@ -37,6 +38,8 @@ jobs:
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
       has_targets: ${{ steps.plan.outputs.has_targets }}
+      # A container image cannot read the env context; the plan job hands BUILD_IMAGE on.
+      image: ${{ env.BUILD_IMAGE }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -76,7 +79,7 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ${{ env.BUILD_IMAGE }}
+      image: ${{ needs.plan.outputs.image }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
