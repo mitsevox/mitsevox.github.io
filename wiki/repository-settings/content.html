@@ -25,10 +25,16 @@
 <td><code>main</code></td>
 </tr>
 <tr>
-<td>Ruleset on <code>main</code></td>
+<td>Ruleset <code>main</code></td>
 <td>require a pull request; required check <code>Validate targets</code>; block force pushes and deletion; no bypass actors</td>
 <td>none: rulesets on a private repository need a paid plan, and only the owner can push there</td>
 <td>require a pull request; required check <code>Test</code>; block force pushes and deletion; no bypass actors</td>
+</tr>
+<tr>
+<td>Ruleset <code>merges</code></td>
+<td>one <code>update</code> rule; its only bypass actor is the Repository admin role with bypass mode "pull requests only"</td>
+<td>none</td>
+<td>none</td>
 </tr>
 <tr>
 <td>Merge method</td>
@@ -116,16 +122,17 @@
 </tr>
 </tbody>
 </table></div>
-<p>The ruleset <code>--check</code> reads is the one with the standard's name, or else the one that targets the default branch under another name; <code>--apply</code> then renames it rather than adding a second one. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: <code>main</code> rebuilds and verifies after every merge.</p>
+<p>Two rulesets protect <code>main</code> in a source repository. <code>main</code> makes every change a pull request that passed <code>Validate targets</code>. <code>merges</code> decides who may merge: contributors hold write access, because CI refuses a fork's pull request (a fork's build would reach the private image), and write access alone would let a contributor merge a pull request that passed CI. The <code>update</code> rule restricts updates of <code>main</code> to the ruleset's bypass actors, and the only one is the Repository admin role in "pull requests only" mode: a writer pushes branches and opens pull requests but cannot merge, the owner merges through a pull request, and nobody, the owner included, pushes to <code>main</code> directly. GitHub shows the rule as "Restrict updates" and the bypass as "Repository admin, Pull requests only".</p>
+<p>Each ruleset <code>--check</code> reads is the one with the standard's name, or else the one of that shape that targets the default branch under another name (<code>merges</code> is the ruleset whose only rule is <code>update</code>), never the same ruleset for both; <code>--apply</code> then renames it rather than adding a second one. An <code>update</code> rule inside <code>main</code> is drift: with no bypass actor there, nobody could merge. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: <code>main</code> rebuilds and verifies after every merge.</p>
 <p>A single setting may differ for one repository (a merge method, say) when its process needs it; that is a row in the per-repository overrides of the configuration file, never a change to the table.</p>
 <h2 id="the-script">The script</h2>
-<p>The standard is data: <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json"><code>config/repo-standard.json</code></a> in the site repository holds the table keyed by kind, a <code>repositories</code> block that names each repository with the values its description, homepage and topics are built from, and the overrides. <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py"><code>tools/repo_settings.py</code></a> reads it and talks to the GitHub REST API; standard-library Python, about 250 lines, idempotent.</p>
+<p>The standard is data: <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json"><code>config/repo-standard.json</code></a> in the site repository holds the table keyed by kind, a <code>repositories</code> block that names each repository with the values its description, homepage and topics are built from, and the overrides. <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py"><code>tools/repo_settings.py</code></a> reads it and talks to the GitHub REST API; standard-library Python, idempotent.</p>
 <pre><code class="language-sh">export GH_TOKEN=&quot;$(gh auth token)&quot;
 python3 tools/repo_settings.py --repo owner/game --check
 python3 tools/repo_settings.py --repo owner/game --apply
 python3 tools/repo_settings.py --all --check
 </code></pre>
-<p><code>--check</code> prints one line per setting that differs (<code>expected ..., found ...</code>) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. <code>--apply</code> sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the <code>main</code> ruleset (created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (<code>--kind source</code> or <code>--kind build</code>), and its description, homepage and topics are its own.</p>
+<p><code>--check</code> prints one line per setting that differs (<code>expected ..., found ...</code>) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. <code>--apply</code> sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the <code>main</code> and <code>merges</code> rulesets (each created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (<code>--kind source</code> or <code>--kind build</code>), and its description, homepage and topics are its own.</p>
 <p>What the script cannot set, and prints as hand steps:</p>
 <ul>
 <li>the variable and secret (set them in Settings, Secrets and variables, Actions, and delete any others);</li>
@@ -137,7 +144,7 @@ python3 tools/repo_settings.py --all --check
 <h2 id="keeping-it-true">Keeping it true</h2>
 <p>Two readers keep the settings from drifting back:</p>
 <ol>
-<li><strong>The scaffold check</strong>, in every repository's <code>Tool tests</code> job (<a href="/wiki/ci/">CI</a>), reads what the default <code>GITHUB_TOKEN</code> can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to <code>main</code> (<code>GET /repos/{owner}/{repo}/rules/branches/main</code>). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.</li>
+<li><strong>The scaffold check</strong>, in every repository's <code>Tool tests</code> job (<a href="/wiki/ci/">CI</a>), reads what the default <code>GITHUB_TOKEN</code> can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to <code>main</code> (<code>GET /repos/{owner}/{repo}/rules/branches/main</code>, the union of both rulesets, so a missing <code>update</code> rule shows there). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.</li>
 <li><strong>The monthly check</strong> in the site repository, <code>.github/workflows/settings-check.yml</code>, runs <code>--check</code> for every listed repository with a fine-grained personal access token limited to <code>Administration: read</code> and <code>Metadata: read</code> on those repositories, expiring yearly, stored as the secret <code>SETTINGS_READ_TOKEN</code>. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.</li>
 </ol>
 <p>The monthly workflow is committed with manual dispatch only. Once the token exists, the owner creates the secret and adds the <code>schedule</code> block that the file's comment shows; nothing else changes. When the token expires, the check fails loudly at its first step rather than passing silently.</p>

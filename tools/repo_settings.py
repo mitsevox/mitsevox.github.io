@@ -6,7 +6,8 @@
     python3 tools/repo_settings.py --all --check                        every listed repository
 
 --check exits 1 when anything drifts. --apply sets repository fields, merge settings, features,
-Actions permissions, token defaults, retention, the default branch's ruleset and the security features, then
+Actions permissions, token defaults, retention, the default branch's rulesets (`main`, and `merges`
+where the kind has one) and the security features, then
 prints the hand steps it cannot do (secrets and variables, package access, the GitHub App). Both are
 idempotent. The token comes from GH_TOKEN or `gh auth token`; --check works with a fine-grained token
 limited to Administration: read and Metadata: read. Standard library only."""
@@ -97,6 +98,18 @@ def expected(std):
     }
     if std['forkPullRequestApproval']:
         items['actions.fork_pr_approval_policy'] = std['forkPullRequestApproval']
+    merges = std.get('mergeRuleset')
+    if merges:
+        # The second ruleset of a repository whose contributors hold write access: one `update`
+        # rule, bypassed by the Repository admin role on pull requests only.
+        items.update({
+            'merges.exists': True,
+            'merges.name': merges['name'],
+            'merges.enforcement': 'active',
+            'merges.bypass_actors': merges['bypassActors'],
+            'merges.targets_default': True,
+            'merges.rule.update': True,
+        })
     rules = std['ruleset']
     if rules is None:
         # A kind whose plan cannot hold a ruleset (private repositories on GitHub Free).
@@ -106,9 +119,13 @@ def expected(std):
         'ruleset.name': rules['name'],
         'ruleset.enforcement': 'active',
         'ruleset.bypass_actors': rules['bypassActors'],
+        'ruleset.targets_default': True,
         'ruleset.rule.deletion': rules['blockDeletion'],
         'ruleset.rule.non_fast_forward': rules['blockForcePush'],
         'ruleset.rule.pull_request': rules['requirePullRequest'],
+        # An update rule inside main, with no bypass actor, would let nobody merge: it belongs
+        # to the merges ruleset alone.
+        'ruleset.rule.update': False,
         'ruleset.required_status_checks': [rules['requiredCheck']],
         'ruleset.checks_up_to_date': False,
     })
@@ -128,6 +145,7 @@ def rules_summary(rules, prefix='ruleset'):
     return {prefix + '.rule.deletion': 'deletion' in types,
             prefix + '.rule.non_fast_forward': 'non_fast_forward' in types,
             prefix + '.rule.pull_request': 'pull_request' in types,
+            prefix + '.rule.update': 'update' in types,
             prefix + '.required_status_checks': sorted(checks),
             prefix + '.checks_up_to_date': bool(status.get('strict_required_status_checks_policy')),
             prefix + '.pull_request.dismiss_stale_reviews': bool(pull.get('dismiss_stale_reviews_on_push')),
@@ -181,33 +199,70 @@ def current(api, repo, std):
     found['actions.variables'] = sorted(v['name'] for v in variables.get('variables', [])) if status == 200 else None
     status, secrets = api('GET', '/repos/%s/actions/secrets' % repo)
     found['actions.secrets'] = sorted(s['name'] for s in secrets.get('secrets', [])) if status == 200 else None
-    if std['ruleset'] is None:
+    if std['ruleset'] is None and not std.get('mergeRuleset'):
         return found
-    detail = default_branch_ruleset(api, repo, std['ruleset']['name'])
-    found['ruleset.exists'] = detail is not None
-    if detail:
-        found['ruleset.id'] = detail['id']
-        found['ruleset.name'] = detail.get('name')
-        found['ruleset.enforcement'] = detail.get('enforcement')
-        found['ruleset.bypass_actors'] = detail.get('bypass_actors') or []
-        found.update(rules_summary(detail.get('rules', [])))
+    main, merges = pick_rulesets(ruleset_details(api, repo), std['ruleset']['name'] if std['ruleset'] else None,
+                                 std['mergeRuleset']['name'] if std.get('mergeRuleset') else None)
+    if std['ruleset'] is not None:
+        found['ruleset.exists'] = main is not None
+        if main:
+            found['ruleset.id'] = main['id']
+            found['ruleset.name'] = main.get('name')
+            found['ruleset.enforcement'] = main.get('enforcement')
+            found['ruleset.bypass_actors'] = main.get('bypass_actors') or []
+            found['ruleset.targets_default'] = targets_default(main)
+            found.update(rules_summary(main.get('rules', [])))
+    if std.get('mergeRuleset'):
+        found['merges.exists'] = merges is not None
+        if merges:
+            found['merges.id'] = merges['id']
+            found['merges.name'] = merges.get('name')
+            found['merges.enforcement'] = merges.get('enforcement')
+            found['merges.bypass_actors'] = merges.get('bypass_actors') or []
+            found['merges.targets_default'] = targets_default(merges)
+            found['merges.rule.update'] = merges_shaped(merges)
     return found
 
 
-def default_branch_ruleset(api, repo, name):
-    """The ruleset that protects the default branch: the one with the standard's name, or else the
-    first that targets the default branch under another name, so that apply renames it instead of
-    adding a second one."""
+def ruleset_details(api, repo):
+    """Every ruleset of the repository with its detail (rules, conditions, bypass actors)."""
     status, rulesets = api('GET', '/repos/%s/rulesets' % repo)
-    rulesets = rulesets if status == 200 else []
-    for ruleset in sorted(rulesets, key=lambda r: r['name'] != name):
+    result = []
+    for ruleset in (rulesets if status == 200 else []):
         status, detail = api('GET', '/repos/%s/rulesets/%s' % (repo, ruleset['id']))
-        if status != 200:
+        if status == 200:
+            result.append(detail)
+    return result
+
+
+def merges_shaped(detail):
+    """A ruleset whose only rule is `update`: the merges ruleset, whatever its name."""
+    return [rule['type'] for rule in detail.get('rules', [])] == ['update']
+
+
+def targets_default(detail):
+    include = (detail.get('conditions') or {}).get('ref_name', {}).get('include', [])
+    return '~DEFAULT_BRANCH' in include or 'refs/heads/main' in include
+
+
+def pick_rulesets(rulesets, main_name, merges_name):
+    """(main, merges): each is the ruleset with its standard name, or else the first of its shape
+    that targets the default branch under another name, so that apply renames it instead of
+    adding a second one. Never the same ruleset for both: a `main` holding only an `update` rule
+    is a broken main ruleset, not the merges ruleset. Among three or more rulesets on the default
+    branch, the first of each shape is taken; the check then reports the rest as drift in them."""
+    by_name = {detail.get('name'): detail for detail in rulesets}
+    main = by_name.get(main_name) if main_name else None
+    merges = by_name.get(merges_name) if merges_name else None
+    taken = {detail['id'] for detail in (main, merges) if detail}
+    for detail in rulesets:
+        if detail['id'] in taken or not targets_default(detail):
             continue
-        include = (detail.get('conditions') or {}).get('ref_name', {}).get('include', [])
-        if detail.get('name') == name or '~DEFAULT_BRANCH' in include or 'refs/heads/main' in include:
-            return detail
-    return None
+        if main_name and main is None and not merges_shaped(detail):
+            main, taken = detail, taken | {detail['id']}
+        elif merges_name and merges is None and merges_shaped(detail):
+            merges, taken = detail, taken | {detail['id']}
+    return main, merges
 
 
 def diff(wanted, found):
@@ -241,6 +296,12 @@ def ruleset_body(std, default_branch):
         'strict_required_status_checks_policy': False,
         'required_status_checks': [{'context': rules['requiredCheck']}]}})
     return body
+
+
+def merge_ruleset_body(std):
+    merges = std['mergeRuleset']
+    return {'name': merges['name'], 'target': 'branch', 'enforcement': 'active', 'bypass_actors': merges['bypassActors'],
+            'conditions': {'ref_name': {'include': ['~DEFAULT_BRANCH'], 'exclude': []}}, 'rules': [{'type': 'update'}]}
 
 
 def apply(api, repo, std, drift, found):
@@ -285,6 +346,12 @@ def apply(api, repo, std, drift, found):
         body = ruleset_body(std, std['defaultBranch'])
         if found.get('ruleset.id'):
             api('PUT', '/repos/%s/rulesets/%s' % (repo, found['ruleset.id']), body)
+        else:
+            api('POST', '/repos/%s/rulesets' % repo, body)
+    if std.get('mergeRuleset') and any(k.startswith('merges.') for k in keys):
+        body = merge_ruleset_body(std)
+        if found.get('merges.id'):
+            api('PUT', '/repos/%s/rulesets/%s' % (repo, found['merges.id']), body)
         else:
             api('POST', '/repos/%s/rulesets' % repo, body)
     hand = []

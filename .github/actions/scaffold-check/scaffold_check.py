@@ -243,6 +243,9 @@ class Check:
         if status == 200:
             found.update(repo_settings.rules_summary(rules))
         wanted = {k: v for k, v in repo_settings.expected(std).items() if k in found or k.startswith('ruleset.rule') or k == 'ruleset.required_status_checks'}
+        # The branch's rules are the union of every ruleset: the `update` rule comes from the
+        # merges ruleset, so it is expected exactly where the standard has one.
+        wanted['ruleset.rule.update'] = bool(std.get('mergeRuleset'))
         for key, value, actual in repo_settings.diff(wanted, found):
             self.warn('settings', '%s: expected %s, found %s' % (key, json.dumps(value), 'unreadable' if actual is None else json.dumps(actual)))
 

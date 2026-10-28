@@ -623,7 +623,7 @@ In order: CI proves that the complete executable of every affected target is byt
 
 ## Authority
 
-Only the owner (`OWNER_LOGIN`) merges into `main`. Contributors and agents prepare branches, open PRs and review. A `SHIP` verdict and a green CI run are two different states, and neither lets a contributor merge. The authority is procedural: agents author under the owner's login, so a native approval rule would not tell an author from a reviewer, and the ruleset on `main` requires a pull request and the `Validate targets` check and nothing else ([Repository settings](/wiki/repository-settings/)).
+Only the owner (`OWNER_LOGIN`) merges into `main`. Contributors and agents prepare branches, open PRs and review. A `SHIP` verdict and a green CI run are two different states, and neither lets a contributor merge. The authority is procedural for agents, which author under the owner's login, so a native approval rule would not tell an author from a reviewer; the `main` ruleset requires a pull request and the `Validate targets` check and nothing else, and the `merges` ruleset lets only the Repository admin role merge, so a contributor with write access cannot ([Repository settings](/wiki/repository-settings/)).
 
 Nobody but the owner changes branch rules, repository settings, the build image or its digest, or the access controls around them. A dependency problem is reported in an issue, not fixed by changing the dependency.
 
@@ -954,7 +954,8 @@ Settings are part of the standard because they are what makes the rest enforceab
 | Setting | Source repository | Build repository | Site repository |
 | --- | --- | --- | --- |
 | Default branch | `main` | `main` | `main` |
-| Ruleset on `main` | require a pull request; required check `Validate targets`; block force pushes and deletion; no bypass actors | none: rulesets on a private repository need a paid plan, and only the owner can push there | require a pull request; required check `Test`; block force pushes and deletion; no bypass actors |
+| Ruleset `main` | require a pull request; required check `Validate targets`; block force pushes and deletion; no bypass actors | none: rulesets on a private repository need a paid plan, and only the owner can push there | require a pull request; required check `Test`; block force pushes and deletion; no bypass actors |
+| Ruleset `merges` | one `update` rule; its only bypass actor is the Repository admin role with bypass mode "pull requests only" | none | none |
 | Merge method | squash only | squash only | squash only |
 | Auto-delete head branches | on | on | on |
 | Allowed actions | GitHub-owned, plus `mitsevox/mitsevox.github.io/.github/actions/*` | GitHub-owned only | GitHub-owned only |
@@ -970,13 +971,15 @@ Settings are part of the standard because they are what makes the rest enforceab
 | Wiki, Projects, Discussions | off | off | off |
 | Description, homepage, topics | `<Title> (<console>, <year>) decompilation`; `https://mitsevox.github.io/games/<slug>/`; `decompilation`, `<platform>`, `<slug>` | `Private build environment for <owner>/<game>`; none; none | the repository's own |
 
-The ruleset `--check` reads is the one with the standard's name, or else the one that targets the default branch under another name; `--apply` then renames it rather than adding a second one. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: `main` rebuilds and verifies after every merge.
+Two rulesets protect `main` in a source repository. `main` makes every change a pull request that passed `Validate targets`. `merges` decides who may merge: contributors hold write access, because CI refuses a fork's pull request (a fork's build would reach the private image), and write access alone would let a contributor merge a pull request that passed CI. The `update` rule restricts updates of `main` to the ruleset's bypass actors, and the only one is the Repository admin role in "pull requests only" mode: a writer pushes branches and opens pull requests but cannot merge, the owner merges through a pull request, and nobody, the owner included, pushes to `main` directly. GitHub shows the rule as "Restrict updates" and the bypass as "Repository admin, Pull requests only".
+
+Each ruleset `--check` reads is the one with the standard's name, or else the one of that shape that targets the default branch under another name (`merges` is the ruleset whose only rule is `update`), never the same ruleset for both; `--apply` then renames it rather than adding a second one. An `update` rule inside `main` is drift: with no bypass actor there, nobody could merge. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: `main` rebuilds and verifies after every merge.
 
 A single setting may differ for one repository (a merge method, say) when its process needs it; that is a row in the per-repository overrides of the configuration file, never a change to the table.
 
 ## The script
 
-The standard is data: [`config/repo-standard.json`](https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json) in the site repository holds the table keyed by kind, a `repositories` block that names each repository with the values its description, homepage and topics are built from, and the overrides. [`tools/repo_settings.py`](https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py) reads it and talks to the GitHub REST API; standard-library Python, about 250 lines, idempotent.
+The standard is data: [`config/repo-standard.json`](https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json) in the site repository holds the table keyed by kind, a `repositories` block that names each repository with the values its description, homepage and topics are built from, and the overrides. [`tools/repo_settings.py`](https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py) reads it and talks to the GitHub REST API; standard-library Python, idempotent.
 
 ```sh
 export GH_TOKEN="$(gh auth token)"
@@ -985,7 +988,7 @@ python3 tools/repo_settings.py --repo owner/game --apply
 python3 tools/repo_settings.py --all --check
 ```
 
-`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` ruleset (created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
+`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
 
 What the script cannot set, and prints as hand steps:
 
@@ -1000,7 +1003,7 @@ The owner runs `--apply` with their own token once per repository after it adopt
 
 Two readers keep the settings from drifting back:
 
-1. **The scaffold check**, in every repository's `Tool tests` job ([CI](/wiki/ci/)), reads what the default `GITHUB_TOKEN` can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to `main` (`GET /repos/{owner}/{repo}/rules/branches/main`). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.
+1. **The scaffold check**, in every repository's `Tool tests` job ([CI](/wiki/ci/)), reads what the default `GITHUB_TOKEN` can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to `main` (`GET /repos/{owner}/{repo}/rules/branches/main`, the union of both rulesets, so a missing `update` rule shows there). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.
 2. **The monthly check** in the site repository, `.github/workflows/settings-check.yml`, runs `--check` for every listed repository with a fine-grained personal access token limited to `Administration: read` and `Metadata: read` on those repositories, expiring yearly, stored as the secret `SETTINGS_READ_TOKEN`. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.
 
 The monthly workflow is committed with manual dispatch only. Once the token exists, the owner creates the secret and adds the `schedule` block that the file's comment shows; nothing else changes. When the token expires, the check fails loudly at its first step rather than passing silently.
@@ -1328,7 +1331,7 @@ The repository is set up when each line is true and can be shown with a run, a c
 - `ninja -f build/<id>/build.ninja progress build/<id>/report.json` writes a report that `publish.py publish --dry-run` converts and `publish.py check` accepts.
 - The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
 - A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
-- The `main` ruleset requires a pull request and `Validate targets`; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
+- The `main` ruleset requires a pull request and `Validate targets`, and the `merges` ruleset restricts merging to the Repository admin role; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
 - The GitHub App is installed on the data repository; the producer holds the variable and the secret.
 - The first `main` run's `Publish to the site` step printed `published <slug>/<id> <sha>`; the data repository has the commit; `https://mitsevox.github.io/games/<slug>/` shows it.
 - Cover art is committed to the data repository and `artwork` is in `config/site.json`, or the owner has decided to go without.

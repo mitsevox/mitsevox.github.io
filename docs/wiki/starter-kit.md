@@ -66,7 +66,7 @@ The repository is set up when each line is true and can be shown with a run, a c
 - `ninja -f build/<id>/build.ninja progress build/<id>/report.json` writes a report that `publish.py publish --dry-run` converts and `publish.py check` accepts.
 - The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
 - A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
-- The `main` ruleset requires a pull request and `Validate targets`; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
+- The `main` ruleset requires a pull request and `Validate targets`, and the `merges` ruleset restricts merging to the Repository admin role; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
 - The GitHub App is installed on the data repository; the producer holds the variable and the secret.
 - The first `main` run's `Publish to the site` step printed `published <slug>/<id> <sha>`; the data repository has the commit; `https://mitsevox.github.io/games/<slug>/` shows it.
 - Cover art is committed to the data repository and `artwork` is in `config/site.json`, or the owner has decided to go without.

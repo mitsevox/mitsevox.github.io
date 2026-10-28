@@ -115,7 +115,8 @@ class ScaffoldCheckTests(unittest.TestCase):
 
     def test_settings_read_compares_the_readable_half(self):
         check = scaffold_check.Check(self.clean)
-        rules = [{'type': 'deletion'}, {'type': 'non_fast_forward'},
+        # /rules/branches/main is the union of every ruleset: `update` comes from the merges ruleset.
+        rules = [{'type': 'update'}, {'type': 'deletion'}, {'type': 'non_fast_forward'},
                  {'type': 'pull_request', 'parameters': {'dismiss_stale_reviews_on_push': True, 'allowed_merge_methods': ['squash']}},
                  {'type': 'required_status_checks', 'parameters': {'strict_required_status_checks_policy': False,
                   'required_status_checks': [{'context': 'Validate targets'}]}}]
@@ -131,6 +132,11 @@ class ScaffoldCheckTests(unittest.TestCase):
         rules.pop()
         check.settings('mitsevox/n100f', 'token', fetch=lambda path: responses[path])
         self.assertEqual(sorted(m.split(':')[0] for _, m in check.findings), ['repository.has_wiki', 'ruleset.required_status_checks'])
+        # Without the merges ruleset a writer could merge: its update rule is expected on main.
+        check = scaffold_check.Check(self.clean)
+        rules.pop(0)
+        check.settings('mitsevox/n100f', 'token', fetch=lambda path: responses[path])
+        self.assertIn('ruleset.rule.update', [m.split(':')[0] for _, m in check.findings])
         unlisted = scaffold_check.Check(self.clean)
         responses['/repos/x/y'] = (200, dict(repo, description='anything', topics=[]))
         responses['/repos/x/y/rules/branches/main'] = (403, None)

@@ -1,10 +1,11 @@
 {
   "schema": 1,
-  "description": "The repository settings standard, keyed by repository kind, applied and checked by tools/repo_settings.py. The repositories block lists each repository with the values its description, homepage and topics are built from; an overrides block there replaces individual settings of its kind.",
+  "description": "The repository settings standard, keyed by repository kind, applied and checked by tools/repo_settings.py. The repositories block lists each repository with the values its description, homepage and topics are built from; an overrides block there replaces individual settings of its kind. ruleset protects the default branch; mergeRuleset is the second ruleset of a repository that gives contributors write access: one update rule, bypassed by the Repository admin role (actor_id 5) on pull requests only, so nobody pushes to main and only the owner merges.",
   "kinds": {
     "source": {
       "defaultBranch": "main",
       "ruleset": {"name": "main", "requiredCheck": "Validate targets", "requirePullRequest": true, "blockForcePush": true, "blockDeletion": true, "bypassActors": []},
+      "mergeRuleset": {"name": "merges", "bypassActors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request"}]},
       "merge": "squash",
       "autoDeleteHeadBranches": true,
       "allowedActions": {"githubOwned": true, "verified": false, "patterns": ["mitsevox/mitsevox.github.io/.github/actions/*"]},
@@ -23,6 +24,7 @@
     "build": {
       "defaultBranch": "main",
       "ruleset": null,
+      "mergeRuleset": null,
       "merge": "squash",
       "autoDeleteHeadBranches": true,
       "allowedActions": {"githubOwned": true, "verified": false, "patterns": []},
@@ -41,6 +43,7 @@
     "site": {
       "defaultBranch": "main",
       "ruleset": {"name": "main", "requiredCheck": "Test", "requirePullRequest": true, "blockForcePush": true, "blockDeletion": true, "bypassActors": []},
+      "mergeRuleset": null,
       "merge": "squash",
       "autoDeleteHeadBranches": true,
       "allowedActions": {"githubOwned": true, "verified": false, "patterns": []},
