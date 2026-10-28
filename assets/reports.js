@@ -36,13 +36,13 @@ function subscribe(promise, signal) {
     promise.then(value => {cleanup();resolve(value);}, error => {cleanup();reject(error);});
   });
 }
-async function read(url, signal, immutable = false) {
+async function read(url, signal, immutable = false, reload = false) {
   const load = async () => {
-    const response = await fetch(url, immutable ? {cache:'force-cache'} : {signal, cache:'no-cache'});
+    const response = await fetch(url, reload ? {cache:'reload'} : immutable ? {cache:'force-cache'} : {signal, cache:'no-cache'});
     if (!response.ok) throw Error('Report unavailable');
     return response.json();
   };
-  return immutable ? subscribe(cached(payloads, url, load), signal) : load();
+  return immutable && !reload ? subscribe(cached(payloads, url, load), signal) : load();
 }
 let worker = null, requestID = 0, workerUnavailable = false;
 const pending = new Map();
@@ -75,8 +75,11 @@ function workerRequest(message, fallback) {
   });
 }
 function loadMap(url, measures) {
-  const fallback = () => read(url, undefined, true).then(map => validateMap(map, measures));
-  return workerRequest({url:new URL(url, import.meta.url).href, measures}, fallback);
+  const attempt = reload => workerRequest({url:new URL(url, import.meta.url).href, measures, reload},
+    () => read(url, undefined, true, reload).then(map => validateMap(map, measures)));
+  // A revisioned map is cached as immutable, but a published map can be corrected in place. A copy
+  // that fails validation is fetched once more past the cache before the page gives up on it.
+  return attempt(false).catch(error => error.message === 'Report unavailable' ? Promise.reject(error) : attempt(true));
 }
 export async function fetchBoundaryGraph(layout) {
   const result = await workerRequest({layout}, async () => {
