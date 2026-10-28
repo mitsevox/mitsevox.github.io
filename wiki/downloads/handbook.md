@@ -627,7 +627,7 @@ Nobody but the owner changes branch rules, repository settings, the build image 
 
 ## Tiers
 
-The paths a PR touches decide what it needs before merge. The author states the tier in the PR's Scope line; the owner checks the claim against the diff.
+The paths a PR touches decide what it needs before merge. The author states the tier in the PR's Scope line; CI's `Check the declared tier` step (`tools/tier.py`) fails a claim below what the diff needs, and the owner checks the rest.
 
 | Tier | Touches | Required before merge |
 | --- | --- | --- |
@@ -645,7 +645,7 @@ The blind accuracy pass stays for tier A only: it is the one check that catches 
 4. **Reconstruct and measure.** Compile and compare with objdiff. Keep discarded variants local. Register partial work as a `NonMatching` object in `configure.py` so CI measures it; promote to `Matching` when the unit links byte-identically. The source file does not move on promotion. A version difference goes under `#if VERSION_<ID>` in the shared file ([Build, verify, measure](/wiki/build-verify-measure/#version-differences)).
 5. **Record.** Add `evidence.tsv` rows for every name, boundary, type and compiler claim in the same PR, to each affected target's file. Keep source comments free of scores and process notes.
 6. **Check every target.** Before calling a shared change safe for every target: build every active target and confirm `build.sha1` on each; run objdiff per target for each touched unit; run `python3 tools/versions.py diff` on every file you added a block to and read the result; add the evidence rows per target. CI enforces the first two; the hostile checklist's `Unit boundaries` and `Validation` rows cover the rest. Fill the Targets table of the PR template from these results, one row per active target.
-7. **Review.** Tier A: a reviewer who did not author or shape the reconstruction interprets the scoped functions with the proposed names and comments withheld, reconciles that interpretation with the submission and posts an `Accuracy:` record; then a fresh reviewer applies the checklist in `CONTRIBUTING.md` (source fidelity, compiler settings, types and layouts, names, comments, unit boundaries, comparison integrity, validation) and posts a `Hostile:` record with `SHIP`, `FIX`, `REDO` or `BLOCKED`. Tier B: the hostile record only. Tier C: none.
+7. **Review.** Tier A: a reviewer who did not author or shape the reconstruction interprets the scoped functions with the proposed names and comments withheld, reconciles that interpretation with the submission and posts an `Accuracy:` record; then a fresh reviewer applies the checklist in `CONTRIBUTING.md` (source fidelity, compiler settings, types and layouts, provenance and licence, names, comments, unit boundaries, comparison integrity, validation) and posts a `Hostile:` record with `SHIP`, `FIX`, `REDO` or `BLOCKED`. Tier B: the hostile record only. Tier C: none.
 8. **Resolve and recheck.** Fix findings; the reviewer rechecks the delta, not the whole PR, and posts a final-revision record that cites the earlier one.
 9. **Submit.** Fill the PR template: scope with the tier, the Targets table, evidence and validation, the records. Request the owner's decision only when CI and the records cover the final revision.
 10. **Merge.** The owner merges. On `main`, CI builds and publishes each affected target.
@@ -730,6 +730,8 @@ Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `pytho
 
 - `matrix`: `{"include":[{"target":"GAME01-rev0"}, ...]}`
 - `has_targets`: `true` or `false`
+
+On a pull request the job's second step, `Check the declared tier`, runs `python3 tools/tier.py`: it reads the first `Tier A`, `Tier B` or `Tier C` in the PR body and fails when the diff needs more (`config/<id>/splits.txt` or `symbols.txt`, an `inferred` evidence row, or a `cflags`, `ldflags`, `asflags` or `mw_version` line in `configure.py` need A; other source or `configure.py` changes need B). Outside pull requests it passes. Editing the body does not re-run it; the next push does.
 
 Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every `include/**` change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.
 
