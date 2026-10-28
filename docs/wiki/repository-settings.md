@@ -2,28 +2,30 @@
 
 Branch rules, merge method, Actions permissions, credentials, security features and presentation, applied by a script and re-checked monthly.
 
-Settings are part of the standard because they are what makes the rest enforceable: a required check means nothing on a branch that accepts direct pushes, and a read-only default token is what keeps a workflow from approving its own PR. Two kinds of repository are in scope, the public source repository and the private build repository. The data repository and the site are the publishing side and have their own settings.
+Settings are part of the standard because they are what makes the rest enforceable: a required check means nothing on a branch that accepts direct pushes, and a read-only default token is what keeps a workflow from approving its own PR. Three kinds of repository are in scope: the public source repository, the private build repository and the site. The data repository receives pushes from the publishing App and has its own settings.
 
 ## The standard
 
-| Setting | Source repository | Build repository |
-| --- | --- | --- |
-| Default branch | `main` | `main` |
-| Ruleset on `main` | require a pull request; required check `Validate targets`; block force pushes and deletion; no bypass actors | require a pull request; required check `Build environment image`; block force pushes and deletion |
-| Merge method | squash only | squash only |
-| Auto-delete head branches | on | on |
-| Allowed actions | GitHub-owned, plus `mitsevox/mitsevox.github.io/.github/actions/*` | GitHub-owned only |
-| Default `GITHUB_TOKEN` | read-only; workflows declare their own `permissions` | read-only |
-| Actions may approve pull requests | off | off |
-| Fork pull request approval | required for all outside collaborators (the fork guard in `validate.yml` is the second line) | not applicable |
-| Artifact and log retention | 30 days | 30 days |
-| Variable and secret | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY`; nothing else | none; `GITHUB_TOKEN` publishes the image |
-| Package | not applicable | private; `Manage Actions access` grants the source repository `Read` |
-| Secret scanning, push protection, Dependabot alerts, private vulnerability reporting | on | on where the plan allows |
-| Dependabot version updates | off; pinned actions are bumped by hand twice a year | off |
-| Issues | on | off |
-| Wiki, Projects, Discussions | off | off |
-| Description, homepage, topics | `<Title> (<console>, <year>) decompilation`; `https://mitsevox.github.io/games/<slug>/`; `decompilation`, `<platform>`, `<slug>` | `Private build environment for <owner>/<game>`; none; none |
+| Setting | Source repository | Build repository | Site repository |
+| --- | --- | --- | --- |
+| Default branch | `main` | `main` | `main` |
+| Ruleset on `main` | require a pull request; required check `Validate targets`; block force pushes and deletion; no bypass actors | none: rulesets on a private repository need a paid plan, and only the owner can push there | require a pull request; required check `Test`; block force pushes and deletion; no bypass actors |
+| Merge method | squash only | squash only | squash only |
+| Auto-delete head branches | on | on | on |
+| Allowed actions | GitHub-owned, plus `mitsevox/mitsevox.github.io/.github/actions/*` | GitHub-owned only | GitHub-owned only |
+| Default `GITHUB_TOKEN` | read-only; workflows declare their own `permissions` | read-only | read-only |
+| Actions may approve pull requests | off | off | off |
+| Fork pull request approval | required for all outside collaborators (the fork guard in `validate.yml` is the second line) | not applicable | required for all outside collaborators |
+| Artifact and log retention | 30 days | 30 days | 30 days |
+| Variable and secret | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY`; nothing else | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Package | not applicable | private; `Manage Actions access` grants the source repository `Read` | not applicable |
+| Secret scanning, push protection, Dependabot alerts, private vulnerability reporting | on | on where the plan allows | on |
+| Dependabot version updates | off; pinned actions are bumped by hand twice a year | off | off |
+| Issues | on | off | on (the drift issue) |
+| Wiki, Projects, Discussions | off | off | off |
+| Description, homepage, topics | `<Title> (<console>, <year>) decompilation`; `https://mitsevox.github.io/games/<slug>/`; `decompilation`, `<platform>`, `<slug>` | `Private build environment for <owner>/<game>`; none; none | the repository's own |
+
+The ruleset `--check` reads is the one with the standard's name, or else the one that targets the default branch under another name; `--apply` then renames it rather than adding a second one. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: `main` rebuilds and verifies after every merge.
 
 A single setting may differ for one repository (a merge method, say) when its process needs it; that is a row in the per-repository overrides of the configuration file, never a change to the table.
 
@@ -67,7 +69,6 @@ The monthly workflow is committed with manual dispatch only. Once the token exis
 
 ## Assumptions to confirm
 
-- Rulesets on a private repository need a paid plan; on a free plan they exist for public repositories only, so the build repository's ruleset may be unavailable and `--check` will keep reporting it.
 - The actions-allowlist, retention and fork-approval endpoints behave as documented for personal accounts.
 - `Manage Actions access` is still the package-level grant that lets the source repository pull the image.
 - Every agent authors under the owner's login. That is what makes a native approval rule pointless and the procedural merge authority of [Contribution workflow](/wiki/contribution-workflow/) the right shape. If agents ever get their own accounts, add one required approving review from the owner with stale approvals dismissed, and nothing else changes.

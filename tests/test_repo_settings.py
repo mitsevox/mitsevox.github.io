@@ -31,8 +31,10 @@ def ideal(repo):
     repo_json = {k.split('.', 1)[1]: v for k, v in wanted.items() if k.startswith('repository.')}
     repo_json['security_and_analysis'] = {
         'secret_scanning': {'status': 'enabled'}, 'secret_scanning_push_protection': {'status': 'enabled'}}
-    rules = [{'type': 'deletion'}, {'type': 'non_fast_forward'}, {'type': 'pull_request'},
-             {'type': 'required_status_checks', 'parameters': {'required_status_checks': [{'context': std['ruleset']['requiredCheck']}]}}]
+    rules = [{'type': 'deletion'}, {'type': 'non_fast_forward'},
+             {'type': 'pull_request', 'parameters': {'dismiss_stale_reviews_on_push': True, 'allowed_merge_methods': [std['merge']]}},
+             {'type': 'required_status_checks', 'parameters': {'strict_required_status_checks_policy': False,
+              'required_status_checks': [{'context': std['ruleset']['requiredCheck']}]}}] if std['ruleset'] else []
     responses = {
         '/repos/%s' % repo: (200, repo_json),
         '/repos/%s/actions/permissions' % repo: (200, {'allowed_actions': 'selected'}),
@@ -47,7 +49,8 @@ def ideal(repo):
         '/repos/%s/actions/variables' % repo: (200, {'variables': [{'name': n} for n in std['variables']]}),
         '/repos/%s/actions/secrets' % repo: (200, {'secrets': [{'name': n} for n in std['secrets']]}),
         '/repos/%s/rulesets' % repo: (200, [{'id': 7, 'name': 'main'}]),
-        '/repos/%s/rulesets/7' % repo: (200, {'id': 7, 'enforcement': 'active', 'bypass_actors': [], 'rules': rules}),
+        '/repos/%s/rulesets/7' % repo: (200, {'id': 7, 'name': 'main', 'enforcement': 'active', 'bypass_actors': [],
+                                              'conditions': {'ref_name': {'include': ['~DEFAULT_BRANCH'], 'exclude': []}}, 'rules': rules}),
     }
     return std, responses
 
@@ -73,7 +76,7 @@ class RepoSettingsTests(unittest.TestCase):
         self.assertNotIn('actions.fork_pr_approval_policy', repo_settings.expected(repo_settings.standard(CONFIG, 'mitsevox/n100f-build')))
 
     def test_ideal_state_has_no_drift_and_changes_are_found(self):
-        for repo in ('mitsevox/n100f', 'mitsevox/tw2004', 'mitsevox/n100f-build'):
+        for repo in ('mitsevox/n100f', 'mitsevox/tw2004', 'mitsevox/n100f-build', 'mitsevox/mitsevox.github.io'):
             with self.subTest(repo=repo):
                 std, responses = ideal(repo)
                 found = repo_settings.current(FakeApi(responses), repo, std)
@@ -110,6 +113,36 @@ class RepoSettingsTests(unittest.TestCase):
         ruleset = next(body for method, path, body in api.writes if method == 'POST')
         self.assertEqual([r['type'] for r in ruleset['rules']], ['deletion', 'non_fast_forward', 'pull_request', 'required_status_checks'])
         self.assertTrue(any('DATA_APP_PRIVATE_KEY' in step for step in hand))
+
+
+    def test_ruleset_drift_inside_the_rules_and_under_another_name(self):
+        # n100f's drift: an admin bypass, stale approvals kept, an extra required check.
+        std, responses = ideal('mitsevox/n100f')
+        detail = responses['/repos/mitsevox/n100f/rulesets/7'][1]
+        detail['bypass_actors'] = [{'actor_id': 5, 'actor_type': 'RepositoryRole', 'bypass_mode': 'always'}]
+        detail['rules'][2]['parameters']['dismiss_stale_reviews_on_push'] = False
+        detail['rules'][3]['parameters']['required_status_checks'].append({'context': 'Tool tests'})
+        keys = {k for k, _, _ in repo_settings.diff(repo_settings.expected(std), repo_settings.current(FakeApi(responses), 'mitsevox/n100f', std))}
+        self.assertEqual(keys, {'ruleset.bypass_actors', 'ruleset.pull_request.dismiss_stale_reviews', 'ruleset.required_status_checks'})
+        # mvp2005's: the default branch's ruleset under another name is found, and apply renames it.
+        std, responses = ideal('mitsevox/mvp2005')
+        responses['/repos/mitsevox/mvp2005/rulesets'] = (200, [{'id': 7, 'name': 'main protection'}])
+        responses['/repos/mitsevox/mvp2005/rulesets/7'][1]['name'] = 'main protection'
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/mvp2005', std)
+        drift = repo_settings.diff(repo_settings.expected(std), found)
+        self.assertEqual({k for k, _, _ in drift}, {'ruleset.name'})
+        repo_settings.apply(api, 'mitsevox/mvp2005', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [('PUT', '/repos/mitsevox/mvp2005/rulesets/7')])
+
+    def test_build_repositories_hold_no_ruleset(self):
+        std, responses = ideal('mitsevox/n100f-build')
+        self.assertNotIn('ruleset.exists', repo_settings.expected(std))
+        del responses['/repos/mitsevox/n100f-build/rulesets']
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f-build', std)
+        self.assertEqual(repo_settings.diff(repo_settings.expected(std), found), [])
+        self.assertEqual(api.writes, [])
 
 
 if __name__ == '__main__':

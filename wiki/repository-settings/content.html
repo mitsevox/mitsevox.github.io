@@ -6,7 +6,7 @@
 <div class="wiki-reading"><div class="wiki-meta"><span>Pipeline <span aria-hidden="true">/</span> 10</span><a href="/docs/wiki/repository-settings.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="repository-settings">Repository settings</h1>
 <p>Branch rules, merge method, Actions permissions, credentials, security features and presentation, applied by a script and re-checked monthly.</p>
-<p>Settings are part of the standard because they are what makes the rest enforceable: a required check means nothing on a branch that accepts direct pushes, and a read-only default token is what keeps a workflow from approving its own PR. Two kinds of repository are in scope, the public source repository and the private build repository. The data repository and the site are the publishing side and have their own settings.</p>
+<p>Settings are part of the standard because they are what makes the rest enforceable: a required check means nothing on a branch that accepts direct pushes, and a read-only default token is what keeps a workflow from approving its own PR. Three kinds of repository are in scope: the public source repository, the private build repository and the site. The data repository receives pushes from the publishing App and has its own settings.</p>
 <h2 id="the-standard">The standard</h2>
 <div class="wiki-table"><table>
 <thead>
@@ -14,6 +14,7 @@
 <th>Setting</th>
 <th>Source repository</th>
 <th>Build repository</th>
+<th>Site repository</th>
 </tr>
 </thead>
 <tbody>
@@ -21,14 +22,17 @@
 <td>Default branch</td>
 <td><code>main</code></td>
 <td><code>main</code></td>
+<td><code>main</code></td>
 </tr>
 <tr>
 <td>Ruleset on <code>main</code></td>
 <td>require a pull request; required check <code>Validate targets</code>; block force pushes and deletion; no bypass actors</td>
-<td>require a pull request; required check <code>Build environment image</code>; block force pushes and deletion</td>
+<td>none: rulesets on a private repository need a paid plan, and only the owner can push there</td>
+<td>require a pull request; required check <code>Test</code>; block force pushes and deletion; no bypass actors</td>
 </tr>
 <tr>
 <td>Merge method</td>
+<td>squash only</td>
 <td>squash only</td>
 <td>squash only</td>
 </tr>
@@ -36,19 +40,23 @@
 <td>Auto-delete head branches</td>
 <td>on</td>
 <td>on</td>
+<td>on</td>
 </tr>
 <tr>
 <td>Allowed actions</td>
 <td>GitHub-owned, plus <code>mitsevox/mitsevox.github.io/.github/actions/*</code></td>
+<td>GitHub-owned only</td>
 <td>GitHub-owned only</td>
 </tr>
 <tr>
 <td>Default <code>GITHUB_TOKEN</code></td>
 <td>read-only; workflows declare their own <code>permissions</code></td>
 <td>read-only</td>
+<td>read-only</td>
 </tr>
 <tr>
 <td>Actions may approve pull requests</td>
+<td>off</td>
 <td>off</td>
 <td>off</td>
 </tr>
@@ -56,9 +64,11 @@
 <td>Fork pull request approval</td>
 <td>required for all outside collaborators (the fork guard in <code>validate.yml</code> is the second line)</td>
 <td>not applicable</td>
+<td>required for all outside collaborators</td>
 </tr>
 <tr>
 <td>Artifact and log retention</td>
+<td>30 days</td>
 <td>30 days</td>
 <td>30 days</td>
 </tr>
@@ -66,29 +76,35 @@
 <td>Variable and secret</td>
 <td><code>DATA_APP_CLIENT_ID</code>, <code>DATA_APP_PRIVATE_KEY</code>; nothing else</td>
 <td>none; <code>GITHUB_TOKEN</code> publishes the image</td>
+<td><code>SETTINGS_READ_TOKEN</code> for the monthly check</td>
 </tr>
 <tr>
 <td>Package</td>
 <td>not applicable</td>
 <td>private; <code>Manage Actions access</code> grants the source repository <code>Read</code></td>
+<td>not applicable</td>
 </tr>
 <tr>
 <td>Secret scanning, push protection, Dependabot alerts, private vulnerability reporting</td>
 <td>on</td>
 <td>on where the plan allows</td>
+<td>on</td>
 </tr>
 <tr>
 <td>Dependabot version updates</td>
 <td>off; pinned actions are bumped by hand twice a year</td>
+<td>off</td>
 <td>off</td>
 </tr>
 <tr>
 <td>Issues</td>
 <td>on</td>
 <td>off</td>
+<td>on (the drift issue)</td>
 </tr>
 <tr>
 <td>Wiki, Projects, Discussions</td>
+<td>off</td>
 <td>off</td>
 <td>off</td>
 </tr>
@@ -96,9 +112,11 @@
 <td>Description, homepage, topics</td>
 <td><code>&lt;Title&gt; (&lt;console&gt;, &lt;year&gt;) decompilation</code>; <code>https://mitsevox.github.io/games/&lt;slug&gt;/</code>; <code>decompilation</code>, <code>&lt;platform&gt;</code>, <code>&lt;slug&gt;</code></td>
 <td><code>Private build environment for &lt;owner&gt;/&lt;game&gt;</code>; none; none</td>
+<td>the repository's own</td>
 </tr>
 </tbody>
 </table></div>
+<p>The ruleset <code>--check</code> reads is the one with the standard's name, or else the one that targets the default branch under another name; <code>--apply</code> then renames it rather than adding a second one. It also compares the pull request rule's merge methods and stale-approval dismissal, and the up-to-date requirement, which stays off: <code>main</code> rebuilds and verifies after every merge.</p>
 <p>A single setting may differ for one repository (a merge method, say) when its process needs it; that is a row in the per-repository overrides of the configuration file, never a change to the table.</p>
 <h2 id="the-script">The script</h2>
 <p>The standard is data: <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json"><code>config/repo-standard.json</code></a> in the site repository holds the table keyed by kind, a <code>repositories</code> block that names each repository with the values its description, homepage and topics are built from, and the overrides. <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py"><code>tools/repo_settings.py</code></a> reads it and talks to the GitHub REST API; standard-library Python, about 250 lines, idempotent.</p>
@@ -132,7 +150,6 @@ python3 tools/repo_settings.py --all --check
 </ol>
 <h2 id="assumptions-to-confirm">Assumptions to confirm</h2>
 <ul>
-<li>Rulesets on a private repository need a paid plan; on a free plan they exist for public repositories only, so the build repository's ruleset may be unavailable and <code>--check</code> will keep reporting it.</li>
 <li>The actions-allowlist, retention and fork-approval endpoints behave as documented for personal accounts.</li>
 <li><code>Manage Actions access</code> is still the package-level grant that lets the source repository pull the image.</li>
 <li>Every agent authors under the owner's login. That is what makes a native approval rule pointless and the procedural merge authority of <a href="/wiki/contribution-workflow/">Contribution workflow</a> the right shape. If agents ever get their own accounts, add one required approving review from the owner with stale approvals dismissed, and nothing else changes.</li>
