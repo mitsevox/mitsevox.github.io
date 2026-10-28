@@ -9,7 +9,12 @@ the group macros of include/version.h; this tool resolves exactly those directiv
 
 `check` fails on a VERSION_ token that is not a known define or group, a MatchingFor argument that
 is not a known target id, a version condition mixed with other macros, and any use of
-BUILD_VERSION in source (it stays defined for dtk-template and is never read)."""
+BUILD_VERSION in source (it stays defined for dtk-template and is never read).
+
+A version condition names the targets it includes. `!VERSION_X`, and `#else` after a version
+condition, cover every target not named, a target listed later too. With two targets listed they
+mean the other target and `check` only warns about them; from the third listed target on they are
+errors, so the pull request that lists a third target makes every such block explicit."""
 import argparse
 import difflib
 from pathlib import Path
@@ -86,6 +91,13 @@ class Expression:
         left=self.evaluate(lookup,node[1]);right=self.evaluate(lookup,node[2])
         return (left and right) if node[0]=='and' else (left or right)
 
+    def negated(self,node=None):
+        """Whether any token is negated: such a condition covers every target not named."""
+        node=node or self.tree
+        if node[0]=='id':return False
+        if node[0]=='not':return True
+        return self.negated(node[1]) or self.negated(node[2])
+
 
 class Versions:
     def __init__(self,root=ROOT):
@@ -93,7 +105,7 @@ class Versions:
         value=registry(self.root/'config/targets.json')
         self.ids=[t['id'] for t in value['targets']]
         self.defines={define(i):i for i in self.ids}
-        self.groups={};self.errors=[]
+        self.groups={};self.errors=[];self.warnings=[]
         header=self.root/'include/version.h'
         if header.is_file():
             for number,line in enumerate(strip_comments(header.read_text()).splitlines(),1):
@@ -104,6 +116,17 @@ class Versions:
                     self.errors.append('include/version.h:%d: group %s is not a boolean expression of known VERSION_ tokens and earlier groups'%(number,m.group(1)))
                     continue
                 self.groups[m.group(1)]=expr
+                if expr.negated():
+                    error=self.broad('include/version.h:%d: group %s negates a version token'%(number,m.group(1)))
+                    if error:self.errors.append(error)
+
+    def broad(self,message,warnings=None):
+        """A condition that covers every target not named: an error from the third listed target
+        on, a warning before (with two targets it names the other one)."""
+        message+=': it covers every target not named, a target listed later too; name the targets or a group'
+        if len(self.ids)>=3:return message
+        (self.warnings if warnings is None else warnings).append(message)
+        return None
 
     def known(self,ident):return ident in self.defines or ident in self.groups
 
@@ -121,8 +144,10 @@ class Versions:
             return self.groups[ident].evaluate(lookup)
         return lookup
 
-    def walk(self,lines,target_id=None):
-        """Resolve the version directives; yield (output line or None, error or None)."""
+    def walk(self,lines,target_id=None,warnings=None):
+        """Resolve the version directives; yield (output line or None, error or None). Broad
+        conditions (a negated token, `#else` after a version condition) go to `warnings` while
+        two targets are listed and are errors from the third on."""
         lookup=self.truth(target_id) if target_id else (lambda ident:False)
         stack=[]  # [resolved, active, taken] per open conditional
         for number,line in enumerate(lines,1):
@@ -136,6 +161,7 @@ class Versions:
                     if unknown:error='%d: unknown VERSION_ token %s'%(number,', '.join(unknown))
                     elif cls=='mixed':error='%d: version condition mixed with other macros: %s'%(number,condition)
                     elif cls=='version' and kind=='elif' and stack and not stack[-1][0]:error='%d: version #elif inside a non-version conditional'%number
+                    elif cls=='version' and expr.valid and expr.negated():error=self.broad('%d: a negated version token'%number,warnings)
                     if 'BUILD_VERSION' in expr.identifiers:error='%d: BUILD_VERSION is never read in source'%number
                     resolved=cls=='version' and not error and (kind=='if' or (stack and stack[-1][0]))
                     if kind=='if':
@@ -145,7 +171,7 @@ class Versions:
                     elif resolved:
                         frame=stack[-1];frame[1]=not frame[2] and expr.evaluate(lookup);frame[2]=frame[2] or frame[1];yield None,error;continue
                 elif stack and stack[-1][0]:
-                    if kind=='else':stack[-1][1]=not stack[-1][2]
+                    if kind=='else':stack[-1][1]=not stack[-1][2];error=self.broad('%d: #else after a version condition'%number,warnings)
                     else:stack.pop()
                     yield None,error;continue
                 elif kind=='endif' and stack:stack.pop()
@@ -159,9 +185,10 @@ class Versions:
         return [line for line,_ in self.walk(read(path).splitlines(),target_id) if line is not None]
 
     def check_file(self,path):
-        text=strip_comments(read(path));errors=[]
-        for _,error in self.walk(text.splitlines()):
+        text=strip_comments(read(path));errors=[];warnings=[]
+        for _,error in self.walk(text.splitlines(),warnings=warnings):
             if error:errors.append('%s:%s'%(path,error))
+        self.warnings+=['%s:%s'%(path,warning) for warning in warnings]
         for number,line in enumerate(text.splitlines(),1):
             for ident in IDENT.findall(line):
                 if ident.startswith('VERSION_') and ident not in self.defines and not DIRECTIVE.match(line):
@@ -177,7 +204,9 @@ class Versions:
         return errors
 
     def check(self,paths=None):
-        errors=list(self.errors);root=self.root
+        """The errors; the warnings (broad conditions while two targets are listed) collect in
+        self.warnings, with paths relative to the root."""
+        errors=list(self.errors);root=self.root;self.warnings=[w for w in self.warnings if w.startswith('include/version.h')]
         paths=[root/p for p in paths] if paths else [root/'src',root/'include',root/'configure.py']
         for path in paths:
             files=sorted(p for p in path.rglob('*') if p.is_file()) if path.is_dir() else [path]
@@ -185,6 +214,7 @@ class Versions:
                 if not file.exists():continue
                 if file.name=='configure.py':errors+=self.check_configure(file)
                 elif file.suffix in SUFFIXES:errors+=self.check_file(file)
+        self.warnings=[w.replace(str(root)+'/','',1) for w in self.warnings]
         return [e.replace(str(root)+'/','',1) for e in errors]
 
 
@@ -195,6 +225,7 @@ def main():
     versions=Versions()
     if args.command=='check':
         errors=versions.check(args.paths)
+        for warning in versions.warnings:print('warning: '+warning)
         print('\n'.join(errors) or 'versions: %d targets, %d groups, no errors'%(len(versions.ids),len(versions.groups)))
         return 1 if errors else 0
     if len(args.paths)!=1 or len(args.target)!={'view':1,'diff':2}[args.command]:parser.error('view takes one --target and one file; diff takes two --target and one file')
