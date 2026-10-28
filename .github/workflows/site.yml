@@ -51,6 +51,12 @@ jobs:
           cp -r index.html 404.html assets wiki _site/
           cp -r docs/wiki _site/docs/
           cp -r redirects/. _site/
+          # 404.html already renders every route; a real file per listed game serves it with
+          # status 200, so game pages stay indexable. A game added later renders through the
+          # 404 shell until the next deploy.
+          for slug in $(python3 -c 'import json, urllib.request; print(*json.load(urllib.request.urlopen("https://mitsevox.github.io/decomp-data/index.json"))["games"])'); do
+            mkdir -p "_site/games/$slug" && cp index.html "_site/games/$slug/"
+          done
       - uses: actions/upload-pages-artifact@98ef48e41587a300b82de4cf298aa98b57b2faae
         with:
           path: _site
