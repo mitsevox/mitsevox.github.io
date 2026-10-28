@@ -24,7 +24,7 @@ to the kit, which are checked by outline, and which are free.
 | `config/ci-targets.json` | same path | Which shared paths affect every target and which affect none |
 | `config/README.md` | same path | The evidence record format |
 | `include/version.h` | same path | The version-difference rule and the group macros |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | same paths | Target registry and define, CI planner, version views, evidence check, target scaffolding, tool provenance, the review-tier floor, the credits check |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | same paths | Target registry and define, CI planner, version views, evidence check, target scaffolding, the scope of Matching declarations, tool provenance, the review-tier floor, the credits check |
 | `tests/test_targets.py` | same path | The tests the `Tool tests` job runs |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the **private** build repository | The build environment image that holds the originals |
 | `scaffold.json` | nowhere | The scaffold spec, read by the scaffold check in the site repository |
