@@ -8,7 +8,7 @@ import sys
 import tempfile
 import unittest
 from tools.targets import registry,select,build_targets,define,check as check_targets
-from tools.ci_targets import affected,target_patterns
+from tools.ci_targets import affected,target_patterns,pr_base
 from tools.evidence import check_text,COLUMNS
 from tools.measuring_tools import tools as measuring_tools,verify
 from tools.new_target import scaffold
@@ -75,6 +75,35 @@ class Targets(unittest.TestCase):
                 self.assertEqual(affected(['orig/%s/sys/main.dol'%target['id']],value,deps),expected)
         with self.assertRaises(ValueError):affected(['../escape'],value,deps)
         with self.assertRaises(ValueError):affected([],value,dict(deps,targets={}))
+
+    def test_pull_request_diff_starts_where_the_merge_commit_was_built(self):
+        # The event's base.sha can lag the base branch the test merge commit was built on (and
+        # the merge commit can lag it too): either way the diff starts at the merge's first parent.
+        import subprocess
+        with tempfile.TemporaryDirectory() as tmp:
+            git=lambda *a:subprocess.check_output(['git','-c','user.name=t','-c','user.email=t@t',*a],cwd=tmp).decode().strip()
+            git('init','-q','-b','main')
+            def commit(path):
+                (Path(tmp)/path).parent.mkdir(parents=True,exist_ok=True);(Path(tmp)/path).write_text(path)
+                git('add','-A');git('commit','-q','-m',path);return git('rev-parse','HEAD')
+            old=commit('src/a.c')
+            git('switch','-q','-c','pr');commit('docs/b.md')
+            tip=git('rev-parse','HEAD')
+            git('switch','-q','main');new=commit('config/GAME01-rev0/evidence.tsv')
+            git('switch','-q','--detach',old);git('merge','-q','--no-ff','-m','test merge','pr');on_old=git('rev-parse','HEAD')
+            git('switch','-q','--detach',new);git('merge','-q','--no-ff','-m','test merge','pr');on_new=git('rev-parse','HEAD')
+            changed=lambda b,h:git('diff','--name-only',b,h).split()
+            pr=lambda base:{'base':{'sha':base},'head':{'sha':tip}}
+            # base.sha one commit behind a merge built on the branch tip (n100f#114's case).
+            self.assertEqual(pr_base(pr(old),on_new,tmp),new)
+            self.assertEqual(changed(pr_base(pr(old),on_new,tmp),on_new),['docs/b.md'])
+            self.assertIn('config/GAME01-rev0/evidence.tsv',changed(old,on_new))  # what the old diff saw
+            # A merge built on an older base than base.sha, and both up to date.
+            self.assertEqual(pr_base(pr(new),on_old,tmp),old)
+            self.assertEqual(pr_base(pr(new),on_new,tmp),new)
+            # Not a merge commit of the pull request's head: the merge base.
+            self.assertEqual(pr_base(pr(new),tip,tmp),old)
+        with self.assertRaises(ValueError):pr_base({'base':{'sha':'main'},'head':{'sha':'0'*40}},'0'*40)
 
     def test_new_target_refuses_unknown_ids_and_overwrites(self):
         with tempfile.TemporaryDirectory() as tmp:

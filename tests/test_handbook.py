@@ -117,6 +117,38 @@ class HandbookTests(unittest.TestCase):
             dispatch = run([sys.executable, 'tools/ci_targets.py'], root, env)
             self.assertEqual(json.loads(dispatch.stdout), {'targets': ['GAME01-rev0'], 'changedPaths': [], 'forced': True})
 
+    def test_planner_and_tier_diff_a_pull_request_from_its_merge_commit(self):
+        # The event's base.sha lags the branch tip the test merge commit was built on: the
+        # base's newer commit (an inferred evidence row, tier A) is not the pull request's.
+        with tempfile.TemporaryDirectory() as tmp:
+            root = kit_checkout(tmp)
+            git = lambda *a: run(['git', '-c', 'user.email=t@example.com', '-c', 'user.name=t', *a], root).stdout.strip()
+            git('init', '-q', '-b', 'main')
+            git('add', '-A')
+            git('commit', '-qm', 'base')
+            stale = git('rev-parse', 'HEAD')
+            git('switch', '-q', '-c', 'pr')
+            (root / 'docs').mkdir(exist_ok=True)
+            (root / 'docs/note.md').write_text('note\n')
+            git('add', '-A')
+            git('commit', '-qm', 'docs')
+            tip = git('rev-parse', 'HEAD')
+            git('switch', '-q', 'main')
+            with open(root / 'config/GAME01-rev0/evidence.tsv', 'a') as rows:
+                rows.write('function\t0x80001000\t0x80001010\tfoo\tinferred\texact\texact\tloads\n')
+            git('commit', '-qam', 'another pull request')
+            git('switch', '-q', '--detach', 'main')
+            git('merge', '-q', '--no-ff', '-m', 'test merge', 'pr')
+            merge = git('rev-parse', 'HEAD')
+            event = root / 'event.json'
+            event.write_text(json.dumps({'pull_request': {'base': {'sha': stale}, 'head': {'sha': tip}, 'body': '## Scope\n\nTier C, docs'}}))
+            env = {'GITHUB_EVENT_PATH': str(event), 'GITHUB_EVENT_NAME': 'pull_request', 'GITHUB_SHA': merge}
+            plan = run([sys.executable, 'tools/ci_targets.py'], root, env)
+            self.assertEqual(json.loads(plan.stdout)['changedPaths'], ['docs/note.md'], plan.stdout + plan.stderr)
+            tier = run([sys.executable, 'tools/tier.py'], root, env)
+            self.assertEqual(tier.returncode, 0, tier.stdout + tier.stderr)
+            self.assertIn('declared Tier C', tier.stdout)
+
 
 if __name__ == '__main__':
     unittest.main()
