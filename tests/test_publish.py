@@ -1,6 +1,10 @@
 """The publisher: objdiff report -> contract files, history append rules and the tree check."""
 import copy
+import functools
 import json
+import math
+import operator
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -144,6 +148,90 @@ class ConversionTests(unittest.TestCase):
         m['files'][0]['children'][0]['matched'] = 0
         with self.assertRaises(publish.ContractError):
             publish.check_map(m, s)
+
+    def test_group_fuzzy_is_added_as_the_page_adds_it(self):
+        # The page re-adds a group's children left to right and compares with the group. One
+        # 2^40-byte exact function and a hundred 1-byte functions at 10 percent put the exact sum
+        # about 0.01 away from that. The publisher writes the page's sum, at the group and in the
+        # summary, so its own output passes both readers; a copy holding the exact sum fails both.
+        r = report()
+        unit, auto = r['units']
+        big, base = 2 ** 40, 2147483648
+        unit['sections'][0]['size'] = str(big + 100)
+        unit['sections'][1]['metadata']['virtual_address'] = str(2147500000 + big)
+        unit['functions'] = [{'name': 'Exact', 'size': str(big), 'fuzzy_match_percent': 100, 'metadata': {'virtual_address': str(base)}}]
+        unit['functions'] += [{'name': 'f%d' % i, 'size': '1', 'fuzzy_match_percent': 10,
+                               'metadata': {'virtual_address': str(base + big + i)}} for i in range(100)]
+        unit['measures'].update(total_code=str(big + 100), matched_code=str(big))
+        auto['sections'][0]['metadata']['virtual_address'] = str(base + big + 100)
+        auto['functions'][0]['metadata']['virtual_address'] = str(base + big + 100)
+        r['measures'].update(total_code=str(big + 116), matched_code=str(big), complete_code=str(big + 100), total_functions=102)
+        s = publish.summary(r, SECTIONS)
+        m = publish.map_document(r, SECTIONS)
+        group = m['files'][0]
+        exact = math.fsum(c['fuzzy'] for c in group['children'])
+        self.assertEqual(exact, big + 10)
+        self.assertEqual(group['fuzzy'], functools.reduce(operator.add, (c['fuzzy'] for c in group['children']), 0))
+        self.assertGreater(abs(group['fuzzy'] - exact), 1e-6)
+        self.assertEqual(s['code']['fuzzy'], group['fuzzy'])  # the other code group adds nothing
+        publish.check_map(m, s)
+        self.assertFalse(self.page_rejects(m, s))
+        # The exact sum put back, with the summary and the sections view kept consistent with it,
+        # so that only the group-against-children comparison can refuse it.
+        m['files'][0]['fuzzy'] = exact
+        m['sections'][0]['fuzzy'] = exact
+        s['code']['fuzzy'] = exact
+        self.assertTrue(self.page_rejects(m, s))
+        with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
+            publish.check_map(m, s)
+
+    def page_rejects(self, map_doc, s):
+        measures = {kind: {k: s[kind][k] for k in ('total', 'linked', 'matched', 'fuzzy')} for kind in ('code', 'data')}
+        script = ("import {validateMap} from './assets/report-map-validation.js';\n"
+                  "const [map, measures] = JSON.parse(process.argv[1]);\n"
+                  "validateMap(map, measures);\n")
+        result = subprocess.run(['node', '--input-type=module', '-e', script, json.dumps([map_doc, measures])],
+                                cwd=ROOT, capture_output=True, text=True)
+        return result.returncode != 0
+
+    def test_map_check_is_exactly_as_strict_as_the_page(self):
+        # The page sums children with an absolute tolerance of 1e-6 and no relative one. A big
+        # unit whose group fuzzy is 1.5e-6 off its children is refused by the page; a relative
+        # tolerance would have let the publisher accept it.
+        r = report()
+        unit, auto = r['units']
+        big = 4000000  # the exact function grows by this; everything after it moves up by this
+        unit['sections'][0]['size'] = str(32 + big)
+        unit['sections'][1]['metadata']['virtual_address'] = str(2147500000 + big)
+        unit['functions'][0]['size'] = str(16 + big)
+        unit['functions'][1]['metadata']['virtual_address'] = str(2147483664 + big)
+        unit['measures'].update(total_code=str(32 + big), matched_code=str(16 + big))
+        auto['sections'][0]['metadata']['virtual_address'] = str(2147483680 + big)
+        auto['functions'][0]['metadata']['virtual_address'] = str(2147483680 + big)
+        r['measures'].update(total_code=str(48 + big), matched_code=str(16 + big), complete_code=str(32 + big))
+        s = publish.summary(r, SECTIONS)
+        self.assertEqual(s['code']['fuzzy'], 16 + big + 8)
+        m = publish.map_document(r, SECTIONS)
+        publish.check_map(m, s)
+        self.assertFalse(self.page_rejects(m, s))  # the page accepts the map as written
+        m['files'][0]['fuzzy'] += 1.5e-6
+        self.assertTrue(self.page_rejects(m, s))
+        with self.assertRaisesRegex(publish.ContractError, 'fuzzy'):  # off the summary and off its children
+            publish.check_map(m, s)
+        # Four more shapes the page refuses: a node without a name, an empty view, a top-level
+        # node of another kind, and a node whose children list is empty.
+        for change, message in (
+                (lambda d: d['files'][0]['children'][0].pop('name'), 'no name'),
+                (lambda d: d.__setitem__('files', []), 'is empty'),
+                (lambda d: d['sections'].append({'name': 'bss', 'kind': 'bss', 'size': 4, 'linked': 0, 'matched': 0,
+                                                 'address': '0x90000000'}), 'has kind'),
+                (lambda d: d['files'][0]['children'][0].__setitem__('children', []), 'no children')):
+            m = publish.map_document(r, SECTIONS)
+            change(m)
+            with self.subTest(message=message):
+                self.assertTrue(self.page_rejects(m, s))
+                with self.assertRaisesRegex(publish.ContractError, message):
+                    publish.check_map(m, s)
 
 
 class TimestampTests(unittest.TestCase):
@@ -357,6 +445,18 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(current['source']['title'], 'Measured commit')
             self.assertEqual(current['tools'], [{'name': 'objdiff', 'version': 'v3.6.1'}])
             self.assertEqual(publish.check_tree(out), 1)
+            # The report check of a pull request: credits on, but the merged pull request does
+            # not exist yet, so --no-credits converts without reading GitHub.
+            (source / 'config/site.json').write_text(json.dumps(dict(SITE, contributors=True)))
+            command = [sys.executable, str(ROOT / '.github/actions/publish/publish.py'), 'publish', '--dry-run',
+                       '--target', 'GAME01-rev0', '--report', 'report.json', '--repository', 'owner/game',
+                       '--output', str(temp / 'check')]
+            refused = subprocess.run(command, cwd=source, capture_output=True, text=True, env={**os.environ, 'GITHUB_TOKEN': ''})
+            self.assertIn('GITHUB_TOKEN is required', refused.stderr)
+            checked = subprocess.run(command + ['--no-credits'], cwd=source, capture_output=True, text=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            self.assertIn('checked 1 target(s)', checked.stdout)
+            self.assertIsNone(json.loads((temp / 'check/data/game/GAME01-rev0/latest.json').read_text())['modules']['contributors'])
 
 
 if __name__ == '__main__':

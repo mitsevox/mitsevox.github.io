@@ -115,7 +115,7 @@ mitsevox.github.io/games/game/  reads  /decomp-data/ at view time
 <li>The <code>Tool tests</code> job's <code>Check the scaffold</code> step reports no warnings.</li>
 <li>The <code>Validate &lt;target id&gt;</code> job ends with <code>Publish to the site</code>, and the data repository gains a commit titled <code>game GAME01-rev0: &lt;sha&gt;, &lt;n&gt;% code linked</code>.</li>
 <li>The data repository's <code>Deploy</code> workflow runs, and <code>https://mitsevox.github.io/games/game/</code> shows the new measurement within a few minutes.</li>
-<li>A pull request runs the same build without the publish step, and cannot merge until <code>Validate targets</code> passes and the owner merges it.</li>
+<li>A pull request runs the same build, checks that the report converts and skips the publish step; it cannot merge until <code>Validate targets</code> passes and the owner merges it.</li>
 <li><code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift.</li>
 </ul>
 <h2 id="glossary">Glossary</h2>

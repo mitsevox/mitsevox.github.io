@@ -1,0 +1,44 @@
+name: Check decomp report
+description: >-
+  Convert one target's objdiff report.json into the site's data contract (contract/README.md) and
+  check the result with the same code the publish step runs on main, without a credential and
+  without pushing. Run it in the per-target CI job on every event, so a pull request learns whether
+  its report converts before it merges. The conversion writes into an empty tree (merging with the
+  published history is not exercised) and reads no credits (they need the merged pull request).
+inputs:
+  target:
+    description: Target id, as listed in the targets file.
+    required: true
+  report:
+    description: objdiff report.json for this target.
+    required: true
+  targets:
+    description: The producer's targets file.
+    default: config/targets.json
+  site:
+    description: The producer's site presentation file.
+    default: config/site.json
+  code-sections:
+    description: Comma-separated code section names, exactly as the publish step passes them.
+    default: .init,.text
+  unit-prefix:
+    description: Prefix stripped from objdiff unit names for display, exactly as the publish step passes it.
+    default: main/
+runs:
+  using: composite
+  steps:
+    - name: Check the report
+      shell: sh
+      env:
+        TARGET: ${{ inputs.target }}
+        REPORT: ${{ inputs.report }}
+        TARGETS: ${{ inputs.targets }}
+        SITE: ${{ inputs.site }}
+        CODE_SECTIONS: ${{ inputs.code-sections }}
+        UNIT_PREFIX: ${{ inputs.unit-prefix }}
+      run: |
+        tree="$(mktemp -d)"
+        python3 "$GITHUB_ACTION_PATH/../publish/publish.py" publish --dry-run --no-credits \
+          --target "$TARGET" --report "$REPORT" --targets "$TARGETS" --site "$SITE" \
+          --code-sections "$CODE_SECTIONS" --unit-prefix "$UNIT_PREFIX" \
+          --repository "$GITHUB_REPOSITORY" --output "$tree"

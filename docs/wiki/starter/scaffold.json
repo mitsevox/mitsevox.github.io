@@ -50,11 +50,12 @@
     "steps": [
       "Select affected target inputs", "Check the declared tier", "Check the credits", "Run tool tests", "Check the scaffold",
       "Require a repository contribution branch", "Provide target original", "Configure target",
-      "Build, verify complete executable and measure progress", "List measuring tools", "Publish to the site",
+      "Build, verify complete executable and measure progress", "Check the report", "List measuring tools", "Publish to the site",
       "Require all selected target validations"
     ],
     "optionalSteps": ["Project checks"],
     "publishAction": "mitsevox/mitsevox.github.io/.github/actions/publish@main",
+    "checkAction": "mitsevox/mitsevox.github.io/.github/actions/check-report@main",
     "scaffoldAction": "mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main",
     "imageVariable": "BUILD_IMAGE",
     "imagePattern": "ghcr\\.io/[^@\\s]+@sha256:[0-9a-f]{64}",

@@ -180,16 +180,16 @@
 <pre><code class="language-sh">git clone https://github.com/mitsevox/mitsevox.github.io site
 python3 site/.github/actions/publish/publish.py publish --target GAME01-rev0 \
   --report build/GAME01-rev0/report.json --repository owner/game \
-  --tools &quot;$(python3 tools/measuring_tools.py)&quot; --dry-run --output /tmp/tree
+  --tools &quot;$(python3 tools/measuring_tools.py)&quot; --dry-run --no-credits --output /tmp/tree
 python3 site/.github/actions/publish/publish.py check /tmp/tree
 </code></pre>
-<p><code>--dry-run</code> writes the files into <code>--output</code> (or a temporary directory) and pushes nothing; <code>check</code> validates a whole tree. <code>--repository</code> is required outside Actions because <code>GITHUB_REPOSITORY</code> is unset; <code>source.runUrl</code> is <code>null</code> locally. This is the fastest way to find out whether a report converts before the first <code>main</code> push, and the only way to inspect the generated files.</p>
+<p><code>--dry-run</code> writes the files into <code>--output</code> (or a temporary directory) and pushes nothing; <code>--no-credits</code> leaves the credits out, which otherwise need the merged pull request on GitHub; <code>check</code> validates a whole tree. <code>--repository</code> is required outside Actions because <code>GITHUB_REPOSITORY</code> is unset; <code>source.runUrl</code> is <code>null</code> locally. This is the same conversion the <code>Check the report</code> step runs on every pull request (<a href="/wiki/ci/">CI</a>), and the only way to inspect the generated files. Both write into an empty tree: whether the measurement merges with the published history (one row per revision, in order) is checked by the publish itself.</p>
 <h2 id="before-the-first-push-to-main">Before the first push to main</h2>
 <ul>
 <li>The App is installed on the data repository with Contents read and write.</li>
 <li>The producer has the variable and the <code>publish</code> environment with its branch policy and secret, and <code>validate.yml</code> names them.</li>
 <li><code>config/targets.json</code> and <code>config/site.json</code> validate (<code>python3 -m unittest discover -s tests -p 'test_*.py'</code> and a dry run).</li>
-<li>A pull request has passed <code>Validate targets</code>.</li>
+<li>A pull request has passed <code>Validate targets</code>, whose <code>Check the report</code> step converted this target's report.</li>
 </ul>
 <p>Then merge. The first publish creates <code>data/&lt;slug&gt;/</code> and adds the slug to <code>index.json</code>; no one edits the data repository for a new game except to add cover art (<a href="/wiki/site/">The site</a>).</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/ci/"><small>Previous</small><span>CI</span></a><a href="/wiki/repository-settings/"><small>Next</small><span>Repository settings</span></a></nav></div>
 <aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-credential">The credential</a><a href="#the-actions-inputs">The action&#x27;s inputs</a><a href="#what-the-action-does">What the action does</a><a href="#credits">Credits</a><a href="#verifying-a-publish">Verifying a publish</a><a href="#running-the-conversion-locally">Running the conversion locally</a><a href="#before-the-first-push-to-main">Before the first push to main</a></nav></aside></main>
