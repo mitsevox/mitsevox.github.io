@@ -491,7 +491,8 @@ def credit(previous, exact, committed_at, authors, overrides, newer):
             known = current.get(fid) or retired.get(fid)
             if known is None:
                 continue
-        if timestamp(known['since']) > when:
+        # A credit without `since` predates it (an imported ledger) and is kept.
+        if 'since' in known and timestamp(known['since']) > when:
             known.update(fresh)
     if newer:
         for fid in [f for f in current if f not in exact]:
@@ -620,7 +621,7 @@ def write_target(tree, game, latest, map_doc, credits=None):
             document = credit(previous, exact_functions(map_doc, latest['target']), latest['source']['committedAt'],
                               authors, credits['overrides'], newer)
             check_contributors(document, latest['summary'] if newer else current['summary'])
-            write_json(credits_path, document)
+            write_json(credits_path, document, compact=True)
             latest['modules']['contributors'] = 'contributors.json'
     if newer:
         write_json(directory / 'map.json', map_doc, compact=True)

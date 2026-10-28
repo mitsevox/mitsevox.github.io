@@ -223,6 +223,14 @@ class CreditTests(unittest.TestCase):
         self.assertEqual(self.authors(alice), {'0x80000000': [1], '0x80000010': [2]})
         self.assertEqual(alice['credited_functions'], 2)
 
+    def test_imported_credits_without_since_are_kept(self):
+        legacy = {'schema': 1, 'credited_functions': 1, 'contributors': [{'id': 2, 'login': 'alice', 'functions': 1}],
+                  'functions': [{'id': 'GAME01-rev0:0x80000000:16', 'authors': [2]}]}
+        document = self.step(legacy, self.ids('0x80000000', '0x80000010'), self.T1, [self.BOB])
+        self.assertEqual(self.authors(document), {'0x80000000': [2], '0x80000010': [3]})
+        older = self.step(document, self.ids('0x80000000', '0x80000010'), self.T0, [self.OWNER], newer=False)
+        self.assertEqual(self.authors(older), {'0x80000000': [2], '0x80000010': [1]})
+
     def test_overrides_win(self):
         first = self.step(None, self.ids('0x80000000', '0x80000010'), self.T0, [self.OWNER],
                           overrides={'0x80000010': [self.ALICE, self.BOB]})
