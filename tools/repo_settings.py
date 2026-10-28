@@ -7,10 +7,13 @@
 
 --check exits 1 when anything drifts. --apply sets repository fields, merge settings, features,
 Actions permissions, token defaults, retention, the default branch's rulesets (`main`, and `merges`
-where the kind has one) and the security features, then
-prints the hand steps it cannot do (secrets and variables, package access, the GitHub App). Both are
+where the kind has one), the deployment environments with their branch policies and the security
+features, then prints the hand steps it cannot do (secrets and variables, package access, the
+GitHub App). Both are
 idempotent. The token comes from GH_TOKEN or `gh auth token`; --check works with a fine-grained token
-limited to Administration: read and Metadata: read. Standard library only."""
+limited to read access for Administration (Actions permissions), Metadata (rulesets), Actions
+(environments and their branch policies), Environments (environment secrets), Secrets and Variables
+(the repository's own) on the repositories. Standard library only."""
 import argparse
 import json
 import os
@@ -98,6 +101,11 @@ def expected(std):
     }
     if std['forkPullRequestApproval']:
         items['actions.fork_pr_approval_policy'] = std['forkPullRequestApproval']
+    for name, env in sorted(std.get('environments', {}).items()):
+        # branches: the deployment branch policy, 'all' when null; secrets: the environment's own.
+        items['environments.%s.exists' % name] = True
+        items['environments.%s.branches' % name] = sorted(env['branches']) if env['branches'] is not None else 'all'
+        items['environments.%s.secrets' % name] = sorted(env['secrets'])
     merges = std.get('mergeRuleset')
     if merges:
         # The second ruleset of a repository whose contributors hold write access: one `update`
@@ -199,6 +207,8 @@ def current(api, repo, std):
     found['actions.variables'] = sorted(v['name'] for v in variables.get('variables', [])) if status == 200 else None
     status, secrets = api('GET', '/repos/%s/actions/secrets' % repo)
     found['actions.secrets'] = sorted(s['name'] for s in secrets.get('secrets', [])) if status == 200 else None
+    if std.get('environments'):
+        found.update(environments(api, repo, std['environments']))
     if std['ruleset'] is None and not std.get('mergeRuleset'):
         return found
     main, merges = pick_rulesets(ruleset_details(api, repo), std['ruleset']['name'] if std['ruleset'] else None,
@@ -221,6 +231,42 @@ def current(api, repo, std):
             found['merges.bypass_actors'] = merges.get('bypass_actors') or []
             found['merges.targets_default'] = targets_default(merges)
             found['merges.rule.update'] = merges_shaped(merges)
+    return found
+
+
+def environments(api, repo, wanted):
+    """Each wanted deployment environment: whether it exists, the branches its deployment branch
+    policy allows ('all' when the policy is null, 'protected' when it allows protected branches)
+    and the secrets it holds. An unreadable listing leaves every key missing, which is drift."""
+    found = {}
+    status, listing = api('GET', '/repos/%s/environments' % repo)
+    if status != 200:
+        return found
+    existing = {e['name']: e for e in listing.get('environments', [])}
+    for name in wanted:
+        key = 'environments.%s.' % name
+        env = existing.get(name)
+        found[key + 'exists'] = env is not None
+        if env is None:
+            continue
+        policy = env.get('deployment_branch_policy')
+        if policy is None:
+            found[key + 'branches'] = 'all'
+        elif policy.get('custom_branch_policies'):
+            status, policies = api('GET', '/repos/%s/environments/%s/deployment-branch-policies' % (repo, name))
+            if status == 200:
+                # A tag policy would let any contributor's tag push reach the key: it is recorded
+                # as tag:<pattern>, which no standard lists, so it drifts and apply deletes it.
+                ids = {}
+                for p in policies.get('branch_policies', []):
+                    label = p['name'] if p.get('type', 'branch') == 'branch' else 'tag:' + p['name']
+                    ids[label] = p['id']
+                found[key + 'branches'] = sorted(ids)
+                found[key + 'policy_ids'] = ids
+        else:
+            found[key + 'branches'] = 'protected'
+        status, secrets = api('GET', '/repos/%s/environments/%s/secrets' % (repo, name))
+        found[key + 'secrets'] = sorted(s['name'] for s in secrets.get('secrets', [])) if status == 200 else None
     return found
 
 
@@ -355,8 +401,31 @@ def apply(api, repo, std, drift, found):
         else:
             api('POST', '/repos/%s/rulesets' % repo, body)
     hand = []
+    for name, env in sorted(std.get('environments', {}).items()):
+        key = 'environments.%s.' % name
+        if not any(k.startswith(key) for k in keys):
+            continue
+        if key + 'exists' in keys or key + 'branches' in keys:
+            selected = env['branches'] is not None
+            # Creates the environment when it is missing; sets the deployment branch policy.
+            api('PUT', '/repos/%s/environments/%s' % (repo, name), {
+                'deployment_branch_policy': {'protected_branches': False, 'custom_branch_policies': True} if selected else None})
+            if selected:
+                have = found.get(key + 'policy_ids', {})
+                for branch in env['branches']:
+                    if branch not in have:
+                        api('POST', '/repos/%s/environments/%s/deployment-branch-policies' % (repo, name), {'name': branch, 'type': 'branch'})
+                # Every other policy goes, tag policies (tag:<pattern>) included.
+                for label, policy_id in have.items():
+                    if label not in env['branches']:
+                        api('DELETE', '/repos/%s/environments/%s/deployment-branch-policies/%s' % (repo, name, policy_id))
+        if key + 'secrets' in keys or key + 'exists' in keys:
+            hand.append('Environment %s: hold exactly the secrets %s (Settings, Environments, %s, Environment secrets).'
+                        % (name, ', '.join(env['secrets']) or 'none', name))
     if 'actions.variables' in keys or 'actions.secrets' in keys:
-        hand.append('Set the repository variables %s and secrets %s, and delete every other one (Settings, Secrets and variables, Actions).'
+        hand.append('Repository variables: exactly %s; repository secrets: exactly %s (Settings, Secrets and variables, Actions). '
+                    'Delete a DATA_APP_PRIVATE_KEY repository secret only at its step of the move order in the Repository '
+                    'settings chapter: until it is gone, a job falls back to it and a published line proves nothing.'
                     % (', '.join(std['variables']) or 'none', ', '.join(std['secrets']) or 'none'))
     if 'security.dependabot_version_updates' in keys:
         hand.append('Remove .github/dependabot.yml; pinned actions are bumped by hand.')

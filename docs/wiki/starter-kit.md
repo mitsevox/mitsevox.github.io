@@ -39,7 +39,7 @@ Every project-specific value, and where it goes:
 | Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `build-image/*`, `config/<id>/config.yml` |
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |
 | Project checks | optional step and its command | `validate.yml.template` |
-| Credential names | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | `validate.yml.template` PARAMETER 4 |
+| Credential names | `DATA_APP_CLIENT_ID` (repository variable), `DATA_APP_PRIVATE_KEY` (secret of the `publish` environment) | `validate.yml.template` PARAMETER 4 |
 | Reported tool versions | `dtk_tag`, `objdiff_tag` | `tools/measuring_tools.py` |
 | Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
@@ -51,7 +51,7 @@ Every project-specific value, and where it goes:
 | Class | Files | Checked |
 | --- | --- | --- |
 | Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
-| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest) | Headings or the fixed part; the body is free |
+| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
 The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
@@ -67,7 +67,7 @@ The repository is set up when each line is true and can be shown with a run, a c
 - The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
 - A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
 - The `main` ruleset requires a pull request and `Validate targets`, and the `merges` ruleset restricts merging to the Repository admin role; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
-- The GitHub App is installed on the data repository; the producer holds the variable and the secret.
+- The GitHub App is installed on the data repository; the producer holds the variable and the `publish` environment with the secret.
 - The first `main` run's `Publish to the site` step printed `published <slug>/<id> <sha>`; the data repository has the commit; `https://mitsevox.github.io/games/<slug>/` shows it.
 - Cover art is committed to the data repository and `artwork` is in `config/site.json`, or the owner has decided to go without.
 

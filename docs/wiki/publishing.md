@@ -15,14 +15,26 @@ For the owner's site the App already exists and is installed on `mitsevox/decomp
 3. After creating it, note the **Client ID** on the App's page and generate a **private key** (a `.pem` file downloads).
 4. Install the App on the account, choosing **Only select repositories** and selecting the data repository alone.
 
-Then, in the producer repository (Settings, Secrets and variables, Actions):
+Then, in the producer repository:
 
-| Kind | Name used in this guide | Value |
-| --- | --- | --- |
-| Variable | `DATA_APP_CLIENT_ID` | The App's client id |
-| Secret | `DATA_APP_PRIVATE_KEY` | The full contents of the `.pem` file |
+| Kind | Where | Name used in this guide | Value |
+| --- | --- | --- | --- |
+| Repository variable | Settings, Secrets and variables, Actions, Variables | `DATA_APP_CLIENT_ID` | The App's client id |
+| Environment secret | Settings, Environments, `publish`, Environment secrets | `DATA_APP_PRIVATE_KEY` | The full contents of the `.pem` file |
 
 The names are yours; `validate.yml` passes them to the action as `app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}` and `app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}` (PARAMETER 4).
+
+The private key is an environment secret and never a repository secret, because a repository secret is readable by a workflow run of any branch of the repository, and contributors push branches. The `publish` environment's deployment branch policy allows `main` only. The target job references `publish` on a push or manual run of `main` and the empty environment `validate` on every other run, so a run of any other branch, including one that edits `validate.yml` to name `publish`, is refused by GitHub before its first step ([CI](/wiki/ci/)). The owner creates the environments once:
+
+1. Settings, Environments, New environment, name `publish`, Configure environment.
+2. Deployment branches and tags: choose "Selected branches and tags", Add deployment branch or tag rule, ref type Branch, name pattern `main`, Add rule. No tag rule: a tag rule would let any contributor's tag push reach the key.
+3. Environment secrets, Add environment secret: name `DATA_APP_PRIVATE_KEY`, value the `.pem` contents.
+4. Leave required reviewers and the wait timer off.
+5. New environment, name `validate`, Configure environment, change nothing: every branch, no secrets.
+
+Both environments are created by hand (or by `python3 tools/repo_settings.py --apply`), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but not for a job with `deployment: false`. The settings standard checks both ([Repository settings](/wiki/repository-settings/)).
+
+A repository secret and an environment secret may share a name. A job that references an environment reads the environment's secret when the environment has one of that name, and otherwise falls back to the repository secret. So the key must not exist as a repository secret at all once the environment holds it, and the move from one to the other follows the order in [Repository settings](/wiki/repository-settings/), which deletes the repository secret before trusting a `published` line and then proves the branch policy with two refused runs.
 
 ## The action's inputs
 
@@ -96,7 +108,7 @@ python3 site/.github/actions/publish/publish.py check /tmp/tree
 ## Before the first push to main
 
 - The App is installed on the data repository with Contents read and write.
-- The producer has the variable and the secret, and `validate.yml` names them.
+- The producer has the variable and the `publish` environment with its branch policy and secret, and `validate.yml` names them.
 - `config/targets.json` and `config/site.json` validate (`python3 -m unittest discover -s tests -p 'test_*.py'` and a dry run).
 - A pull request has passed `Validate targets`.
 

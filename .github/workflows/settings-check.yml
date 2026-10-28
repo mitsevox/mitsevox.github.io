@@ -2,8 +2,10 @@ name: Repository settings check
 
 # Runs tools/repo_settings.py --check for every repository listed in config/repo-standard.json and
 # opens (or updates) one issue when anything drifts. It never applies a setting: the token is a
-# fine-grained personal access token limited to Administration: read and Metadata: read on those
-# repositories, expiring yearly, stored as the secret SETTINGS_READ_TOKEN.
+# fine-grained personal access token limited to read access for Administration, Actions,
+# Environments, Metadata, Secrets and Variables on those repositories (what --check reads: Actions
+# permissions, environments and branch policies, environment secrets, rulesets, repository secrets
+# and variables), expiring yearly, stored as the secret SETTINGS_READ_TOKEN.
 #
 # Disabled until that token exists: the workflow runs on manual dispatch only. Once the secret is
 # set, add the monthly schedule below and the workflow needs no other change.

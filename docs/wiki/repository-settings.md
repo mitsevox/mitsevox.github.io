@@ -18,7 +18,8 @@ Settings are part of the standard because they are what makes the rest enforceab
 | Actions may approve pull requests | off | off | off |
 | Fork pull request approval | required for all outside collaborators (the fork guard in `validate.yml` is the second line) | not applicable | required for all outside collaborators |
 | Artifact and log retention | 30 days | 30 days | 30 days |
-| Variable and secret | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY`; nothing else | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Variable and secret | the repository variable `DATA_APP_CLIENT_ID`; no repository secret | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Environments | `publish`: deployment branches `main` only (no tag rule), the secret `DATA_APP_PRIVATE_KEY`, nothing else; `validate`: every branch, no secrets | none | none |
 | Package | not applicable | private; `Manage Actions access` grants the source repository `Read` | not applicable |
 | Secret scanning, push protection, Dependabot alerts, private vulnerability reporting | on | on where the plan allows | on |
 | Dependabot version updates | off; pinned actions are bumped by hand twice a year | off | off |
@@ -43,11 +44,11 @@ python3 tools/repo_settings.py --repo owner/game --apply
 python3 tools/repo_settings.py --all --check
 ```
 
-`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
+`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name), the environments with their deployment branch policies, and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
 
 What the script cannot set, and prints as hand steps:
 
-- the variable and secret (set them in Settings, Secrets and variables, Actions, and delete any others);
+- the variable (Settings, Secrets and variables, Actions) and the environment secret (Settings, Environments, `publish`), and deleting any others; a `DATA_APP_PRIVATE_KEY` repository secret goes only at its step of the move order below;
 - the private package's `Manage Actions access` grant to the source repository;
 - the GitHub App that writes the data repository ([Publishing](/wiki/publishing/));
 - removing a `.github/dependabot.yml` if one exists.
@@ -59,7 +60,7 @@ The owner runs `--apply` with their own token once per repository after it adopt
 Two readers keep the settings from drifting back:
 
 1. **The scaffold check**, in every repository's `Tool tests` job ([CI](/wiki/ci/)), reads what the default `GITHUB_TOKEN` can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to `main` (`GET /repos/{owner}/{repo}/rules/branches/main`, the union of both rulesets, so a missing `update` rule shows there). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.
-2. **The monthly check** in the site repository, `.github/workflows/settings-check.yml`, runs `--check` for every listed repository with a fine-grained personal access token limited to `Administration: read` and `Metadata: read` on those repositories, expiring yearly, stored as the secret `SETTINGS_READ_TOKEN`. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.
+2. **The monthly check** in the site repository, `.github/workflows/settings-check.yml`, runs `--check` for every listed repository with a fine-grained personal access token on those repositories, expiring yearly, stored as the secret `SETTINGS_READ_TOKEN`. The token holds read access, and nothing more, for: Administration (the Actions permissions), Metadata (the rulesets), Actions (the environments and their deployment branch policies), Environments (the environment secrets), Secrets and Variables (the repository's own); a permission missing from the token reads as permanent drift, because unreadable counts as drift. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.
 
 The monthly workflow is committed with manual dispatch only. Once the token exists, the owner creates the secret and adds the `schedule` block that the file's comment shows; nothing else changes. When the token expires, the check fails loudly at its first step rather than passing silently.
 
@@ -67,8 +68,17 @@ The monthly workflow is committed with manual dispatch only. Once the token exis
 
 1. Merge the repository's scaffold PR, so that `validate.yml` and the `Validate targets` check exist before the ruleset requires them.
 2. Run `python3 tools/repo_settings.py --repo owner/game --apply` and `--repo owner/game-build --apply` from a site repository checkout.
-3. Do the printed hand steps: rename or create `DATA_APP_CLIENT_ID` and `DATA_APP_PRIVATE_KEY`, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
+3. Do the printed hand steps: create the `DATA_APP_CLIENT_ID` variable and the `DATA_APP_PRIVATE_KEY` environment secret, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
 4. Once, for the site repository: create the read-only token and the `SETTINGS_READ_TOKEN` secret, then enable the monthly schedule.
+
+A repository that still holds the key as a repository secret moves it in this order. A job that references an environment reads the environment's secret when it has one of that name and otherwise falls back to the repository secret, so while both exist a `published` line proves nothing about the environment secret; the order below deletes the repository secret first and then demands a publish.
+
+1. Create the `publish` environment with its branch policy and the environment secret, and the empty `validate` environment ([Publishing](/wiki/publishing/)); `--apply` creates both environments and the policy, the secret is by hand.
+2. Merge the `validate.yml` change that references the environments (the kit sync).
+3. Delete the repository secret `DATA_APP_PRIVATE_KEY` (Settings, Secrets and variables, Actions, Secrets).
+4. Run the workflow on `main` by hand (Actions, Validate, Run workflow, branch `main`) and require `Publish to the site` to print `published ...`. A failure at `Mint a data-repository token` means the environment secret is wrong: fix it and run again; nothing was published in between, and the next run publishes.
+5. Prove the branch policy, with both probes; they are the only evidence that the policy applies with `deployment: false`, which GitHub documents for secrets but not for environments created on the fly. On a throwaway branch change the environment line to `name: publish`, then (a) open a draft pull request: every `Validate <target id>` job must be refused before its first step with an environment protection message; (b) run the workflow by hand on that branch (Actions, Validate, Run workflow, choose the branch): refused the same way. Close the pull request and delete the branch. A probe that runs instead of being refused means the key is reachable from branches: delete the environment secret at once and report it.
+6. `python3 tools/repo_settings.py --repo owner/game --check` reports no drift.
 
 ## Assumptions to confirm
 

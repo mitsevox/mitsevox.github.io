@@ -59,6 +59,15 @@ def ideal(repo):
             'id': 8, 'name': 'merges', 'enforcement': 'active',
             'bypass_actors': [{'actor_id': 5, 'actor_type': 'RepositoryRole', 'bypass_mode': 'pull_request'}],
             'conditions': {'ref_name': {'include': ['~DEFAULT_BRANCH'], 'exclude': []}}, 'rules': [{'type': 'update'}]})
+    environments = std.get('environments', {})
+    responses['/repos/%s/environments' % repo] = (200, {'total_count': len(environments), 'environments': [
+        {'name': name, 'deployment_branch_policy': {'protected_branches': False, 'custom_branch_policies': True}
+         if env['branches'] is not None else None} for name, env in environments.items()]})
+    for name, env in environments.items():
+        responses['/repos/%s/environments/%s/secrets' % (repo, name)] = (200, {'secrets': [{'name': n} for n in env['secrets']]})
+        if env['branches'] is not None:
+            responses['/repos/%s/environments/%s/deployment-branch-policies' % (repo, name)] = (200, {
+                'branch_policies': [{'id': i + 1, 'name': b, 'type': 'branch'} for i, b in enumerate(env['branches'])]})
     return std, responses
 
 
@@ -106,7 +115,7 @@ class RepoSettingsTests(unittest.TestCase):
         std, responses = ideal('mitsevox/n100f')
         responses['/repos/mitsevox/n100f'][1]['has_wiki'] = True
         responses['/repos/mitsevox/n100f/rulesets'] = (200, [])
-        responses['/repos/mitsevox/n100f/actions/secrets'] = (200, {'secrets': []})
+        responses['/repos/mitsevox/n100f/environments/publish/secrets'] = (200, {'secrets': []})
         api = FakeApi(responses)
         found = repo_settings.current(api, 'mitsevox/n100f', std)
         drift = repo_settings.diff(repo_settings.expected(std), found)
@@ -182,6 +191,68 @@ class RepoSettingsTests(unittest.TestCase):
         self.assertEqual(sorted((m, p) for m, p, _ in api.writes),
                          [('PUT', '/repos/mitsevox/nflstreet2/rulesets/7'), ('PUT', '/repos/mitsevox/nflstreet2/rulesets/8')])
         self.assertEqual({body['name'] for _, _, body in api.writes}, {'main', 'merges'})
+
+    def test_publish_environment_holds_the_key_and_main_only(self):
+        std, responses = ideal('mitsevox/n100f')
+        wanted = repo_settings.expected(std)
+        self.assertEqual((wanted['actions.secrets'], wanted['environments.publish.branches'], wanted['environments.publish.secrets'],
+                          wanted['environments.validate.branches'], wanted['environments.validate.secrets']),
+                         ([], ['main'], ['DATA_APP_PRIVATE_KEY'], 'all', []))
+        for other in ('mitsevox/mitsevox.github.io', 'mitsevox/n100f-build'):
+            self.assertFalse([k for k in repo_settings.expected(repo_settings.standard(CONFIG, other)) if k.startswith('environments.')])
+        self.assertEqual(repo_settings.diff(wanted, repo_settings.current(FakeApi(responses), 'mitsevox/n100f', std)), [])
+        # The key as a repository secret, readable by every branch: drift.
+        responses['/repos/mitsevox/n100f/actions/secrets'] = (200, {'secrets': [{'name': 'DATA_APP_PRIVATE_KEY'}]})
+        keys = {k for k, _, _ in repo_settings.diff(wanted, repo_settings.current(FakeApi(responses), 'mitsevox/n100f', std))}
+        self.assertEqual(keys, {'actions.secrets'})
+        # A key in the empty environment, or publish open to every branch: drift.
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/environments/validate/secrets'] = (200, {'secrets': [{'name': 'DATA_APP_PRIVATE_KEY'}]})
+        responses['/repos/mitsevox/n100f/environments'][1]['environments'][0]['deployment_branch_policy'] = None
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        drift = repo_settings.diff(wanted, found)
+        self.assertEqual({k for k, _, _ in drift}, {'environments.validate.secrets', 'environments.publish.branches'})
+        hand = repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [
+            ('PUT', '/repos/mitsevox/n100f/environments/publish'),
+            ('POST', '/repos/mitsevox/n100f/environments/publish/deployment-branch-policies')])
+        self.assertEqual(api.writes[0][2], {'deployment_branch_policy': {'protected_branches': False, 'custom_branch_policies': True}})
+        self.assertEqual(api.writes[1][2], {'name': 'main', 'type': 'branch'})
+        self.assertTrue(any(step.startswith('Environment validate: hold exactly the secrets none') for step in hand), hand)
+        # No environment at all: every key is drift, apply creates publish with its policy and
+        # validate without one, and the secret is a hand step.
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/environments'] = (200, {'total_count': 0, 'environments': []})
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        drift = repo_settings.diff(wanted, found)
+        self.assertIn('environments.publish.exists', {k for k, _, _ in drift})
+        hand = repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [
+            ('PUT', '/repos/mitsevox/n100f/environments/publish'),
+            ('POST', '/repos/mitsevox/n100f/environments/publish/deployment-branch-policies'),
+            ('PUT', '/repos/mitsevox/n100f/environments/validate')])
+        self.assertEqual(api.writes[2][2], {'deployment_branch_policy': None})
+        self.assertTrue(any('Environment publish: hold exactly the secrets DATA_APP_PRIVATE_KEY' in step for step in hand), hand)
+
+    def test_tag_policies_and_extra_branch_policies_are_removed(self):
+        # A tag policy on publish would let any contributor's tag push reach the key; an extra
+        # branch policy widens it. Both drift and apply deletes them, keeping main.
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/environments/publish/deployment-branch-policies'] = (200, {'branch_policies': [
+            {'id': 1, 'name': 'main', 'type': 'branch'}, {'id': 2, 'name': '*', 'type': 'tag'},
+            {'id': 3, 'name': 'release/*', 'type': 'branch'}]})
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        self.assertEqual(found['environments.publish.branches'], ['main', 'release/*', 'tag:*'])
+        drift = repo_settings.diff(repo_settings.expected(std), found)
+        self.assertEqual({k for k, _, _ in drift}, {'environments.publish.branches'})
+        repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [
+            ('PUT', '/repos/mitsevox/n100f/environments/publish'),
+            ('DELETE', '/repos/mitsevox/n100f/environments/publish/deployment-branch-policies/2'),
+            ('DELETE', '/repos/mitsevox/n100f/environments/publish/deployment-branch-policies/3')])
 
     def test_a_main_ruleset_holding_only_update_is_never_the_merges_ruleset(self):
         # One ruleset named `main` whose only rule is `update`, no `merges`: both standard rulesets

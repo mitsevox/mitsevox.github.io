@@ -45,6 +45,10 @@ uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
     permissions:
       contents: read
       packages: read
+      pull-requests: read
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' &amp;&amp; (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &amp;&amp; 'publish' || 'validate' }}
+      deployment: false
     container:
       image: ${{ needs.plan.outputs.image }}
       credentials:
@@ -53,6 +57,7 @@ uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
     env:
       TARGET_ID: ${{ matrix.target }}
 </code></pre>
+<p>The job references a deployment environment: <code>publish</code> on a push or manual run of <code>main</code>, <code>validate</code> otherwise. <code>publish</code> holds the publishing key as an environment secret and its deployment branch policy allows <code>main</code> only, so a run of any other branch that names <code>publish</code> is refused by GitHub before its first step; <code>validate</code> holds nothing. <code>deployment: false</code> uses the environment's secrets without recording a deployment per run; that the branch policy still applies with it is proven per repository by the two refused probe runs of the move order (<a href="/wiki/repository-settings/">Repository settings</a>, <a href="/wiki/publishing/">Publishing</a>).</p>
 <div class="wiki-table"><table>
 <thead>
 <tr>
@@ -91,11 +96,11 @@ uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
 </tr>
 <tr>
 <td><code>Publish to the site</code>, <code>main</code> only</td>
-<td><code>uses: mitsevox/mitsevox.github.io/.github/actions/publish@main</code> with <code>target</code>, <code>report: build/&lt;target&gt;/report.json</code>, <code>tools</code>, <code>measured-at</code>, <code>app-client-id</code> and <code>app-private-key</code>. PARAMETER 4 names the variable and secret.</td>
+<td><code>uses: mitsevox/mitsevox.github.io/.github/actions/publish@main</code> with <code>target</code>, <code>report: build/&lt;target&gt;/report.json</code>, <code>tools</code>, <code>measured-at</code>, <code>app-client-id</code> and <code>app-private-key</code>. PARAMETER 4 names the repository variable and the <code>publish</code> environment's secret.</td>
 </tr>
 </tbody>
 </table></div>
-<p>The two <code>main</code>-only steps use the condition <code>github.ref == 'refs/heads/main' &amp;&amp; github.event_name != 'pull_request'</code>, so a push and a manual run on <code>main</code> both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.</p>
+<p>The two <code>main</code>-only steps and the job's environment use the same condition, <code>github.ref == 'refs/heads/main' &amp;&amp; (github.event_name == 'push' || github.event_name == 'workflow_dispatch')</code>: a push and a manual run on <code>main</code> publish, and nothing else does, the events being named rather than excluded so that an event added later never publishes by accident. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.</p>
 <h3 id="validate-targets">Validate targets</h3>
 <p>Runs always, after the others, and fails unless <code>plan</code> and <code>tests</code> succeeded and the target jobs either all succeeded (when <code>has_targets</code> was <code>true</code>) or were skipped (when it was <code>false</code>). Its name, <code>Validate targets</code>, is the single check the <code>main</code> ruleset requires; the per-target job names vary with the matrix and cannot be required one by one.</p>
 <h2 id="workflow-level-settings">Workflow-level settings</h2>
@@ -105,13 +110,13 @@ concurrency:
   group: validate-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 </code></pre>
-<p>A new push to a PR cancels that PR's running validation; pushes to <code>main</code> queue instead, so every <code>main</code> commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to <code>BUILD_IMAGE</code>.</p>
+<p>A new push to a PR cancels that PR's running validation; pushes to <code>main</code> queue instead, so every <code>main</code> commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential, read from the <code>publish</code> environment on <code>main</code> runs only. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to <code>BUILD_IMAGE</code>.</p>
 <h2 id="installing-it">Installing it</h2>
 <ol>
 <li>Copy <code>validate.yml.template</code> to <code>.github/workflows/validate.yml</code>.</li>
 <li>Fill PARAMETER 1 with the digest from the image workflow (<a href="/wiki/build-environment/">Build environment</a>).</li>
 <li>Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally (<a href="/wiki/build-verify-measure/">Build, verify, measure</a>). The image's tool paths replace the local ones.</li>
-<li>Fill PARAMETER 4 with the variable and secret names from <a href="/wiki/publishing/">Publishing</a>; the step is harmless until they exist, because it only runs on <code>main</code>.</li>
+<li>Fill PARAMETER 4 with the variable and environment secret names from <a href="/wiki/publishing/">Publishing</a>; the step is harmless until they exist, because it only runs on <code>main</code>. The owner creates both environments, <code>publish</code> and <code>validate</code>, before the first run.</li>
 <li>Copy the <code>tools/</code> and <code>tests/</code> starter files and <code>config/ci-targets.json</code>.</li>
 <li>Open a pull request with all of it and watch the four jobs. The first run of <code>Validate &lt;target id&gt;</code> proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (<code>build.sha1</code>). The <code>Check the scaffold</code> step lists what still differs from the kit.</li>
 <li>Merge. The first <code>main</code> run publishes, provided the credential is in place.</li>

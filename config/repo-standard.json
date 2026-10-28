@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "description": "The repository settings standard, keyed by repository kind, applied and checked by tools/repo_settings.py. The repositories block lists each repository with the values its description, homepage and topics are built from; an overrides block there replaces individual settings of its kind. ruleset protects the default branch; mergeRuleset is the second ruleset of a repository that gives contributors write access: one update rule, bypassed by the Repository admin role (actor_id 5) on pull requests only, so nobody pushes to main and only the owner merges.",
+  "description": "The repository settings standard, keyed by repository kind, applied and checked by tools/repo_settings.py. The repositories block lists each repository with the values its description, homepage and topics are built from; an overrides block there replaces individual settings of its kind. ruleset protects the default branch; mergeRuleset is the second ruleset of a repository that gives contributors write access: one update rule, bypassed by the Repository admin role (actor_id 5) on pull requests only, so nobody pushes to main and only the owner merges. environments names each deployment environment with the branches its deployment branch policy allows (null: every branch) and the secrets it holds; the publishing key lives in `publish`, allowed to main only, never as a repository secret.",
   "kinds": {
     "source": {
       "defaultBranch": "main",
@@ -14,7 +14,8 @@
       "forkPullRequestApproval": "all_external_contributors",
       "retentionDays": 30,
       "variables": ["DATA_APP_CLIENT_ID"],
-      "secrets": ["DATA_APP_PRIVATE_KEY"],
+      "secrets": [],
+      "environments": {"publish": {"branches": ["main"], "secrets": ["DATA_APP_PRIVATE_KEY"]}, "validate": {"branches": null, "secrets": []}},
       "security": {"secretScanning": true, "pushProtection": true, "dependabotAlerts": true, "privateVulnerabilityReporting": true, "dependabotVersionUpdates": false},
       "features": {"issues": true, "wiki": false, "projects": false, "discussions": false},
       "description": "<title> (<console>, <year>) decompilation",
@@ -34,6 +35,7 @@
       "retentionDays": 30,
       "variables": [],
       "secrets": [],
+      "environments": {},
       "security": {"secretScanning": true, "pushProtection": true, "dependabotAlerts": true, "privateVulnerabilityReporting": true, "dependabotVersionUpdates": false},
       "features": {"issues": false, "wiki": false, "projects": false, "discussions": false},
       "description": "Private build environment for <source>",
@@ -53,6 +55,7 @@
       "retentionDays": 30,
       "variables": [],
       "secrets": ["SETTINGS_READ_TOKEN"],
+      "environments": {},
       "security": {"secretScanning": true, "pushProtection": true, "dependabotAlerts": true, "privateVulnerabilityReporting": true, "dependabotVersionUpdates": false},
       "features": {"issues": true, "wiki": false, "projects": false, "discussions": false},
       "description": null,

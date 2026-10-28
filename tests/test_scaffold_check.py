@@ -100,6 +100,12 @@ class ScaffoldCheckTests(unittest.TestCase):
         self.assertTrue(messages(root, '.github/workflows/review.yml'))
         workflow.write_text(workflow.read_text().replace('      - name: List measuring tools', '      - name: Project checks\n        run: true\n      - name: List measuring tools'))
         self.assertFalse(any("'Project checks' is not" in m for m in messages(root, '.github/workflows/validate.yml')))
+        # The environment's name line is not a step, and the publish environment must stay main-only.
+        self.assertFalse(any('publish' in m for m in messages(root, '.github/workflows/validate.yml')))
+        environment = "name: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'publish' || 'validate' }}"
+        self.assertIn(environment, workflow.read_text())
+        workflow.write_text(workflow.read_text().replace(environment, 'name: publish'))
+        self.assertTrue(any('publish environment' in m for m in messages(root, '.github/workflows/validate.yml')))
 
     def test_forbidden_paths_references_and_gitignore(self):
         root = self.broken()

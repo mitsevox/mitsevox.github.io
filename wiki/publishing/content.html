@@ -16,29 +16,42 @@
 <li>After creating it, note the <strong>Client ID</strong> on the App's page and generate a <strong>private key</strong> (a <code>.pem</code> file downloads).</li>
 <li>Install the App on the account, choosing <strong>Only select repositories</strong> and selecting the data repository alone.</li>
 </ol>
-<p>Then, in the producer repository (Settings, Secrets and variables, Actions):</p>
+<p>Then, in the producer repository:</p>
 <div class="wiki-table"><table>
 <thead>
 <tr>
 <th>Kind</th>
+<th>Where</th>
 <th>Name used in this guide</th>
 <th>Value</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Variable</td>
+<td>Repository variable</td>
+<td>Settings, Secrets and variables, Actions, Variables</td>
 <td><code>DATA_APP_CLIENT_ID</code></td>
 <td>The App's client id</td>
 </tr>
 <tr>
-<td>Secret</td>
+<td>Environment secret</td>
+<td>Settings, Environments, <code>publish</code>, Environment secrets</td>
 <td><code>DATA_APP_PRIVATE_KEY</code></td>
 <td>The full contents of the <code>.pem</code> file</td>
 </tr>
 </tbody>
 </table></div>
 <p>The names are yours; <code>validate.yml</code> passes them to the action as <code>app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}</code> and <code>app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}</code> (PARAMETER 4).</p>
+<p>The private key is an environment secret and never a repository secret, because a repository secret is readable by a workflow run of any branch of the repository, and contributors push branches. The <code>publish</code> environment's deployment branch policy allows <code>main</code> only. The target job references <code>publish</code> on a push or manual run of <code>main</code> and the empty environment <code>validate</code> on every other run, so a run of any other branch, including one that edits <code>validate.yml</code> to name <code>publish</code>, is refused by GitHub before its first step (<a href="/wiki/ci/">CI</a>). The owner creates the environments once:</p>
+<ol>
+<li>Settings, Environments, New environment, name <code>publish</code>, Configure environment.</li>
+<li>Deployment branches and tags: choose "Selected branches and tags", Add deployment branch or tag rule, ref type Branch, name pattern <code>main</code>, Add rule. No tag rule: a tag rule would let any contributor's tag push reach the key.</li>
+<li>Environment secrets, Add environment secret: name <code>DATA_APP_PRIVATE_KEY</code>, value the <code>.pem</code> contents.</li>
+<li>Leave required reviewers and the wait timer off.</li>
+<li>New environment, name <code>validate</code>, Configure environment, change nothing: every branch, no secrets.</li>
+</ol>
+<p>Both environments are created by hand (or by <code>python3 tools/repo_settings.py --apply</code>), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but not for a job with <code>deployment: false</code>. The settings standard checks both (<a href="/wiki/repository-settings/">Repository settings</a>).</p>
+<p>A repository secret and an environment secret may share a name. A job that references an environment reads the environment's secret when the environment has one of that name, and otherwise falls back to the repository secret. So the key must not exist as a repository secret at all once the environment holds it, and the move from one to the other follows the order in <a href="/wiki/repository-settings/">Repository settings</a>, which deletes the repository secret before trusting a <code>published</code> line and then proves the branch policy with two refused runs.</p>
 <h2 id="the-actions-inputs">The action's inputs</h2>
 <div class="wiki-table"><table>
 <thead>
@@ -174,7 +187,7 @@ python3 site/.github/actions/publish/publish.py check /tmp/tree
 <h2 id="before-the-first-push-to-main">Before the first push to main</h2>
 <ul>
 <li>The App is installed on the data repository with Contents read and write.</li>
-<li>The producer has the variable and the secret, and <code>validate.yml</code> names them.</li>
+<li>The producer has the variable and the <code>publish</code> environment with its branch policy and secret, and <code>validate.yml</code> names them.</li>
 <li><code>config/targets.json</code> and <code>config/site.json</code> validate (<code>python3 -m unittest discover -s tests -p 'test_*.py'</code> and a dry run).</li>
 <li>A pull request has passed <code>Validate targets</code>.</li>
 </ul>
