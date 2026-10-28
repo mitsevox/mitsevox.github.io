@@ -68,7 +68,12 @@ def scaffold(target_id,root=ROOT,original=None):
     for path,text in planned.items():
         if path not in adopted:
             (root/path).parent.mkdir(parents=True,exist_ok=True);(root/path).write_text(text)
-    return ['%s %s'%('adopted' if path in adopted else 'wrote',path) for path in sorted(planned)]
+    lines=[]
+    for path in sorted(planned):
+        if path in adopted and placeholder and path.endswith('/README.md'):
+            lines.append('adopted %s (a placeholder written while the target waited: rewrite it, its status and identity change when the target is activated)'%path)
+        else:lines.append('%s %s'%('adopted' if path in adopted else 'wrote',path))
+    return lines
 
 
 if __name__=='__main__':

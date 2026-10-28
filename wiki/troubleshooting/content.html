@@ -41,16 +41,16 @@
 <td><code>tools/targets.py check</code>: the three hashes of a target disagree, or an active target lacks a file. Fix the odd one out; the original's hash is the truth.</td>
 </tr>
 <tr>
-<td><code>unknown VERSION_ token</code>, <code>version condition mixed with other macros</code>, <code>BUILD_VERSION is never read in source</code>, <code>MatchingFor argument ... is not a known target id</code>, <code>#else after a version condition: it covers every target not named</code>, <code>a negated version token: it covers every target not named</code></td>
-<td><code>tools/versions.py check</code>: see the Version differences section of <a href="/wiki/build-verify-measure/">Build, verify, measure</a>. The last two are warnings while two targets are listed and errors from the third.</td>
+<td><code>unknown VERSION_ token</code>, <code>version condition mixed with other macros</code>, <code>BUILD_VERSION is never read in source</code>, <code>MatchingFor argument ... is not a known target id</code>, <code>#else after a version condition: it covers every target not named</code>, <code>a version condition that holds for every target not named</code></td>
+<td><code>tools/versions.py check</code>: see the Version differences section of <a href="/wiki/build-verify-measure/">Build, verify, measure</a>. The last two are warnings while two targets are listed and errors from the third; <code>view</code> and <code>diff</code> still resolve the branch.</td>
 </tr>
 <tr>
 <td><code>new_target: refusing to overwrite config/&lt;id&gt;/...</code></td>
 <td>The target's directory holds a file that is neither the tool's own stub nor a lone placeholder <code>README.md</code>: real content. Move it aside or scaffold by hand (<a href="/wiki/targets/">Targets</a>).</td>
 </tr>
 <tr>
-<td><code>matching_scope: not an active target</code>, <code>matching_scope: Matching is used outside Object(Matching, ...)</code></td>
-<td><code>pin</code> names only active targets; a use of <code>Matching</code> as a value (<code>flag = Matching</code>) is pinned by hand before the tool runs.</td>
+<td><code>matching_scope: pin names ...; the active targets are ...</code>, <code>matching_scope: Object calls whose first argument is not ...</code>, <code>matching_scope: Matching is used outside Object(Matching, ...)</code></td>
+<td><code>pin</code> must name every active target, all of them, with the new target still <code>planned</code> or <code>archived</code>; an <code>Object</code> call with an alias or a literal as its first argument, or a use of <code>Matching</code> as a value (<code>flag = Matching</code>), is pinned by hand before the tool runs.</td>
 </tr>
 <tr>
 <td><code>evidence.tsv:&lt;line&gt;: ...</code></td>
