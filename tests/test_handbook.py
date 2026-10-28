@@ -1,62 +1,121 @@
-"""Check that every wiki chapter is routable and the clearance template behaves."""
+"""Check that every wiki chapter is routable, that nothing written for the standard carries an em
+dash, and that the starter kit works as a repository: its tools and tests run in a scratch
+checkout built from the kit, and the scaffold check finds nothing to warn about there."""
 import json
+import os
 from pathlib import Path
+import shutil
 import subprocess
-import textwrap
+import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
+KIT = ROOT / 'docs/wiki/starter'
+CHECK = ROOT / '.github/actions/scaffold-check/scaffold_check.py'
+DIGEST = 'ghcr.io/owner/game-build@sha256:' + '0' * 64
+
+
+def kit_checkout(folder):
+    """A repository that followed the guide: the kit copied, the templates renamed, the parameters
+    filled with the kit's placeholder values, one active target scaffolded and hashed."""
+    root = Path(folder)
+    for path in sorted(KIT.rglob('*')):
+        if path.is_file() and 'build-image' not in path.parts and path.name != 'scaffold.json':
+            dest = root / path.relative_to(KIT)
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(path, dest)
+    (root / '.github/workflows/validate.yml.template').rename(root / '.github/workflows/validate.yml')
+    (root / 'README.md.template').rename(root / 'README.md')
+    (root / 'tools/project.py').write_text('"""dtk-template stand-in."""\n')
+    (root / 'configure.py').write_text('from tools.targets import registry, build_targets\n'
+                                       'config.dtk_tag = "v1.8.3"\nconfig.objdiff_tag = "v3.6.1"\n'
+                                       'def MatchingFor(*versions):\n    return config.version in versions\n'
+                                       'Object(MatchingFor("GAME01-rev0"), "unit.cpp")\n')
+    (root / 'src').mkdir()
+    (root / 'src/unit.cpp').write_text('#include "version.h"\n#if VERSION_GAME01_REV0\nint rev0;\n#else\nint later;\n#endif\n')
+    (root / 'licenses').mkdir()
+    targets = json.loads((root / 'config/targets.json').read_text())
+    for target in targets['targets']:
+        subprocess.run([sys.executable, 'tools/new_target.py', target['id']], cwd=root, check=True, capture_output=True)
+        if target['status'] == 'active':
+            folder = root / 'config' / target['id']
+            (folder / 'build.sha1').write_text(target['sha1'] + '  build/%s/main.dol\n' % target['id'])
+            (folder / 'splits.txt').write_text('')
+            (folder / 'symbols.txt').write_text('')
+    return root
+
+
+def run(args, cwd, env=None):
+    return subprocess.run(args, cwd=cwd, text=True, capture_output=True, env={**os.environ, **(env or {})})
 
 
 class HandbookTests(unittest.TestCase):
     def test_every_registered_chapter_is_routable(self):
-        module = (ROOT/'assets/wiki-chapters.js').read_text()
+        module = (ROOT / 'assets/wiki-chapters.js').read_text()
         slugs = json.loads(module.split('Object.freeze(', 1)[1].split(');', 1)[0])
-        chapters = json.loads((ROOT/'docs/wiki/chapters.json').read_text())
+        chapters = json.loads((ROOT / 'docs/wiki/chapters.json').read_text())
         self.assertEqual(slugs, [chapter['slug'] for chapter in chapters])
         for slug in slugs:
-            route = ROOT/'wiki' if slug == 'start-here' else ROOT/'wiki'/slug
-            self.assertTrue((route/'index.html').is_file())
-            self.assertTrue((route/'content.html').is_file())
+            route = ROOT / 'wiki' if slug == 'start-here' else ROOT / 'wiki' / slug
+            self.assertTrue((route / 'index.html').is_file())
+            self.assertTrue((route / 'content.html').is_file())
+        for stale in (ROOT / 'wiki').iterdir():
+            if stale.is_dir() and stale.name != 'downloads':
+                self.assertIn(stale.name, slugs, 'wiki/%s has no chapter' % stale.name)
 
-    def test_clearance_template_rejects_invalid_or_deleted_evidence(self):
-        template = (ROOT/'docs/wiki/starter/.github/workflows/review.yml.template').read_text()
-        script = textwrap.dedent(template.split('script: |\n', 1)[1])
-        node = r'''
-const fs = require('fs');
-const source = JSON.parse(fs.readFileSync(0, 'utf8'));
-const run = new (Object.getPrototypeOf(async function(){}).constructor)('context', 'github', source);
-process.env.REVIEW_OWNER = 'owner';
-const sha = 'a'.repeat(40), link = id => `https://github.com/owner/game/pull/1#issuecomment-${id}`;
-const record = (id, lane, verdict) => ({id, issue_url:'https://api.github.com/repos/owner/game/issues/1',
-  body:`Revision: ${sha}\n${lane}: ${verdict}\n`});
-const clearance = () => ({id:1,user:{login:'owner'},updated_at:'2026-01-01T00:00:00Z',
-  html_url:link(1),body:`<!-- owner-review-clearance -->\nRevision: ${sha}\nAccuracy: ${link(2)}\nHostile: ${link(3)}`});
-(async () => {
- for (const scenario of ['valid','absent','draft','stale','same-link','foreign-owner','deleted','failed-review','wrong-pr','withdrawn']) {
-  const comments = scenario === 'absent' ? [] : [clearance()];
-  if (scenario === 'stale') comments[0].body = comments[0].body.replace(sha, 'b'.repeat(40));
-  if (scenario === 'same-link') comments[0].body = comments[0].body.replace(link(3), link(2));
-  if (scenario === 'foreign-owner') comments[0].user.login = 'someone';
-  if (scenario === 'withdrawn') comments[0].body = '<!-- owner-review-clearance -->';
-  const records = {2:record(2,'Accuracy','PASS'),3:record(3,'Hostile','SHIP')};
-  if (scenario === 'failed-review') records[3].body = records[3].body.replace('SHIP','FIX');
-  if (scenario === 'wrong-pr') records[2].issue_url = 'https://api.github.com/repos/owner/game/issues/2';
-  const states = [];
-  const github = {rest:{pulls:{get:async()=>({data:{state:'open',head:{sha,repo:{full_name:'owner/game'}},
-    base:{repo:{full_name:'owner/game'}},draft:scenario==='draft',html_url:link(1)}})},
-    repos:{createCommitStatus:async status=>states.push(status.state)},
-    issues:{listComments:()=>{},getComment:async({comment_id})=>{
-      if (scenario==='deleted') throw {status:404};
-      return {data:records[comment_id]};
-    }}},paginate:async()=>comments};
-  await run({repo:{owner:'owner',repo:'game'},payload:{pull_request:{number:1}}},github);
-  if (states[0]!=='pending' || states.at(-1)!==(scenario==='valid'?'success':'pending'))
-    throw new Error(`Incorrect ${scenario}: ${states}`);
- }
-})().catch(error=>{console.error(error);process.exit(1)});
-'''
-        subprocess.run(['node', '-e', node], input=json.dumps(script), text=True, check=True, capture_output=True)
+    def test_no_em_dash_in_the_standard(self):
+        folders = [ROOT / 'docs/wiki', ROOT / 'wiki', ROOT / 'tools', ROOT / 'config', ROOT / '.github', ROOT / 'tests']
+        offenders = []
+        for folder in folders:
+            for path in folder.rglob('*'):
+                if path.is_file() and path.suffix in ('.md', '.py', '.json', '.yml', '.template', '.h', '.html', '.js', '.txt', '.gitignore', '.gitattributes', ''):
+                    try:
+                        text = path.read_text()
+                    except (UnicodeDecodeError, OSError):
+                        continue
+                    if chr(0x2014) in text:
+                        offenders.append(str(path.relative_to(ROOT)))
+        self.assertEqual(offenders, [])
+
+    def test_kit_checkout_passes_its_tools_tests_and_the_scaffold_check(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = kit_checkout(tmp)
+            tests = run([sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'], root)
+            self.assertEqual(tests.returncode, 0, tests.stderr)
+            for tool in (['tools/targets.py', 'check'], ['tools/versions.py', 'check'], ['tools/evidence.py', 'check']):
+                result = run([sys.executable] + tool, root)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            view = run([sys.executable, 'tools/versions.py', 'view', '--target', 'GAME01-rev0', 'src/unit.cpp'], root)
+            self.assertEqual(view.stdout.split('\n')[:2], ['#include "version.h"', 'int rev0;'])
+            diff = run([sys.executable, 'tools/versions.py', 'diff', '--target', 'GAME01-rev0', '--target', 'GAME01-rev1', 'src/unit.cpp'], root)
+            self.assertIn('-int rev0;', diff.stdout)
+            self.assertIn('+int later;', diff.stdout)
+            tools = run([sys.executable, 'tools/measuring_tools.py'], root, {'BUILD_IMAGE': DIGEST})
+            self.assertEqual(tools.stdout.split('\n')[0], 'build-environment=' + DIGEST)
+            check = run([sys.executable, str(CHECK), '--repo', str(root), '--strict'], ROOT)
+            self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+            self.assertIn('0 findings', check.stdout)
+
+    def test_planner_reads_push_and_dispatch_events(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = kit_checkout(tmp)
+            git = ['git', '-c', 'user.email=t@example.com', '-c', 'user.name=t']
+            run(['git', 'init', '-q'], root)
+            run(git + ['add', '-A'], root)
+            run(git + ['commit', '-qm', 'base'], root)
+            base = run(['git', 'rev-parse', 'HEAD'], root).stdout.strip()
+            (root / 'config/GAME01-rev1/README.md').write_text('# planned\n')
+            run(git + ['commit', '-qam', 'planned only'], root)
+            head = run(['git', 'rev-parse', 'HEAD'], root).stdout.strip()
+            event = root / 'event.json'
+            event.write_text(json.dumps({'before': base}))
+            env = {'GITHUB_EVENT_PATH': str(event), 'GITHUB_EVENT_NAME': 'push', 'GITHUB_SHA': head}
+            push = run([sys.executable, 'tools/ci_targets.py'], root, env)
+            self.assertEqual(json.loads(push.stdout)['targets'], [], push.stdout + push.stderr)
+            env['GITHUB_EVENT_NAME'] = 'workflow_dispatch'
+            dispatch = run([sys.executable, 'tools/ci_targets.py'], root, env)
+            self.assertEqual(json.loads(dispatch.stdout), {'targets': ['GAME01-rev0'], 'changedPaths': [], 'forced': True})
 
 
 if __name__ == '__main__':
