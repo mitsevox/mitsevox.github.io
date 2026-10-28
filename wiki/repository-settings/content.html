@@ -86,7 +86,7 @@
 </tr>
 <tr>
 <td>Environments</td>
-<td><code>publish</code>: deployment branches <code>main</code> only, the secret <code>DATA_APP_PRIVATE_KEY</code>, nothing else; <code>validate</code>: every branch, no secrets</td>
+<td><code>publish</code>: deployment branches <code>main</code> only (no tag rule), the secret <code>DATA_APP_PRIVATE_KEY</code>, nothing else; <code>validate</code>: every branch, no secrets</td>
 <td>none</td>
 <td>none</td>
 </tr>
@@ -141,7 +141,7 @@ python3 tools/repo_settings.py --all --check
 <p><code>--check</code> prints one line per setting that differs (<code>expected ..., found ...</code>) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. <code>--apply</code> sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the <code>main</code> and <code>merges</code> rulesets (each created or updated by name), the environments with their deployment branch policies, and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (<code>--kind source</code> or <code>--kind build</code>), and its description, homepage and topics are its own.</p>
 <p>What the script cannot set, and prints as hand steps:</p>
 <ul>
-<li>the variable (Settings, Secrets and variables, Actions) and the environment secret (Settings, Environments, <code>publish</code>), and deleting any others, in particular a <code>DATA_APP_PRIVATE_KEY</code> repository secret;</li>
+<li>the variable (Settings, Secrets and variables, Actions) and the environment secret (Settings, Environments, <code>publish</code>), and deleting any others; a <code>DATA_APP_PRIVATE_KEY</code> repository secret goes only at its step of the move order below;</li>
 <li>the private package's <code>Manage Actions access</code> grant to the source repository;</li>
 <li>the GitHub App that writes the data repository (<a href="/wiki/publishing/">Publishing</a>);</li>
 <li>removing a <code>.github/dependabot.yml</code> if one exists.</li>
@@ -151,7 +151,7 @@ python3 tools/repo_settings.py --all --check
 <p>Two readers keep the settings from drifting back:</p>
 <ol>
 <li><strong>The scaffold check</strong>, in every repository's <code>Tool tests</code> job (<a href="/wiki/ci/">CI</a>), reads what the default <code>GITHUB_TOKEN</code> can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to <code>main</code> (<code>GET /repos/{owner}/{repo}/rules/branches/main</code>, the union of both rulesets, so a missing <code>update</code> rule shows there). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.</li>
-<li><strong>The monthly check</strong> in the site repository, <code>.github/workflows/settings-check.yml</code>, runs <code>--check</code> for every listed repository with a fine-grained personal access token limited to <code>Administration: read</code> and <code>Metadata: read</code> on those repositories, expiring yearly, stored as the secret <code>SETTINGS_READ_TOKEN</code>. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.</li>
+<li><strong>The monthly check</strong> in the site repository, <code>.github/workflows/settings-check.yml</code>, runs <code>--check</code> for every listed repository with a fine-grained personal access token on those repositories, expiring yearly, stored as the secret <code>SETTINGS_READ_TOKEN</code>. The token holds read access, and nothing more, for: Administration (the Actions permissions), Metadata (the rulesets), Actions (the environments and their deployment branch policies), Environments (the environment secrets), Secrets and Variables (the repository's own); a permission missing from the token reads as permanent drift, because unreadable counts as drift. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.</li>
 </ol>
 <p>The monthly workflow is committed with manual dispatch only. Once the token exists, the owner creates the secret and adds the <code>schedule</code> block that the file's comment shows; nothing else changes. When the token expires, the check fails loudly at its first step rather than passing silently.</p>
 <h2 id="owner-steps-when-adopting-the-standard">Owner steps when adopting the standard</h2>
@@ -161,13 +161,14 @@ python3 tools/repo_settings.py --all --check
 <li>Do the printed hand steps: create the <code>DATA_APP_CLIENT_ID</code> variable and the <code>DATA_APP_PRIVATE_KEY</code> environment secret, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.</li>
 <li>Once, for the site repository: create the read-only token and the <code>SETTINGS_READ_TOKEN</code> secret, then enable the monthly schedule.</li>
 </ol>
-<p>A repository that still holds the key as a repository secret moves it in this order, so that publishing never stops:</p>
+<p>A repository that still holds the key as a repository secret moves it in this order. A job that references an environment reads the environment's secret when it has one of that name and otherwise falls back to the repository secret, so while both exist a <code>published</code> line proves nothing about the environment secret; the order below deletes the repository secret first and then demands a publish.</p>
 <ol>
-<li>Create the <code>publish</code> environment with its branch policy and the environment secret (<a href="/wiki/publishing/">Publishing</a>); <code>--apply</code> creates the environment and the policy, the secret is by hand.</li>
-<li>Merge the <code>validate.yml</code> change that references the environment (the kit sync).</li>
-<li>Watch the next <code>main</code> run: <code>Publish to the site</code> prints <code>published ...</code>, now with the environment secret.</li>
+<li>Create the <code>publish</code> environment with its branch policy and the environment secret, and the empty <code>validate</code> environment (<a href="/wiki/publishing/">Publishing</a>); <code>--apply</code> creates both environments and the policy, the secret is by hand.</li>
+<li>Merge the <code>validate.yml</code> change that references the environments (the kit sync).</li>
 <li>Delete the repository secret <code>DATA_APP_PRIVATE_KEY</code> (Settings, Secrets and variables, Actions, Secrets).</li>
-<li><code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift. To see the protection work, open a draft pull request whose <code>validate.yml</code> names <code>publish</code> directly: the target job is refused before its first step; close it without merging.</li>
+<li>Run the workflow on <code>main</code> by hand (Actions, Validate, Run workflow, branch <code>main</code>) and require <code>Publish to the site</code> to print <code>published ...</code>. A failure at <code>Mint a data-repository token</code> means the environment secret is wrong: fix it and run again; nothing was published in between, and the next run publishes.</li>
+<li>Prove the branch policy, with both probes; they are the only evidence that the policy applies with <code>deployment: false</code>, which GitHub documents for secrets but not for environments created on the fly. On a throwaway branch change the environment line to <code>name: publish</code>, then (a) open a draft pull request: every <code>Validate &lt;target id&gt;</code> job must be refused before its first step with an environment protection message; (b) run the workflow by hand on that branch (Actions, Validate, Run workflow, choose the branch): refused the same way. Close the pull request and delete the branch. A probe that runs instead of being refused means the key is reachable from branches: delete the environment secret at once and report it.</li>
+<li><code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift.</li>
 </ol>
 <h2 id="assumptions-to-confirm">Assumptions to confirm</h2>
 <ul>

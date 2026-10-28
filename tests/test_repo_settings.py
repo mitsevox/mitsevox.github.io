@@ -236,6 +236,24 @@ class RepoSettingsTests(unittest.TestCase):
         self.assertEqual(api.writes[2][2], {'deployment_branch_policy': None})
         self.assertTrue(any('Environment publish: hold exactly the secrets DATA_APP_PRIVATE_KEY' in step for step in hand), hand)
 
+    def test_tag_policies_and_extra_branch_policies_are_removed(self):
+        # A tag policy on publish would let any contributor's tag push reach the key; an extra
+        # branch policy widens it. Both drift and apply deletes them, keeping main.
+        std, responses = ideal('mitsevox/n100f')
+        responses['/repos/mitsevox/n100f/environments/publish/deployment-branch-policies'] = (200, {'branch_policies': [
+            {'id': 1, 'name': 'main', 'type': 'branch'}, {'id': 2, 'name': '*', 'type': 'tag'},
+            {'id': 3, 'name': 'release/*', 'type': 'branch'}]})
+        api = FakeApi(responses)
+        found = repo_settings.current(api, 'mitsevox/n100f', std)
+        self.assertEqual(found['environments.publish.branches'], ['main', 'release/*', 'tag:*'])
+        drift = repo_settings.diff(repo_settings.expected(std), found)
+        self.assertEqual({k for k, _, _ in drift}, {'environments.publish.branches'})
+        repo_settings.apply(api, 'mitsevox/n100f', std, drift, found)
+        self.assertEqual([(m, p) for m, p, _ in api.writes], [
+            ('PUT', '/repos/mitsevox/n100f/environments/publish'),
+            ('DELETE', '/repos/mitsevox/n100f/environments/publish/deployment-branch-policies/2'),
+            ('DELETE', '/repos/mitsevox/n100f/environments/publish/deployment-branch-policies/3')])
+
     def test_a_main_ruleset_holding_only_update_is_never_the_merges_ruleset(self):
         # One ruleset named `main` whose only rule is `update`, no `merges`: both standard rulesets
         # must not resolve to it, or apply would write the merges body over the main body.

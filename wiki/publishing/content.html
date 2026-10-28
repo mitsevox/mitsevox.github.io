@@ -42,14 +42,16 @@
 </tbody>
 </table></div>
 <p>The names are yours; <code>validate.yml</code> passes them to the action as <code>app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}</code> and <code>app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}</code> (PARAMETER 4).</p>
-<p>The private key is an environment secret and never a repository secret, because a repository secret is readable by a workflow run of any branch of the repository, and contributors push branches. The <code>publish</code> environment's deployment branch policy allows <code>main</code> only. The target job references <code>publish</code> on a <code>main</code> run and the empty environment <code>validate</code> on every other run, so a run of any other branch, including one that edits <code>validate.yml</code> to name <code>publish</code>, is refused by GitHub before its first step (<a href="/wiki/ci/">CI</a>). The owner creates the environment once:</p>
+<p>The private key is an environment secret and never a repository secret, because a repository secret is readable by a workflow run of any branch of the repository, and contributors push branches. The <code>publish</code> environment's deployment branch policy allows <code>main</code> only. The target job references <code>publish</code> on a push or manual run of <code>main</code> and the empty environment <code>validate</code> on every other run, so a run of any other branch, including one that edits <code>validate.yml</code> to name <code>publish</code>, is refused by GitHub before its first step (<a href="/wiki/ci/">CI</a>). The owner creates the environments once:</p>
 <ol>
 <li>Settings, Environments, New environment, name <code>publish</code>, Configure environment.</li>
-<li>Deployment branches and tags: choose "Selected branches and tags", Add deployment branch or tag rule, ref type Branch, name pattern <code>main</code>, Add rule.</li>
+<li>Deployment branches and tags: choose "Selected branches and tags", Add deployment branch or tag rule, ref type Branch, name pattern <code>main</code>, Add rule. No tag rule: a tag rule would let any contributor's tag push reach the key.</li>
 <li>Environment secrets, Add environment secret: name <code>DATA_APP_PRIVATE_KEY</code>, value the <code>.pem</code> contents.</li>
 <li>Leave required reviewers and the wait timer off.</li>
+<li>New environment, name <code>validate</code>, Configure environment, change nothing: every branch, no secrets.</li>
 </ol>
-<p><code>validate</code> needs no setup: the first pull request run creates it, with no rules and no secrets, and it stays empty. The settings standard checks both (<a href="/wiki/repository-settings/">Repository settings</a>).</p>
+<p>Both environments are created by hand (or by <code>python3 tools/repo_settings.py --apply</code>), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but not for a job with <code>deployment: false</code>. The settings standard checks both (<a href="/wiki/repository-settings/">Repository settings</a>).</p>
+<p>A repository secret and an environment secret may share a name. A job that references an environment reads the environment's secret when the environment has one of that name, and otherwise falls back to the repository secret. So the key must not exist as a repository secret at all once the environment holds it, and the move from one to the other follows the order in <a href="/wiki/repository-settings/">Repository settings</a>, which deletes the repository secret before trusting a <code>published</code> line and then proves the branch policy with two refused runs.</p>
 <h2 id="the-actions-inputs">The action's inputs</h2>
 <div class="wiki-table"><table>
 <thead>

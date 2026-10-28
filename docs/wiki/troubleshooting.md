@@ -44,7 +44,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 
 | Message | Cause and fix |
 | --- | --- |
-| The `Mint a data-repository token` step fails | The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable name and the `publish` environment's secret name in `validate.yml` against the repository settings; a repository secret of the same name is not read by a job that references the environment. |
+| The `Mint a data-repository token` step fails | The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable name and the `publish` environment's secret name in `validate.yml` against the repository settings. The environment's secret wins when the environment has one of that name; a job whose environment lacks it falls back to a repository secret of that name, which is why the move order deletes the repository secret before trusting a publish ([Repository settings](/wiki/repository-settings/)). |
 | A `Validate <target id>` job of a branch is refused before its first step with an environment protection message | The run referenced the `publish` environment outside `main`: that branch's `validate.yml` changed the environment line. Restore the kit's line ([CI](/wiki/ci/)). |
 | `DATA_TOKEN is not set` | The script ran outside the action without the token; use `--dry-run` locally. |
 | `--repository or GITHUB_REPOSITORY is required` | Local run: pass `--repository owner/game`. |
@@ -64,7 +64,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | --- | --- |
 | The data repository has the commit but the page is old | The data repository's `Deploy` workflow takes about a minute and queues bursts; wait, then reload. If `Deploy` did not run, the Pages source is not set to GitHub Actions. |
 | A target shows "unavailable" | Its `latest.json` does not load or parse. A `map.json` or `history.json` that fails the page's checks hides only its own section ("Progress history unavailable"). Run `publish.py check` on a clone of the data repository to find the file. |
-| The game is missing from the hub | Its slug is not in `index.json`; the first publish adds it. Check that the publish step ran on `main` (the condition is `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`). |
+| The game is missing from the hub | Its slug is not in `index.json`; the first publish adds it. Check that the publish step ran on `main` (the condition is `github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')`). |
 | `/games/<slug>/` returns 404 with the application shell | Normal for a game added since the last site deploy; the page still renders. The next site deploy stages a real file. |
 | No cover | Both halves are needed: `data/<slug>/cover.webp` in the data repository and `artwork` in `config/site.json` followed by a publish. |
 | No Contribute link | `contributions.accepting` is `false`, or there is no `guideUrl`, or the target has no report. |
