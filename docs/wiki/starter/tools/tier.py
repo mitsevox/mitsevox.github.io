@@ -74,7 +74,7 @@ def main():
     sys.path.insert(0,str(ROOT/'tools'))
     from ci_targets import changed_paths,pr_base
     pr=json.loads(Path(os.environ['GITHUB_EVENT_PATH']).read_text())['pull_request']
-    head=os.environ['GITHUB_SHA'];base=pr_base(pr['base']['sha'],head)
+    head=os.environ['GITHUB_SHA'];base=pr_base(pr,head)
     claim=declared(pr.get('body'))
     moved=unchanged_moves(base,head)
     need,why=floor([p for p in changed_paths(base,head) if p not in moved],git_diff_lines(base,head))
