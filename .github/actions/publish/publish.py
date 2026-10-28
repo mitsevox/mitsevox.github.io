@@ -410,6 +410,11 @@ def check_map(document, s):
     def walk(item, kind, inventory):
         require(isinstance(item.get('name'), str), 'map: a node has no name')
         require(item.get('kind') == kind, 'map: kind differs at %r' % item.get('name'))
+        # The page needs integer counts on every node, and a number where fuzzy is given; a null
+        # here is not a missing measure.
+        require(all(isinstance(item.get(k), int) and not isinstance(item.get(k), bool) for k in ('size', 'linked', 'matched'))
+                and ('fuzzy' not in item or (isinstance(item['fuzzy'], (int, float)) and not isinstance(item['fuzzy'], bool))),
+                'map: %r lacks a count' % item.get('name'))
         for key in ('source', 'comparison_source'):
             if key in item:
                 require(SOURCE_PATH.fullmatch(item[key]) and not any(p in ('.', '..') for p in item[key].split('/')),
@@ -418,10 +423,11 @@ def check_map(document, s):
                        'fuzzy': item.get('fuzzy')}, 'map %r' % item.get('name'))
         if item.get('children'):
             children = item['children']
+            # The children are checked first, so that every count summed below is a number.
+            rs = merged_ranges([r for c in children for r in walk(c, kind, inventory)])
             for key in ('size', 'linked', 'matched', *(['fuzzy'] if 'fuzzy' in item else [])):
                 require(all(key in c for c in children) and close(math.fsum(c[key] for c in children), item[key]),
                         'map: %r children do not add up (%s)' % (item.get('name'), key))
-            rs = merged_ranges([r for c in children for r in walk(c, kind, inventory)])
             if 'address' in item or 'mapped_extents' in item:
                 require(rs == merged_ranges(node_extents(item)), 'map: %r extents differ from its children' % item.get('name'))
             return rs
@@ -440,12 +446,12 @@ def check_map(document, s):
         reference, m = None, s[kind]
         for field in ('sections', 'files'):
             items = [i for i in document[field] if i['kind'] == kind]
+            actual = merged_ranges([r for i in items for r in walk(i, kind, field == 'files')])
             for key, k in (('total', 'size'), ('linked', 'linked'), ('matched', 'matched'), ('fuzzy', 'fuzzy')):
                 if m.get(key) is None:
                     continue
                 require(all(k in x for x in items) and close(math.fsum(x[k] for x in items), m[key]),
                         'map: %s %s %s differs from the summary' % (field, kind, key))
-            actual = merged_ranges([r for i in items for r in walk(i, kind, field == 'files')])
             require(reference is None or actual == reference, 'map: sections and files cover different %s bytes' % kind)
             reference = actual
     for (start, size), rs in functions.items():

@@ -1145,6 +1145,8 @@ Optional; `modules.contributors` names it when present. The publish action write
 
 Adding a field never changes `schema`; readers ignore fields they do not know. A breaking change bumps `schema`, rewrites the whole data repository in one commit and switches the site in the same change; the action at `@main` follows, and producers pick it up on their next run without editing anything. Writers are strict and readers are lenient: the action refuses anything the checker rejects, and the site shows "unavailable" for a target whose files do not parse.
 
+Two readers check the data: `publish.py check` before every push, and the page's own validator before every draw. They must agree, and the site repository keeps them agreeing in two ways: its tests run the page's validator on what the publisher writes, and its CI runs `python3 tools/check_data_tree.py` on a fresh clone of the data repository, with both readers, on every change to the site. A check that gets stricter than the published data fails there, before it is deployed, instead of leaving a map the page refuses; the fix is a correction of the data ([Publishing](/wiki/publishing/)), never a looser check.
+
 
 ---
 
@@ -1277,6 +1279,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | No cover | Both halves are needed: `data/<slug>/cover.webp` in the data repository and `artwork` in `config/site.json` followed by a publish. |
 | No Contribute link | `contributions.accepting` is `false`, or there is no `guideUrl`, or the target has no report. |
 | The history chart has one point | Expected after the first publish; every later `main` publish adds one. |
+| The site repository's `Test` job fails at `Validate the live data` | A change to the site made a reader stricter than something already published, or the data repository holds a hand edit the checkers refuse. The step names the game, target and file. Correct the data ([Publishing](/wiki/publishing/)); do not loosen the check. |
 
 ## Settings
 

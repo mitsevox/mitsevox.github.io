@@ -24,6 +24,12 @@ jobs:
         run: python3 -m unittest discover -s tests -v
       - name: Frontend syntax
         run: find assets -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Validate the live data
+        # The published data must pass both readers at this revision, the publish checker and the
+        # page's validator, so a check that gets stricter cannot strand what producers published.
+        run: |
+          git clone --quiet --depth 1 https://github.com/mitsevox/decomp-data live-data
+          python3 tools/check_data_tree.py live-data
 
   deploy:
     name: Deploy
