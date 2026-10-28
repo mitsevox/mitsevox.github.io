@@ -701,7 +701,7 @@ Every handoff states: changed files, evidence, the validation commands and their
 | File | What to fill in |
 | --- | --- |
 | `CONTRIBUTING.md` | `OWNER_LOGIN` and `owner/game`; the section headings stay as in the kit |
-| `AGENTS.md` | Nothing in the header; the project's own rules go under `## Project` |
+| `AGENTS.md` | Nothing in the header; the project's own facts (toolchain, references, style guide, project tools) go under `## Project`, never process rules |
 | `CLAUDE.md` | Nothing; it imports `AGENTS.md` |
 | `.github/pull_request_template.md` | The target ids in the Targets table |
 | `README.md` | Yours, under the seven headings of the kit template: the targets table, the build commands per target, the owner, links to `CONTRIBUTING.md` and `AGENTS.md`, the layout table, the credits |
