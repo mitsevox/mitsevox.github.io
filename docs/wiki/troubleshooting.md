@@ -10,10 +10,13 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | --- | --- |
 | `Invalid target registry`, `Unknown target fields`, `Invalid target identity`, `Invalid target status`, `Duplicate target` | `config/targets.json` breaks a rule in [Targets](/wiki/targets/): exactly the seven fields per target, lower-case platform, 40 lower-case hex digits, status in `active`, `planned`, `archived`. |
 | `Default target is not active` | `defaultTarget` names a planned or archived target. |
-| `Invalid CI dependency map`, `CI dependencies must cover every known target`, `Unsafe CI dependency patterns` | `config/ci-targets.json`: the four keys, an entry for every target in `targets.json`, no leading `/` or `..` in patterns. |
+| `Invalid CI dependency map`, `Unsafe CI dependency patterns` | `config/ci-targets.json`: exactly the keys `schemaVersion`, `shared` and `nonBuild`, no leading `/` or `..` in patterns. |
+| `Target defines collide` | Two ids in `targets.json` give the same `VERSION_` define (`a-b` and `a.b`, say); rename one. |
 | `Diff endpoints must be full commit SHAs` | The planner ran outside Actions or with an unusual event; run it with `--force-all` to audit everything. |
-| `Configure REVIEW_OWNER before adopting clearance` | The `REVIEW_OWNER` variable is empty; `tests/review_gate.mjs` passes its own value, so this appears in the live workflow only. |
-| `node --test` fails after editing `review.yml` | The test reads the script from the workflow file; keep the `script: |` block and its indentation intact. |
+| `config/<id>/build.sha1 differs from targets.json`, `config/<id>/config.yml hash differs from targets.json`, `config/<id>/<file> is missing` | `tools/targets.py check`: the three hashes of a target disagree, or an active target lacks a file. Fix the odd one out; the original's hash is the truth. |
+| `unknown VERSION_ token`, `version condition mixed with other macros`, `BUILD_VERSION is never read in source`, `MatchingFor argument ... is not a known target id` | `tools/versions.py check`: see the Version differences section of [Build, verify, measure](/wiki/build-verify-measure/). |
+| `evidence.tsv:<line>: ...` | `tools/evidence.py check`: the row breaks the format in `config/README.md` (columns, address form, kind, origin, edges). |
+| `::warning file=...::` lines in `Check the scaffold` | The checkout drifts from the kit or the spec ([Starter kit](/wiki/starter-kit/#the-scaffold-spec)). Warnings do not fail the job until the owner sets `strict: true`. |
 
 ## Image and original
 
@@ -21,9 +24,7 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | --- | --- |
 | The job fails while initializing the container (pull denied, unauthorized, manifest unknown) | The package is not readable by the public repository, or the digest is wrong. In the private package's settings add `owner/game` under Manage Actions access with Read, and copy the digest from the image workflow's summary. |
 | `cp: cannot stat '/orig/<id>/sys/main.dol'` | The image does not hold that target, or the path differs from PARAMETER 2. Add the `COPY` and checksum to the Dockerfile and rebuild, or fix the path in both places. |
-| `Missing/unsafe target original` | `orig/<id>/<ORIGINAL>` is absent or a symlink; locally, put your copy there. |
-| `Original executable SHA-1 differs` | The file is not the binary `targets.json` names. Fix the file or, if the file is right, the `sha1` field (then the image's checksum line too). |
-| `Target is not active` | `verify_target.py` was run for a planned or archived target. |
+| The toolkit reports a hash mismatch when splitting | The file at `orig/<id>/<path>` is not the binary `config.yml` names. Fix the file or, if the file is right, the hash in `config.yml`, `build.sha1` and `targets.json` together (then the image's checksum line too). |
 | `sha1sum: WARNING: 1 computed checksum did NOT match` during `docker build` | The original committed to the private repository differs from the Dockerfile's checksum line. |
 
 ## Build and measurement
@@ -34,7 +35,7 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | The link succeeds but the hash check against `config/<id>/build.sha1` fails | A `Matching` object no longer matches, or `build.sha1` is wrong. Mark the object `NonMatching` until it matches; `build.sha1` must equal the original's `sha1`. |
 | `ninja: error: ... report.json` or no report written | The `progress`/`report.json` targets need objdiff; check `config.objdiff_tag` and network access from the image, or pass `--objdiff` to a local binary. |
 | Numbers look wrong on the page but the build is green | Compare with `ninja ... progress` locally at the same commit. `linked` only counts `Matching` units; `matched` counts exact functions anywhere; `fuzzy` is size-weighted. A new split or a renamed unit changes `files` counts without changing bytes. |
-| `measuring_tools: validate.yml names no single pinned build image` | The `image:` line is not of the form `ghcr.io/<name>@sha256:<64 hex>`, or appears more than once. |
+| `measuring_tools: BUILD_IMAGE is not a digest-pinned image reference` | The `BUILD_IMAGE` variable in `validate.yml` is not of the form `ghcr.io/<name>@sha256:<64 hex>`, or the tool was run outside the workflow without it in the environment. |
 | `measuring_tools: configure.py has no objdiff_tag` | The `config.<tag> = "<version>"` line is missing or formatted differently; edit `TAGS` in `tools/measuring_tools.py` or the line. |
 
 ## Publish step
@@ -68,13 +69,13 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | No Contribute link | `contributions.accepting` is `false`, or there is no `guideUrl`, or the target has no report. |
 | The history chart has one point | Expected after the first publish; every later `main` publish adds one. |
 
-## Review gate
+## Settings
 
 | Symptom | Cause and fix |
 | --- | --- |
-| `Owner review clearance` stays pending | In order: the PR is a draft; the clearance is not by `REVIEW_OWNER`; `Revision:` is not the current head; the two links are the same, malformed or point at another PR; a linked record's revision or verdict is wrong; a header line appears twice. The acceptance matrix in [Review gate](/wiki/review-gate/) lists every case. |
-| The workflow does not run on comments | It is not on the default branch yet, or the comment is on an issue rather than a PR. |
-| The status never appears on a PR from a fork | By design; fork PRs are not cleared and not built. |
+| `repo_settings.py --check` reports `found unreadable` | The token lacks `Administration: read` for that setting, or the endpoint does not exist on this plan (rulesets on a private repository, say). Unreadable counts as drift on purpose. |
+| The monthly check fails at `Require the read-only token` | The `SETTINGS_READ_TOKEN` secret is missing or expired; create a new yearly token ([Repository settings](/wiki/repository-settings/)). |
+| `Check the scaffold` warns `settings: ...` | The repository's description, topics, features, merge settings or `main` rules differ from the standard; run `--apply` with the owner's token. |
 
 ## Recovery
 

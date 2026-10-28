@@ -32,7 +32,7 @@ What the final image must provide, whatever the platform, because `validate.yml`
 
 | Requirement | Why |
 | --- | --- |
-| `/orig/<target id>/<original path>` for every active target | The `Provide and verify target original` step copies it into the checkout |
+| `/orig/<target id>/<original path>` for every active target | The `Provide target original` step copies it into the checkout |
 | `sh`, `git`, `python3` | Composite action steps run with `sh`; `tools/` and `publish.py` are Python; `publish.py` runs `git log`, `git clone` and `git push` |
 | `gcompat` on Alpine | The Actions runner mounts its own glibc Node.js into the container to run `actions/checkout` and the token-minting action |
 | The toolchain at fixed paths | The configure command in `validate.yml` names them (`/usr/local/bin/dtk`, `/binutils`, `/compilers` in the starter) |
@@ -53,19 +53,21 @@ These steps are done once, on GitHub, by the owner:
 
 1. Open the package `game-build` under the owner's packages and confirm its visibility is **private**. A package created by a workflow from a private repository starts private; check anyway.
 2. In the package settings, under **Manage Actions access**, add the repository `owner/game` with the **Read** role. This is what lets the public repository's workflow pull the image with its own `GITHUB_TOKEN`.
-3. Copy the digest from the `Publish image` step summary into `validate.yml` (`container.image`).
+3. Copy the digest from the `Publish image` step summary into `validate.yml` (the `BUILD_IMAGE` variable).
 
 The public workflow's `target` job declares `permissions: packages: read` and pulls with `credentials: {username: github.actor, password: secrets.GITHUB_TOKEN}`. No personal token is involved.
 
 ## Referencing the image by digest
 
-`validate.yml` names the image as `ghcr.io/owner/game-build@sha256:<64 hex digits>`, never `:main`. The digest is part of the measurement's provenance: `tools/measuring_tools.py` extracts exactly that line and the publish action records it as the `build-environment` tool in `latest.json`. Changing the digest is a reviewed change to `validate.yml`, and it is an owner decision: the image defines the compiler and the original, so a different image can change every number.
+`validate.yml` names the image once, as `BUILD_IMAGE: ghcr.io/owner/game-build@sha256:<64 hex digits>`, never `:main`; the target job runs in it and the variable is exported to every step. The digest is part of the measurement's provenance: `tools/measuring_tools.py` reads `BUILD_IMAGE` and the publish action records it as the `build-environment` tool in `latest.json`. The scaffold check warns on an image referenced by tag. Changing the digest is a reviewed change to `validate.yml`, and it is an owner decision: the image defines the compiler and the original, so a different image can change every number.
 
-The reference repositories keep the digest line commented with the image workflow run that produced it.
+Keep the digest line commented with the image workflow run that produced it. Pulling `:main` in `validate.yml` is never acceptable, and no bot bumps the digest.
+
+Two later conveniences have known triggers and are not built before them: a small tool that reads the image run summary and rewrites the digest line, once the third bump has been done by hand; and a shared toolchain base image with each game's image adding only `/orig/<id>/`, once two repositories build on the same compiler pack.
 
 ## Other platforms
 
-The pattern does not depend on the platform. For another console, the Dockerfile's `dependencies` stage fetches that platform's toolchain, the original goes under `/orig/<target id>/` at whatever path your build expects (the `ORIGINAL` constant in `tools/verify_target.py` and `PARAMETER 2` in `validate.yml` name it), and the configure and build commands in `validate.yml` change. A single image may hold several targets, and a reference binary from another platform may be added for comparison in the same way; it is just one more `COPY` with a checksum.
+The pattern does not depend on the platform. For another console, the Dockerfile's `dependencies` stage fetches that platform's toolchain, the original goes under `/orig/<target id>/` at whatever path your build expects (`PARAMETER 2` in `validate.yml` and the toolchain's own configuration name it), and the configure and build commands in `validate.yml` change. A single image may hold several targets, and a reference binary from another platform may be added for comparison in the same way; it is just one more `COPY` with a checksum.
 
 ## Local builds
 

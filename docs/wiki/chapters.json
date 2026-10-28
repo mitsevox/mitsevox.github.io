@@ -38,25 +38,25 @@
   {
     "slug": "contribution-workflow",
     "title": "Contribution workflow",
-    "summary": "Bounded tasks, isolated branches, independent reviews and an owner-only merge.",
-    "group": "Contribution"
-  },
-  {
-    "slug": "review-gate",
-    "title": "Review gate",
-    "summary": "Review records, the owner clearance comment and the status check that verifies them.",
+    "summary": "Review tiers sized to what a PR touches, draft PRs as reservations, independent records and an owner-only merge.",
     "group": "Contribution"
   },
   {
     "slug": "ci",
     "title": "CI",
-    "summary": "validate.yml: plan the affected targets, run the tool tests, build each target in the image, publish on main.",
+    "summary": "validate.yml: plan the affected targets, run the tool tests and the scaffold check, build each target in the image, publish on main.",
     "group": "Pipeline"
   },
   {
     "slug": "publishing",
     "title": "Publishing",
     "summary": "The GitHub App credential, the publish action's inputs and what happens on a push to main.",
+    "group": "Pipeline"
+  },
+  {
+    "slug": "repository-settings",
+    "title": "Repository settings",
+    "summary": "Branch rules, merge method, Actions permissions, credentials and presentation: the standard, the script that applies it and the monthly check.",
     "group": "Pipeline"
   },
   {

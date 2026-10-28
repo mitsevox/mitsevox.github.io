@@ -10,6 +10,8 @@ Inventory what the target and its references actually contain: the parsed filesy
 
 Related builds (another platform, another revision, another game on the same engine) suggest names and behavior. They do not prove the target's offsets, field widths, original names or source boundaries. Keep target evidence, reference evidence and inferred meaning separate.
 
+Reference material that agents read on every task lives under `references/`: text only, regenerable by a named tool, no file over 4 MB. The scaffold check warns on anything larger.
+
 ## Bounded tasks
 
 Identify the functions, address ranges, candidate source unit, shared headers and dependencies before editing. Confirm accepted declarations on current `main`. Establish each function's full extent and the limits of any provisional unit; unresolved boundaries stay visible.
@@ -44,13 +46,19 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 | Column | Values |
 | --- | --- |
 | `kind` | `name`, `function`, `data`, `unit-anchor`, `unit`, `type`, `field`, `external`, `compiler`, `assembly`, `source-form`, `linker` |
-| `start`, `end` | Hexadecimal virtual addresses, end exclusive; `-` when unknown or inapplicable |
+| `start`, `end` | Virtual addresses as `0x` plus eight upper-case hex digits, end exclusive; `-` when unknown or inapplicable |
 | `subject` | The symbol, source path, type or field concerned |
 | `origin` | `target` (present in the target's bytes, symbols or debug information), `signature` (a named tool signature), `related` (another identified build), `inferred` (interpretation of the code) |
-| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other |
+| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data` and `unit` rows |
 | `evidence` | A reproducible locator and what it establishes and leaves unknown |
 
 Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
+
+## What earns a row
+
+A row is a claim a person or agent made that a reviewer must be able to challenge: an `inferred` name, a `unit` boundary, a `type` or `field` layout read from loads and stores, a `compiler`, `source-form` or `linker` claim. Tool output is not transcribed row by row. Symbol extents from the toolkit, debug names from a related build, signature hits from a library map: these are reproducible from `references/` plus a tool at a pinned revision, so they get one row per tool run, with kind `unit-anchor` or `name`, origin `related` or `signature`, a subject that names the tool with its inputs and revision, and the regenerable report's path as the evidence. The table then stays readable in review, and the report is the evidence.
+
+`python3 tools/evidence.py check` runs in the `Tool tests` job and in the scaffold check: the header row, eight columns, the address format, the kinds and origins, edges only on the rows that have extents, non-empty subject and evidence. It checks form, not truth; the hostile checklist's `Names` row is the provenance check, and the publish action counts a function as named only when its symbol is not a tool label, so an unnamed function can never be published as named.
 
 ## Matching integrity
 
@@ -68,6 +76,6 @@ When evidence runs out, keep the useful partial reconstruction as a `NonMatching
 
 ## Imported and SDK code
 
-Retain the origin, source revision, license and local modifications of anything imported. A fingerprint match is a candidate, especially for a short function; inspect target-specific calls, data ownership and compilation boundaries before importing. Imported code gets the same accuracy and hostile reviews as new reconstruction.
+Retain the origin, source revision, license and local modifications of anything imported, in `CREDITS.md` and under `licenses/`; a verbatim imported tree goes under `extern/` with its own credits. A fingerprint match is a candidate, especially for a short function; inspect target-specific calls, data ownership and compilation boundaries before importing. Imported code whose every name is `target`, `signature` or `related` is a tier B change: it gets the hostile review, not the blind accuracy pass.
 
 Comments in source explain intent, invariants and non-obvious relationships. Matching scores, compiler experiments, agent notes and review history belong in `evidence.tsv` or the PR, never in source comments.

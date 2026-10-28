@@ -2,50 +2,59 @@
 <aside class="wiki-sidebar">
 <div data-ui="wiki-search"></div>
 <p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
-<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/" aria-current="page"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/" aria-current="page"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">08</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">09</span>Publishing</a><a href="/wiki/repository-settings/"><span class="wiki-nav-number">10</span>Repository settings</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>Foundation <span aria-hidden="true">/</span> 02</span><a href="/docs/wiki/repository-layout.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="repository-layout">Repository layout</h1>
 <p>What the public repository tracks, what it ignores and where each file lives.</p>
 <h2 id="the-public-repository">The public repository</h2>
-<p>This is the layout of a GameCube or Wii project built with <a href="https://github.com/encounter/dtk-template">dtk-template</a>, with the files this guide adds marked. Keep the names: the CI workflow, the tools and the publish action refer to them.</p>
+<p>This is the layout of a GameCube or Wii project built with <a href="https://github.com/encounter/dtk-template">dtk-template</a>, with the files the starter kit provides marked. Keep the names: the CI workflow, the tools, the scaffold check and the publish action refer to them.</p>
 <pre><code class="language-text">game/
-  README.md                      target, owner, build commands
-  CONTRIBUTING.md                contribution, review and merge policy   (starter)
-  AGENTS.md                      agent instructions                      (starter)
-  .gitignore                     originals, generated output             (starter)
-  .gitattributes                 optional: line endings for toolkit files
+  README.md                      targets, owner, build commands; seven fixed headings
+  CONTRIBUTING.md                tiers, task loop, matching integrity, checklist  (starter)
+  AGENTS.md                      fixed header, then the project's own section    (starter)
+  CLAUDE.md                      one line: @AGENTS.md                            (starter)
+  CREDITS.md                     origin and license of imported source           (starter)
+  .gitignore, .gitattributes     originals, generated output; LF for toolkit files (starter)
   configure.py                   build configuration: libraries, objects, flags (dtk-template)
   config/
-    targets.json                 the target list, schema 1               (starter)
-    site.json                    presentation on the site                (starter)
-    ci-targets.json              which paths affect which target         (starter)
-    README.md                    evidence record format                  (starter)
+    targets.json                 the target list, schema 1                      (starter)
+    site.json                    presentation on the site                       (starter)
+    ci-targets.json              which shared paths affect every target         (starter)
+    README.md                    evidence record format                         (starter)
     GAME01-rev0/                 one directory per target, named by its id
       config.yml                 decomp-toolkit project: original path, hash, symbols, splits
       splits.txt, symbols.txt    toolkit inputs
       build.sha1                 expected hash of the built executable
       evidence.tsv               curated claims
-  src/                           reconstructed source, complete and partial
-  include/                       shared declarations
+      README.md                  the target in one paragraph
+  src/                           reconstructed source, shared by every target
+  include/
+    version.h                    the version-difference rule and group macros   (starter)
   tools/
-    __init__.py                                                          (starter)
-    targets.py                   reads and validates config/targets.json (starter)
-    ci_targets.py                selects affected targets in CI          (starter)
-    verify_target.py             checks the original's SHA-1             (starter)
-    measuring_tools.py           lists tool versions for provenance      (starter)
+    __init__.py                                                                 (starter)
+    targets.py                   reads config/targets.json, derives the define  (starter)
+    ci_targets.py                selects affected targets in CI                 (starter)
+    versions.py                  view, diff and check version differences       (starter)
+    evidence.py                  checks evidence.tsv                            (starter)
+    new_target.py                scaffolds config/&lt;id&gt;/                         (starter)
+    measuring_tools.py           lists tool versions for provenance             (starter)
     project.py, ninja_syntax.py, download_tool.py, ...   dtk-template
   tests/
-    test_targets.py                                                      (starter)
-    review_gate.mjs                                                      (starter)
-  docs/                          durable documentation
+    test_targets.py                                                             (starter)
+  docs/                          durable project knowledge
+  references/                    text only, regenerable by a named tool, no file over 4 MB
+  licenses/                      license texts of imported source
   orig/GAME01-rev0/.gitkeep      where the original goes locally; the file itself is ignored
   build/                         generated, ignored
   .github/
-    workflows/validate.yml                                               (starter)
-    workflows/review.yml                                                 (starter)
-    pull_request_template.md                                             (starter)
+    workflows/validate.yml                                                      (starter)
+    pull_request_template.md                                                    (starter)
 </code></pre>
 <p>Three directories are keyed by the target id and nothing else: <code>config/&lt;target id&gt;/</code> for inputs, <code>orig/&lt;target id&gt;/</code> for the original, <code>build/&lt;target id&gt;/</code> for everything generated, including <code>build.ninja</code>, <code>objdiff.json</code> and <code>report.json</code>. Switching targets never overwrites another target's files. This holds for a project with a single target too: there is no flat, unkeyed layout to grow out of later.</p>
+<h2 id="shared-and-per-target">Shared and per target</h2>
+<p>A file is per target only when it holds an address, a hash or a unit list of one binary: <code>config/&lt;id&gt;/config.yml</code>, <code>splits.txt</code>, <code>symbols.txt</code>, <code>build.sha1</code>, <code>evidence.tsv</code>, <code>README.md</code>, an <code>ldscript.tpl</code> when the toolkit needs one, and tool reports. Everything else has one copy: <code>src/</code>, <code>include/</code>, <code>configure.py</code> listing the union of units, <code>tools/</code>, <code>tests/</code>, <code>docs/</code>, <code>references/</code> and the three JSON files under <code>config/</code>. A unit that exists on some targets only is simply absent from the other targets' <code>splits.txt</code>; there is no per-target source file and no unit-to-target table. Version differences inside a shared file are <code>#if VERSION_&lt;ID&gt;</code> blocks, described in <a href="/wiki/build-verify-measure/#version-differences">Build, verify, measure</a>.</p>
+<h2 id="the-root-allowlist">The root allowlist</h2>
+<p>The root holds the required files plus these directories and nothing else: <code>src/</code>, <code>include/</code>, <code>extern/</code> (verbatim imported source trees, each with its own credits), <code>tools/</code>, <code>tests/</code>, <code>docs/</code>, <code>references/</code>, <code>licenses/</code>, <code>orig/</code>, <code>build/</code>, <code>config/</code>, <code>.github/</code>, <code>.vscode/</code>, and the files <code>LICENSE</code>, <code>CLAUDE.md</code> and <code>.flake8</code>. Anything else at the root is a warning from the scaffold check; project material goes under <code>docs/</code>, <code>tools/</code> or <code>references/</code>. Two things never exist: a copy of upstream toolkit documentation under <code>docs/dtk/</code>, and <code>config/&lt;id&gt;/config.example.yml</code>; link dtk-template at its pinned revision from the README instead.</p>
 <h2 id="tracked-and-ignored">Tracked and ignored</h2>
 <p>Public Git holds reviewed source, headers, tools, curated evidence and configuration. It never holds:</p>
 <ul>
@@ -53,7 +62,7 @@
 <li>generated objects, build directories, objdiff and editor configuration (<code>build/</code>, <code>build.ninja</code>, <code>objdiff.json</code>, <code>compile_commands.json</code>);</li>
 <li>complete debug exports, private analysis databases or discarded trial variants.</li>
 </ul>
-<p>The starter <code>.gitignore</code> covers these for a dtk-template project. A <code>.gitignore</code> entry does not remove a file already tracked; inspect <code>git status</code> before every commit that touches <code>orig/</code>.</p>
+<p>The starter <code>.gitignore</code> covers these for a dtk-template project; the scaffold check requires it to cover <code>orig/*/*</code>, <code>build/</code>, <code>*.dol</code> and <code>*.elf</code> at least. A <code>.gitignore</code> entry does not remove a file already tracked; inspect <code>git status</code> before every commit that touches <code>orig/</code>.</p>
 <h2 id="the-private-repository">The private repository</h2>
 <pre><code class="language-text">game-build/
   Dockerfile                     originals + toolchain into one image      (starter)
@@ -77,9 +86,11 @@
 <p>Only active targets have a directory. See <a href="/wiki/data-contract/">Data contract</a>.</p>
 <h2 id="naming">Naming</h2>
 <ul>
-<li>Target ids are <code>[A-Za-z0-9._-]+</code> and stable forever: they name directories, the site's <code>?target=</code> value and the data directory. <code>&lt;label&gt;-rev&lt;revision&gt;</code> is the convention the examples use.</li>
+<li>Target ids are <code>[A-Za-z0-9._-]+</code> and stable forever: they name directories, the site's <code>?target=</code> value and the data directory. The convention is <code>&lt;label&gt;-rev&lt;N&gt;</code> for discs with a game id (<code>GAME01-rev0</code>) and <code>&lt;serial&gt;-v&lt;version&gt;</code> where the platform carries a serial and a version (<code>SLUS-20349-v1.01</code>).</li>
+<li>A target's define is <code>VERSION_&lt;ID&gt;</code> with the id upper-cased and <code>-</code> and <code>.</code> replaced by <code>_</code>: <code>GAME01-rev0</code> gives <code>VERSION_GAME01_REV0</code>, <code>SLUS-20349-v1.01</code> gives <code>VERSION_SLUS_20349_V1_01</code>. <code>tools/targets.py define &lt;id&gt;</code> prints it; nothing stores it.</li>
 <li>The slug is <code>[a-z0-9][a-z0-9-]*</code> and names the game on the site: <code>/games/&lt;slug&gt;/</code> and <code>data/&lt;slug&gt;/</code>.</li>
-<li>Unknown functions keep tool-generated address labels (<code>fn_&lt;hex&gt;</code> with decomp-toolkit, <code>func_&lt;hex&gt;</code> with splat). The publish action counts a function as <code>named</code> only when its symbol is not such a label, so a descriptive name is a claim and needs evidence.</li>
+<li>Unit names are source paths. Unknown functions keep tool-generated address labels (<code>fn_&lt;hex&gt;</code> with decomp-toolkit, <code>func_&lt;hex&gt;</code> with splat). The publish action counts a function as <code>named</code> only when its symbol is not such a label, so a descriptive name is a claim and needs evidence.</li>
 <li>Files under <code>src/</code> use recovered paths when established; a descriptive file name counts as named while its boundaries remain provisional.</li>
+<li>Branch names are free. The aggregate CI check is always named <code>Validate targets</code>.</li>
 </ul></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/"><small>Previous</small><span>Start here</span></a><a href="/wiki/targets/"><small>Next</small><span>Targets</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-public-repository">The public repository</a><a href="#tracked-and-ignored">Tracked and ignored</a><a href="#the-private-repository">The private repository</a><a href="#the-data-repository">The data repository</a><a href="#naming">Naming</a></nav></aside></main>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-public-repository">The public repository</a><a href="#shared-and-per-target">Shared and per target</a><a href="#the-root-allowlist">The root allowlist</a><a href="#tracked-and-ignored">Tracked and ignored</a><a href="#the-private-repository">The private repository</a><a href="#the-data-repository">The data repository</a><a href="#naming">Naming</a></nav></aside></main>
