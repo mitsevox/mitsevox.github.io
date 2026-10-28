@@ -55,8 +55,8 @@ class Check:
             self.warn(path, '... %d more %s findings' % (len(messages) - LIMIT, label))
 
     def run(self):
-        for method in (self.required, self.root, self.registry, self.per_target, self.versions, self.ci_targets,
-                       self.evidence, self.byte_identical, self.outlines, self.workflow, self.forbidden,
+        for method in (self.required, self.root, self.registry, self.per_target, self.versions, self.matching_scope,
+                       self.ci_targets, self.evidence, self.byte_identical, self.outlines, self.workflow, self.forbidden,
                        self.references, self.gitignore):
             try:
                 method()
@@ -109,6 +109,13 @@ class Check:
             return
         versions = load(self.kit, 'versions').Versions(self.repo)
         self.warn_many('src', versions.check(), 'version')
+
+    def matching_scope(self):
+        # Once two or more targets are active, a unit declared Matching without naming targets
+        # claims every one of them (Multiple targets chapter); the kit's check says which.
+        if not self.targets:
+            return
+        self.warn_many('configure.py', load(self.kit, 'matching_scope').check(self.repo), 'matching scope')
 
     def ci_targets(self):
         path = self.repo / 'config/ci-targets.json'

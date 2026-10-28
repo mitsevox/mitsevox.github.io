@@ -7,6 +7,15 @@ that has not yet linked a unit byte-identically must not inherit that claim.
                                                          or unclassified
     python3 tools/matching_scope.py pin <id> [<id>...]   before a new target is activated: rewrite
                                                          every unconditional Matching to MatchingFor(<ids>)
+    python3 tools/matching_scope.py check                once two or more targets are active: fail on
+                                                         a unit declared Matching for every target
+
+`check` runs in CI (Tool tests and the scaffold check). With one active target plain Matching is the
+normal form and there is nothing to check; with two or more, a unit declared Matching without
+naming targets claims every active target, one activated later included, and an unclassified
+Object call or a use of Matching outside the four forms hides what it claims, so each is a failure
+until the claim names its targets with MatchingFor(...), a hand edit: `pin` is for the moment
+before a target is activated, and afterwards the tool cannot know which targets a unit links on.
 
 `pin` names every target active so far, all of them: pinning to a subset would silently drop
 another active target's claims. For the targets named nothing changes: MatchingFor(<ids>) is true
@@ -97,8 +106,30 @@ def pin(text,ids):
     return '\n'.join(lines),count
 
 
-def run(root,command,ids=()):
+def check(root=ROOT):
+    """The problems with configure.py's claims once two or more targets are active, as strings:
+    a unit declared Matching for every target, an Object call the tool cannot classify, a use of
+    Matching outside the four forms. Empty with one active target or without a configure.py."""
     root=Path(root);active=build_targets(registry(root/'config/targets.json'))
+    path=root/'configure.py'
+    if len(active)<2 or not path.is_file():return []
+    try:found,other=calls(path.read_text())
+    except (tokenize.TokenError,SyntaxError,ValueError) as error:return ['configure.py: cannot read as Python: %s'%error]
+    problems=[]
+    for row,unit,scope,_ in found:
+        if scope=='all':problems.append('configure.py:%d: %s is declared Matching for every target; %s are active: name the targets it links on with MatchingFor(...)'%(row,unit,', '.join(active)))
+        elif scope=='unclassified':problems.append('configure.py:%d: %s: Object call whose first argument is not Matching, NonMatching, Equivalent or MatchingFor'%(row,unit))
+    for row,line in other:problems.append('configure.py:%d: Matching is used outside Object(Matching, ...): %s'%(row,line))
+    return problems
+
+
+def run(root,command,ids=()):
+    root=Path(root)
+    if command=='check':
+        problems=check(root)
+        if problems:raise SystemExit('\n'.join(problems))
+        return ['matching_scope: no problems']
+    active=build_targets(registry(root/'config/targets.json'))
     path=root/'configure.py'
     try:text=path.read_text()
     except OSError as error:raise SystemExit('matching_scope: '+str(error))
@@ -125,7 +156,7 @@ def run(root,command,ids=()):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('command',choices=['show','pin']);parser.add_argument('targets',nargs='*')
+    parser.add_argument('command',choices=['show','pin','check']);parser.add_argument('targets',nargs='*')
     args=parser.parse_args()
     try:print('\n'.join(run(ROOT,args.command,args.targets)))
     except ValueError as error:sys.exit('matching_scope: '+str(error))

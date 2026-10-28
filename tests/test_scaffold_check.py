@@ -70,6 +70,12 @@ class ScaffoldCheckTests(unittest.TestCase):
         self.assertTrue(any('VERSION_NOPE' in m for m in messages(root, 'src')))
         self.assertTrue(any('header row' in m for m in messages(root, 'config')))
         self.assertTrue(any("'targets' key" in m for m in messages(root, 'config/ci-targets.json')))
+        # A unit declared Matching for every target is a finding only once two targets are active.
+        (root / 'configure.py').write_text('Matching = True\nobjects = [Object(Matching, "a.c")]\n')
+        self.assertEqual(messages(root, 'configure.py'), [])
+        registry = root / 'config/targets.json'
+        registry.write_text(registry.read_text().replace('"planned"', '"active"'))
+        self.assertTrue(any('a.c is declared Matching for every target' in m for m in messages(root, 'configure.py')))
 
     def test_byte_identical_and_outline_files(self):
         root = self.broken()

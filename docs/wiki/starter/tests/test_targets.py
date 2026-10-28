@@ -201,6 +201,35 @@ class Targets(unittest.TestCase):
                 with self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev0'])
                 self.assertTrue(run(root,'pin',build_targets(registry(root/'config/targets.json')))[0].startswith('pinned 4 '))
 
+    def test_matching_scope_check_refuses_a_claim_on_every_target_once_two_are_active(self):
+        from tools.matching_scope import check,run
+        def root_with(tmp,statuses):
+            root=Path(tmp);(root/'config').mkdir()
+            targets=[{'id':'GAME01-rev%d'%n,'platform':'gamecube','label':'GAME01','region':'USA','revision':str(n),
+                      'sha1':'%040x'%(n+1),'status':status} for n,status in enumerate(statuses)]
+            (root/'config/targets.json').write_text(json.dumps({'schema':1,'defaultTarget':'GAME01-rev0','targets':targets}))
+            return root
+        text=('Matching = True\nNonMatching = False\nEquivalent = False\ndef MatchingFor(*versions):\n    return True\n'
+              'objects = [\n    Object(Matching, "a.c"),\n    Object(MatchingFor("GAME01-rev0"), "b.c"),\n    Object(NonMatching, "c.c"),\n]\n')
+        with tempfile.TemporaryDirectory() as tmp:
+            root=root_with(tmp,['active','planned']);(root/'configure.py').write_text(text)
+            self.assertEqual(check(root),[])  # one active target: plain Matching is the normal form
+            self.assertEqual(run(root,'check'),['matching_scope: no problems'])
+            (root/'config/targets.json').write_text((root/'config/targets.json').read_text().replace('"planned"','"active"'))
+            problems=check(root)
+            self.assertEqual(len(problems),1,problems)
+            self.assertTrue(problems[0].startswith('configure.py:7: a.c is declared Matching for every target; GAME01-rev0, GAME01-rev1 are active'))
+            with self.assertRaises(SystemExit):run(root,'check')
+            (root/'configure.py').write_text(text.replace('Object(Matching, "a.c")','Object(MatchingFor("GAME01-rev0"), "a.c")'))
+            self.assertEqual(check(root),[])
+            self.assertEqual(run(root,'check'),['matching_scope: no problems'])
+            # A call the tool cannot classify, or Matching used elsewhere, hides a claim: a failure too.
+            for tail in ('Object(True, "z.c")\n','flag = Matching\n'):
+                (root/'configure.py').write_text(text.replace('    Object(Matching, "a.c"),\n','')+tail)
+                with self.subTest(tail=tail):self.assertEqual(len(check(root)),1,check(root))
+            (root/'configure.py').unlink()
+            self.assertEqual(check(root),[])  # a build without configure.py keeps its claims elsewhere
+
     def test_tier_floor_follows_what_the_diff_touches(self):
         self.assertEqual(declared('## Scope\n\nTier (A, B or C), task\n\nTier B, import of x.c'),'B')
         self.assertIsNone(declared('Tier (A, B or C), task'))
