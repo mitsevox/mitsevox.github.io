@@ -69,7 +69,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | No cover | Both halves are needed: `data/<slug>/cover.webp` in the data repository and `artwork` in `config/site.json` followed by a publish. |
 | No Contribute link | `contributions.accepting` is `false`, or there is no `guideUrl`, or the target has no report. |
 | The history chart has one point | Expected after the first publish; every later `main` publish adds one. |
-| The site repository's `Test` job fails at `Validate the live data` | A change to the site made a reader stricter than something already published, or the data repository holds a hand edit the checkers refuse. The step names the game, target and file. Correct the data ([Publishing](/wiki/publishing/)); do not loosen the check. |
+| The site repository's `Live data` job fails | A change to the site made a reader stricter than something already published, or the data repository holds a hand edit the checkers refuse, or the daily run found a bad publish. The log names the game, target and file, and the data repository's commit it checked. If the data is wrong, correct it ([Publishing](/wiki/publishing/)); if the new check is wrong, fix the check. The deploy does not wait for this job. |
 
 ## Settings
 

@@ -206,6 +206,17 @@ class TimestampTests(unittest.TestCase):
                 publish.timestamp(value)
 
 
+class LatestTests(unittest.TestCase):
+    def test_module_names_are_bare_file_names(self):
+        good = latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z')
+        publish.check_latest(good, 'game', 'GAME01-rev0')
+        for key, name in (('map', '../map.json'), ('map', 'maps/map.json'), ('map', ''), ('contributors', '..')):
+            bad = copy.deepcopy(good)
+            bad['modules'][key] = name
+            with self.subTest(key=key, name=name), self.assertRaisesRegex(publish.ContractError, 'not a file name'):
+                publish.check_latest(bad, 'game', 'GAME01-rev0')
+
+
 class TargetTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()

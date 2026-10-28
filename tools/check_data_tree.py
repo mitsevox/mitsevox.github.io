@@ -2,13 +2,15 @@
 """Validate a data tree with both readers of the contract: the publish action's checker
 (`publish.py check`) and the page's own map validator (assets/report-map-validation.js, run with
 node, fed exactly what assets/reports.js feeds it). The site's CI runs it on a fresh clone of the
-data repository, so that a validator that gets stricter cannot strand published data unnoticed; it
-also takes the tree a `publish.py publish --dry-run --output <tree>` wrote.
+data repository, on every change to the site and once a day, so that a check that gets stricter
+cannot strand published data unnoticed and a bad publish does not wait for the next site change;
+it also takes the tree a `publish.py publish --dry-run --output <tree>` wrote.
 
     python3 tools/check_data_tree.py <tree>
 
-Exit code 1 and one line per refused file when either reader refuses something."""
-import json
+Every target that has a latest.json is checked, archived targets included: more than the page
+shows, exactly what every publish enforces on the whole tree. The output is the first refusal from
+publish.py check, or, when that passes, one line per map the page refuses; exit code 1 either way."""
 import subprocess
 import sys
 from pathlib import Path
@@ -38,7 +40,7 @@ for (const slug of read(`${tree}/index.json`).games) {
       validateMap(read(`${directory}/${latest.modules.map}`), measures);
       checked++;
     } catch (error) {
-      console.log(`${slug}/${target.id}: the page refuses ${latest.modules.map}: ${error.message}`);
+      console.log(`${slug}/${target.id}/${latest.modules.map}: the page refuses it: ${error.message}`);
       process.exitCode = 1;
     }
   }

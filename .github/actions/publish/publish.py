@@ -356,6 +356,13 @@ def check_latest(latest, game, target):
     timestamp(source.get('committedAt'))
     timestamp(latest.get('measuredAt'))
     check_summary(latest.get('summary', {}))
+    modules = latest.get('modules')
+    require(isinstance(modules, dict), 'latest.json: modules is missing')
+    for key in ('map', 'contributors'):
+        name = modules.get(key)
+        # A bare file name beside latest.json; never a path.
+        require(name is None or (isinstance(name, str) and name and '/' not in name and name not in ('.', '..')),
+                'latest.json: modules.%s is not a file name: %r' % (key, name))
 
 
 def check_history(rows):
@@ -636,21 +643,34 @@ def check_tree(tree):
             directory = root / target['id']
             if not (directory / 'latest.json').exists():
                 continue
+            where = '%s/%s' % (slug, target['id'])
+            # Every target with a measurement is checked, archived ones too: more than the page
+            # shows, exactly what every publish enforces on the whole tree.
             latest = read_json(directory / 'latest.json')
-            check_latest(latest, slug, target['id'])
+            located(where + '/latest.json', check_latest, latest, slug, target['id'])
             rows = read_json(directory / 'history.json')
-            check_history(rows)
+            located(where + '/history.json', check_history, rows)
             row = next((r for r in rows if r['revision'] == latest['source']['revision']), None)
-            require(row is not None, '%s/%s: history lacks the latest revision' % (slug, target['id']))
+            require(row is not None, '%s: history lacks the latest revision' % where)
             for kind in ('code', 'data'):
                 require(all(row[kind][k] == latest['summary'][kind][k] for k in ('total', 'linked')),
-                        '%s/%s: history differs from latest' % (slug, target['id']))
+                        '%s: history differs from latest' % where)
             if latest.get('modules', {}).get('map'):
-                check_map(read_json(directory / latest['modules']['map']), latest['summary'])
+                name = latest['modules']['map']
+                located(where + '/' + name, check_map, read_json(directory / name), latest['summary'])
             if latest.get('modules', {}).get('contributors'):
-                check_contributors(read_json(directory / latest['modules']['contributors']), latest['summary'])
+                name = latest['modules']['contributors']
+                located(where + '/' + name, check_contributors, read_json(directory / name), latest['summary'])
             checked += 1
     return checked
+
+
+def located(where, check, *args):
+    """Run one file's check; a refusal names the game, target and file it is about."""
+    try:
+        check(*args)
+    except ContractError as error:
+        raise ContractError('%s: %s' % (where, error)) from None
 
 
 # Writing one measurement into a data tree.
