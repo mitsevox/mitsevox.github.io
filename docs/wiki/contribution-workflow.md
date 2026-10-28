@@ -10,7 +10,7 @@ In order: CI proves that the complete executable of every affected target is byt
 
 ## Authority
 
-Only the owner (`OWNER_LOGIN`) merges into `main`. Contributors and agents prepare branches, open PRs and review. A `SHIP` verdict and a green CI run are two different states, and neither lets a contributor merge. The authority is procedural: agents author under the owner's login, so a native approval rule would not tell an author from a reviewer, and the ruleset on `main` requires a pull request and the `Validate targets` check and nothing else ([Repository settings](/wiki/repository-settings/)).
+Only the owner (`OWNER_LOGIN`) merges into `main`. Contributors and agents prepare branches, open PRs and review. A `SHIP` verdict and a green CI run are two different states, and neither lets a contributor merge. The authority is procedural for agents, which author under the owner's login, so a native approval rule would not tell an author from a reviewer; the `main` ruleset requires a pull request and the `Validate targets` check and nothing else, and the `merges` ruleset lets only the Repository admin role merge, so a contributor with write access cannot ([Repository settings](/wiki/repository-settings/)).
 
 Nobody but the owner changes branch rules, repository settings, the build image or its digest, or the access controls around them. A dependency problem is reported in an issue, not fixed by changing the dependency.
 
