@@ -10,6 +10,7 @@ The authoritative text is [`contract/README.md`](https://github.com/mitsevox/mit
 index.json                          {"schema": 1, "games": ["game", ...]}
 data/game/game.json                 presentation and the target list
 data/game/cover.webp                optional, committed by hand
+data/game/cover-thumb.webp          generated on deploy: 360px wide, what the site displays
 data/game/GAME01-rev0/latest.json   the newest measurement
 data/game/GAME01-rev0/history.json  every measurement, append-only
 data/game/GAME01-rev0/map.json      the newest measurement's tile map

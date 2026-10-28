@@ -142,7 +142,9 @@ game/
     versions.py                  view, diff and check version differences       (starter)
     evidence.py                  checks evidence.tsv                            (starter)
     new_target.py                scaffolds config/<id>/                         (starter)
-    measuring_tools.py           lists tool versions for provenance             (starter)
+    measuring_tools.py           lists tool versions for provenance, verifies them (starter)
+    tier.py                      the review tier a diff needs, checked in CI    (starter)
+    credits.py                   the credits a merge will publish, checked in CI (starter)
     project.py, ninja_syntax.py, download_tool.py, ...   dtk-template
   tests/
     test_targets.py                                                             (starter)
@@ -319,9 +321,9 @@ The publish action copies this file into `game.json` on every publish, adding `r
 | a `nonBuild` pattern only | nothing |
 | no pattern at all | every active target (unknown paths never skip validation) |
 
-The per-target patterns are not written down: every target owns `config/<id>/**` and `orig/<id>/**`, and the planner derives them from `targets.json`, so adding a target never touches this file. Patterns are `fnmatch` globs matched against the repository-relative path; `*` and `**` both match across `/`. Rules: `schemaVersion` is `1`; the keys are exactly `schemaVersion`, `shared` and `nonBuild` (a `targets` key is a scaffold-check warning); no pattern may start with `/` or contain `..`. A manual run (`workflow_dispatch`), a push with no known base (first push, force push) and a changed path that cannot be diffed all select every active target.
+The per-target patterns are not written down: every target owns `config/<id>/**` and `orig/<id>/**`, and the planner derives them from `targets.json`, so adding a target never touches this file. Patterns are `fnmatch` globs matched against the repository-relative path; `*` and `**` both match across `/`. Rules: `schemaVersion` is `1`; the keys are exactly `schemaVersion`, `shared` and `nonBuild` (a `targets` key is a scaffold-check warning); no pattern may start with `/` or contain `..`. A manual run (`workflow_dispatch`) and a push with no known base (first push, force push) select every active target, and so does a changed path that matches no pattern.
 
-A change that selects no target still runs the `Tool tests` job and passes the `Validate targets` check.
+A change that selects no target still runs the `Tool tests` job and passes the `Validate targets` check. `tests/**` is `nonBuild` in the kit because every test runs in `Tool tests` on the bare runner; a repository whose tests need the toolchain and run in the target job's `Project checks` lists `tests/**` under `shared` instead, so that a test change rebuilds every target ([CI](/wiki/ci/), builds without `configure.py`).
 
 ## Adding a target
 
@@ -436,7 +438,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     ```
 
     add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`, point `config.config_path` and `config.check_sha_path` at `config/<version>/config.yml` and `config/<version>/build.sha1`, and pass `f"-D{define(config.version)}"` in `cflags_base` next to the template's `-DBUILD_VERSION=`. Remove `type=str.upper` from the `--version` argument: dtk-template upper-cases it, which no target id with a lower-case revision (`GAME01-rev0`) can pass. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
-3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag.
+3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag. The two can drift apart, since the build uses the image's dtk and not the tag; in CI `tools/measuring_tools.py --verify` runs the image's `dtk --version` and fails the job unless it reports the pinned tag. objdiff is downloaded at the pinned tag by the build itself, so the pin is what runs.
 4. Place your own copy of the original at `orig/<target id>/sys/main.dol`, the path `config.yml` names (`orig/*/*` is ignored by Git). The toolkit refuses an original whose hash differs from `config.yml`, and `python3 tools/targets.py check` confirms that `config.yml`, `build.sha1` and `targets.json` agree.
 5. Configure and build:
 
@@ -518,8 +520,10 @@ The per-target directory, the define rule, the planner, the tiers, the Targets t
 - the original's path under `orig/<target id>/` (`PARAMETER 2` in `validate.yml`, the `COPY` in the Dockerfile, the toolchain's own config);
 - the configure and build commands (`PARAMETER 3` in `validate.yml`), which must fail unless the complete executable matches and must write `build/<target id>/report.json`;
 - `config/<target id>/` holds a splat or custom configuration instead of dtk's three files; `tools/versions.py` reads the same `#if` convention, and the `MatchingFor` equivalent lives in whatever generates the build;
-- the `code-sections` and `unit-prefix` inputs of the publish action if the defaults do not fit;
-- the `TAGS` dictionary in `tools/measuring_tools.py`, which names the version lines of `configure.py` to report.
+- the `code-sections` and `unit-prefix` inputs of the publish action and of the report check if the defaults do not fit;
+- in `tools/measuring_tools.py`, `TAGS` (the version lines of `configure.py` to report) or `PINS` (the JSON pin files of a build without `configure.py`), and `VERIFY`, the commands that confirm each image-installed tool's version against the pin.
+
+A producer that writes its own report sets a unit's `metadata.complete` only when the whole unit links from source into the byte-identical executable: that is what `linked` means on the site. A status of the producer's own, such as whether a unit's boundaries have evidence, stays in the repository's files; the contract has no field for it and it never sets `complete`. Bytes of a code section that no function covers (alignment padding, code the producer does not split into functions) become one `(other code)` tile per piece on the site, holding the matched bytes no exact function accounts for ([Data contract](/wiki/data-contract/)).
 
 A project that cannot produce an objdiff report cannot use the publish action as shipped; that is a site-side change and outside this guide.
 
@@ -577,7 +581,7 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 | `start`, `end` | Virtual addresses as `0x` plus eight upper-case hex digits, end exclusive; `-` when unknown or inapplicable |
 | `subject` | The symbol, source path, type or field concerned |
 | `origin` | `target` (present in the target's bytes, symbols or debug information), `signature` (a named tool signature), `related` (another identified build), `inferred` (interpretation of the code) |
-| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data` and `unit` rows |
+| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data`, `unit`, `assembly` and `linker` rows |
 | `evidence` | A reproducible locator and what it establishes and leaves unknown |
 
 Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
@@ -794,10 +798,10 @@ The job references a deployment environment: `publish` on a push or manual run o
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
 | `Check the report` | `uses: mitsevox/mitsevox.github.io/.github/actions/check-report@main` with `target` and `report`, on every event. It converts the report into the contract files with the same code as the publish step, into an empty tree, and checks them, without a credential and without credits. A report the site would refuse fails the pull request here, not the `main` publish. A repository that passes `code-sections` or `unit-prefix` to the publish step passes the same values here. |
 | `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
-| `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names), and captures its lines in the output `lines` with a random heredoc delimiter. |
+| `List measuring tools` (`id: tools`) | Runs `python3 tools/measuring_tools.py --verify` on every event. The tool reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names); `--verify` runs each command its `VERIFY` parameter names inside the image (`dtk --version` in the kit) and fails the job unless the pinned version appears in the output, so the provenance published on `main` names what measured the report, and a pull request that bumps the image digest without the pin, or the pin without the image, fails here. The lines are captured in the output `lines` with a random heredoc delimiter. |
 | `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the repository variable and the `publish` environment's secret. |
 
-The two `main`-only steps and the job's environment use the same condition, `github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')`: a push and a manual run on `main` publish, and nothing else does, the events being named rather than excluded so that an event added later never publishes by accident. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
+The publish step and the job's environment use the same condition, `github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')`: a push and a manual run on `main` publish, and nothing else does, the events being named rather than excluded so that an event added later never publishes by accident. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
 
 ### Validate targets
 
@@ -832,9 +836,10 @@ A repository whose build is not dtk-template's (its own scripts, a Makefile) kee
 - **Entry point.** `build.py` or a `Makefile` at the root (the scaffold accepts either in place of `configure.py`).
 - **PARAMETER 2.** The image still holds `/orig/<target id>/sys/main.dol`; the step copies it wherever the build reads it.
 - **PARAMETER 3.** `Configure target` runs the build's setup (or `true` when there is none). `Build, verify complete executable and measure progress` runs one command that fails unless the complete executable is byte-identical, prints `build/<target id>/main.dol: OK` (the line every repository's build ends with) and writes an objdiff-shaped `build/<target id>/report.json` that `Check the report` accepts (locally: `publish.py publish --dry-run --no-credits`, [Publishing](/wiki/publishing/)): `measures` with `total_functions` and `matched_functions`, and units whose sections carry real names and `metadata.virtual_address`. The `code-sections` and `unit-prefix` the report needs go to both the report check and the publish step.
-- **Measuring tools.** Set `PINS` in `tools/measuring_tools.py` to the JSON files that pin the tools (`{"<name>": {"version": ...}}`).
+- **Measuring tools.** Set `PINS` in `tools/measuring_tools.py` to the JSON files that pin the tools (`{"<name>": {"version": ...}}`), and `VERIFY` to the command that prints each image-installed tool's version, so that `--verify` confirms every pin against the image.
 - **Tools.** Every tool the build runs is baked into the build image, as in the kit's Dockerfile; the target job downloads nothing.
 - **Tool tests.** The `Tool tests` job runs on the bare runner; a test that needs the toolchain skips there and runs in `Project checks` instead.
+- **Build inputs.** `tests/**` is a `nonBuild` pattern in the kit because every test runs in `Tool tests`. A repository whose tests run in `Project checks` moves `tests/**` from `nonBuild` to `shared` in `config/ci-targets.json`, so that a test change rebuilds every target where that test runs ([Targets](/wiki/targets/)).
 
 ## What a pull request proves
 
@@ -899,7 +904,7 @@ A repository secret and an environment secret may share a name. A job that refer
 | `app-client-id` | yes | | Client id of the GitHub App installed on the data repository |
 | `app-private-key` | yes | | Private key of that GitHub App |
 
-The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-client-id` and `app-private-key` and leaves the rest at their defaults. The `tools` lines come from `tools/measuring_tools.py`: `build-environment=<image digest>`, then one line per tag it reads from `configure.py` (`dtk=v1.8.3`, `objdiff=v3.6.1` in the starter).
+The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-client-id` and `app-private-key` and leaves the rest at their defaults. The `tools` lines come from `tools/measuring_tools.py --verify`: `build-environment=<image digest>`, then one line per tag it reads from `configure.py` (`dtk=v1.8.3`, `objdiff=v3.6.1` in the starter) or per entry of its pin files; the versions are the repository's pins, and `--verify` has just confirmed each tool its `VERIFY` parameter names against the image ([CI](/wiki/ci/)).
 
 ## What the action does
 
@@ -932,7 +937,7 @@ The page fetches `map.json`, `history.json` and `contributors.json` by their dig
 
 Credits are optional per repository: `"contributors": true` in `config/site.json` switches them on, and nothing changes while it is `false` or absent. With them on, each `main` build also writes `contributors.json`:
 
-1. **Who.** The PR whose merge made the measured revision (`GET /repos/<repo>/commits/<sha>/pulls`). Its body's `Credits: @login, @login` line names the people; without the line its author is credited. A revision that no PR merged credits nobody and fails the publish.
+1. **Who.** The PR whose merge made the measured revision (`GET /repos/<repo>/commits/<sha>/pulls`). Its body's `Credits: @login, @login` line names the people; without the line its author is credited. Work an agent did under the owner's login is the owner's merge and is credited to the owner. A revision that no PR merged credits nobody and fails the publish.
 2. **What.** A function is credited to the people of the earliest measured `main` build in which it was exact. Newly exact functions take this build's people; functions already credited keep theirs; a function that is no longer exact moves to `retired` with its credit, and gets that credit back when it returns. An older commit whose run finishes late moves a credit earlier when it was exact first, and adds or retires nothing, because `latest.json` decides what is exact now.
 3. **Switching on.** The first build with credits on credits every function already exact to the repository owner.
 4. **Overrides.** `config/<target>/credits.tsv` (address, comma-separated logins, reason; `#` comments allowed) credits the listed functions to those people whatever the merges say: for batches that carry other people's work, imports and corrections. It is reviewed like any other record.
@@ -1077,6 +1082,7 @@ The authoritative text is [`contract/README.md`](https://github.com/mitsevox/mit
 index.json                          {"schema": 1, "games": ["game", ...]}
 data/game/game.json                 presentation and the target list
 data/game/cover.webp                optional, committed by hand
+data/game/cover-thumb.webp          generated on deploy: 360px wide, what the site displays
 data/game/GAME01-rev0/latest.json   the newest measurement
 data/game/GAME01-rev0/history.json  every measurement, append-only
 data/game/GAME01-rev0/map.json      the newest measurement's tile map
@@ -1259,9 +1265,11 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | `configure.py` rejects `--version` | The id is not an active target in `config/targets.json`, or `configure.py` was not wired to `tools/targets.py` ([Build, verify, measure](/wiki/build-verify-measure/)). |
 | The link succeeds but the hash check against `config/<id>/build.sha1` fails | A `Matching` object no longer matches, or `build.sha1` is wrong. Mark the object `NonMatching` until it matches; `build.sha1` must equal the original's `sha1`. |
 | `ninja: error: ... report.json` or no report written | The `progress`/`report.json` targets need objdiff; check `config.objdiff_tag` and network access from the image, or pass `--objdiff` to a local binary. |
-| Numbers look wrong on the page but the build is green | Compare with `ninja ... progress` locally at the same commit. `linked` only counts `Matching` units; `matched` counts exact functions anywhere; `fuzzy` is size-weighted. A new split or a renamed unit changes `files` counts without changing bytes. |
+| Numbers look wrong on the page but the build is green | Compare with a local measurement at the same commit (`ninja ... progress` with dtk-template). `linked` only counts `Matching` units; `matched` counts exact functions anywhere; `fuzzy` is size-weighted. A new split or a renamed unit changes `files` counts without changing bytes. |
 | `measuring_tools: BUILD_IMAGE is not a digest-pinned image reference` | The `BUILD_IMAGE` variable in `validate.yml` is not of the form `ghcr.io/<name>@sha256:<64 hex>`, or the tool was run outside the workflow without it in the environment. |
 | `measuring_tools: configure.py has no objdiff_tag` | The `config.<tag> = "<version>"` line is missing or formatted differently; edit `TAGS` in `tools/measuring_tools.py` or the line. |
+| `measuring_tools: dtk reports 'dtk 1.8.4'; the repository pins v1.8.3` | The image's tool and the repository's pin disagree: an image digest bumped without the pin, or the pin without the image. Change the one that is wrong, deliberately ([Build environment](/wiki/build-environment/)); never publish a provenance the image does not match. |
+| `measuring_tools: cannot run dtk --version to verify dtk` | `VERIFY` in `tools/measuring_tools.py` names a command the image does not have at that path; fix the command or the image. |
 
 ## Publish step
 
@@ -1330,7 +1338,7 @@ Download the [repository starter archive](/wiki/downloads/repository-starter.zip
 | `.github/workflows/validate.yml.template` | `.github/workflows/validate.yml` | [CI](/wiki/ci/) |
 | `config/targets.json`, `config/site.json`, `config/ci-targets.json`, `config/README.md` | `config/` | [Targets](/wiki/targets/), [Evidence](/wiki/evidence/) |
 | `include/version.h` | `include/` | [Build, verify, measure](/wiki/build-verify-measure/) |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/) |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/), [Contribution workflow](/wiki/contribution-workflow/), [Publishing](/wiki/publishing/) |
 | `tests/test_targets.py` | `tests/` | [CI](/wiki/ci/) |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the private repository | [Build environment](/wiki/build-environment/) |
 | `scaffold.json` | nowhere; the scaffold check reads it | this one |
@@ -1356,7 +1364,7 @@ Every project-specific value, and where it goes:
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |
 | Project checks | optional step and its command | `validate.yml.template` |
 | Credential names | `DATA_APP_CLIENT_ID` (repository variable), `DATA_APP_PRIVATE_KEY` (secret of the `publish` environment) | `validate.yml.template` PARAMETER 4 |
-| Reported tool versions | `dtk_tag`, `objdiff_tag` | `tools/measuring_tools.py` |
+| Reported and verified tool versions | `TAGS` (the `configure.py` lines) or `PINS` (JSON pin files), and `VERIFY` (the command that prints each image-installed tool's version) | `tools/measuring_tools.py` |
 | Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
 
@@ -1366,7 +1374,7 @@ Every project-specific value, and where it goes:
 
 | Class | Files | Checked |
 | --- | --- | --- |
-| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
+| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/tier.py`, `tools/credits.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
 | Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish, report-check and scaffold-check actions, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 

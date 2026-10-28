@@ -143,12 +143,13 @@ jobs:
       #   run: python3 tools/project_checks.py --target "$TARGET_ID"
       - name: List measuring tools
         id: tools
-        if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        # Every event: the tools the published provenance names, verified against what the image
+        # runs (--verify), so a pin and the image never disagree unnoticed.
         run: |
           delimiter="tools-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
           {
             echo "lines<<$delimiter"
-            python3 tools/measuring_tools.py
+            python3 tools/measuring_tools.py --verify
             echo "$delimiter"
           } >> "$GITHUB_OUTPUT"
       - name: Publish to the site

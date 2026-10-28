@@ -20,7 +20,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     ```
 
     add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`, point `config.config_path` and `config.check_sha_path` at `config/<version>/config.yml` and `config/<version>/build.sha1`, and pass `f"-D{define(config.version)}"` in `cflags_base` next to the template's `-DBUILD_VERSION=`. Remove `type=str.upper` from the `--version` argument: dtk-template upper-cases it, which no target id with a lower-case revision (`GAME01-rev0`) can pass. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
-3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag.
+3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag. The two can drift apart, since the build uses the image's dtk and not the tag; in CI `tools/measuring_tools.py --verify` runs the image's `dtk --version` and fails the job unless it reports the pinned tag. objdiff is downloaded at the pinned tag by the build itself, so the pin is what runs.
 4. Place your own copy of the original at `orig/<target id>/sys/main.dol`, the path `config.yml` names (`orig/*/*` is ignored by Git). The toolkit refuses an original whose hash differs from `config.yml`, and `python3 tools/targets.py check` confirms that `config.yml`, `build.sha1` and `targets.json` agree.
 5. Configure and build:
 
@@ -102,7 +102,9 @@ The per-target directory, the define rule, the planner, the tiers, the Targets t
 - the original's path under `orig/<target id>/` (`PARAMETER 2` in `validate.yml`, the `COPY` in the Dockerfile, the toolchain's own config);
 - the configure and build commands (`PARAMETER 3` in `validate.yml`), which must fail unless the complete executable matches and must write `build/<target id>/report.json`;
 - `config/<target id>/` holds a splat or custom configuration instead of dtk's three files; `tools/versions.py` reads the same `#if` convention, and the `MatchingFor` equivalent lives in whatever generates the build;
-- the `code-sections` and `unit-prefix` inputs of the publish action if the defaults do not fit;
-- the `TAGS` dictionary in `tools/measuring_tools.py`, which names the version lines of `configure.py` to report.
+- the `code-sections` and `unit-prefix` inputs of the publish action and of the report check if the defaults do not fit;
+- in `tools/measuring_tools.py`, `TAGS` (the version lines of `configure.py` to report) or `PINS` (the JSON pin files of a build without `configure.py`), and `VERIFY`, the commands that confirm each image-installed tool's version against the pin.
+
+A producer that writes its own report sets a unit's `metadata.complete` only when the whole unit links from source into the byte-identical executable: that is what `linked` means on the site. A status of the producer's own, such as whether a unit's boundaries have evidence, stays in the repository's files; the contract has no field for it and it never sets `complete`. Bytes of a code section that no function covers (alignment padding, code the producer does not split into functions) become one `(other code)` tile per piece on the site, holding the matched bytes no exact function accounts for ([Data contract](/wiki/data-contract/)).
 
 A project that cannot produce an objdiff report cannot use the publish action as shipped; that is a site-side change and outside this guide.

@@ -54,7 +54,7 @@ A repository secret and an environment secret may share a name. A job that refer
 | `app-client-id` | yes | | Client id of the GitHub App installed on the data repository |
 | `app-private-key` | yes | | Private key of that GitHub App |
 
-The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-client-id` and `app-private-key` and leaves the rest at their defaults. The `tools` lines come from `tools/measuring_tools.py`: `build-environment=<image digest>`, then one line per tag it reads from `configure.py` (`dtk=v1.8.3`, `objdiff=v3.6.1` in the starter).
+The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-client-id` and `app-private-key` and leaves the rest at their defaults. The `tools` lines come from `tools/measuring_tools.py --verify`: `build-environment=<image digest>`, then one line per tag it reads from `configure.py` (`dtk=v1.8.3`, `objdiff=v3.6.1` in the starter) or per entry of its pin files; the versions are the repository's pins, and `--verify` has just confirmed each tool its `VERIFY` parameter names against the image ([CI](/wiki/ci/)).
 
 ## What the action does
 
@@ -87,7 +87,7 @@ The page fetches `map.json`, `history.json` and `contributors.json` by their dig
 
 Credits are optional per repository: `"contributors": true` in `config/site.json` switches them on, and nothing changes while it is `false` or absent. With them on, each `main` build also writes `contributors.json`:
 
-1. **Who.** The PR whose merge made the measured revision (`GET /repos/<repo>/commits/<sha>/pulls`). Its body's `Credits: @login, @login` line names the people; without the line its author is credited. A revision that no PR merged credits nobody and fails the publish.
+1. **Who.** The PR whose merge made the measured revision (`GET /repos/<repo>/commits/<sha>/pulls`). Its body's `Credits: @login, @login` line names the people; without the line its author is credited. Work an agent did under the owner's login is the owner's merge and is credited to the owner. A revision that no PR merged credits nobody and fails the publish.
 2. **What.** A function is credited to the people of the earliest measured `main` build in which it was exact. Newly exact functions take this build's people; functions already credited keep theirs; a function that is no longer exact moves to `retired` with its credit, and gets that credit back when it returns. An older commit whose run finishes late moves a credit earlier when it was exact first, and adds or retires nothing, because `latest.json` decides what is exact now.
 3. **Switching on.** The first build with credits on credits every function already exact to the repository owner.
 4. **Overrides.** `config/<target>/credits.tsv` (address, comma-separated logins, reason; `#` comments allowed) credits the listed functions to those people whatever the merges say: for batches that carry other people's work, imports and corrections. It is reviewed like any other record.

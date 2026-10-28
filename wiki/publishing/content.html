@@ -143,7 +143,7 @@
 </tr>
 </tbody>
 </table></div>
-<p>The starter workflow passes <code>target</code>, <code>report</code>, <code>tools</code>, <code>measured-at</code>, <code>app-client-id</code> and <code>app-private-key</code> and leaves the rest at their defaults. The <code>tools</code> lines come from <code>tools/measuring_tools.py</code>: <code>build-environment=&lt;image digest&gt;</code>, then one line per tag it reads from <code>configure.py</code> (<code>dtk=v1.8.3</code>, <code>objdiff=v3.6.1</code> in the starter).</p>
+<p>The starter workflow passes <code>target</code>, <code>report</code>, <code>tools</code>, <code>measured-at</code>, <code>app-client-id</code> and <code>app-private-key</code> and leaves the rest at their defaults. The <code>tools</code> lines come from <code>tools/measuring_tools.py --verify</code>: <code>build-environment=&lt;image digest&gt;</code>, then one line per tag it reads from <code>configure.py</code> (<code>dtk=v1.8.3</code>, <code>objdiff=v3.6.1</code> in the starter) or per entry of its pin files; the versions are the repository's pins, and <code>--verify</code> has just confirmed each tool its <code>VERIFY</code> parameter names against the image (<a href="/wiki/ci/">CI</a>).</p>
 <h2 id="what-the-action-does">What the action does</h2>
 <ol>
 <li>Splits <code>data-repository</code> into owner and name.</li>
@@ -170,7 +170,7 @@
 <h2 id="credits">Credits</h2>
 <p>Credits are optional per repository: <code>"contributors": true</code> in <code>config/site.json</code> switches them on, and nothing changes while it is <code>false</code> or absent. With them on, each <code>main</code> build also writes <code>contributors.json</code>:</p>
 <ol>
-<li><strong>Who.</strong> The PR whose merge made the measured revision (<code>GET /repos/&lt;repo&gt;/commits/&lt;sha&gt;/pulls</code>). Its body's <code>Credits: @login, @login</code> line names the people; without the line its author is credited. A revision that no PR merged credits nobody and fails the publish.</li>
+<li><strong>Who.</strong> The PR whose merge made the measured revision (<code>GET /repos/&lt;repo&gt;/commits/&lt;sha&gt;/pulls</code>). Its body's <code>Credits: @login, @login</code> line names the people; without the line its author is credited. Work an agent did under the owner's login is the owner's merge and is credited to the owner. A revision that no PR merged credits nobody and fails the publish.</li>
 <li><strong>What.</strong> A function is credited to the people of the earliest measured <code>main</code> build in which it was exact. Newly exact functions take this build's people; functions already credited keep theirs; a function that is no longer exact moves to <code>retired</code> with its credit, and gets that credit back when it returns. An older commit whose run finishes late moves a credit earlier when it was exact first, and adds or retires nothing, because <code>latest.json</code> decides what is exact now.</li>
 <li><strong>Switching on.</strong> The first build with credits on credits every function already exact to the repository owner.</li>
 <li><strong>Overrides.</strong> <code>config/&lt;target&gt;/credits.tsv</code> (address, comma-separated logins, reason; <code>#</code> comments allowed) credits the listed functions to those people whatever the merges say: for batches that carry other people's work, imports and corrections. It is reviewed like any other record.</li>

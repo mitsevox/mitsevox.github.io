@@ -24,7 +24,7 @@ to the kit, which are checked by outline, and which are free.
 | `config/ci-targets.json` | same path | Which shared paths affect every target and which affect none |
 | `config/README.md` | same path | The evidence record format |
 | `include/version.h` | same path | The version-difference rule and the group macros |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py` | same paths | Target registry and define, CI planner, version views, evidence check, target scaffolding, tool provenance |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | same paths | Target registry and define, CI planner, version views, evidence check, target scaffolding, tool provenance, the review-tier floor, the credits check |
 | `tests/test_targets.py` | same path | The tests the `Tool tests` job runs |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the **private** build repository | The build environment image that holds the originals |
 | `scaffold.json` | nowhere | The scaffold spec, read by the scaffold check in the site repository |
@@ -49,7 +49,7 @@ a target's directory once the registry lists it.
 | `sys/main.dol` | The original's path under `orig/<target id>/` and `/orig/<target id>/` | validate.yml.template (PARAMETER 2), build-image/*, config.yml |
 | configure and build commands | PARAMETER 3 in validate.yml.template | validate.yml.template |
 | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | The repository variable and the `publish` environment secret holding the GitHub App credential | validate.yml.template (PARAMETER 4) |
-| `dtk_tag`, `objdiff_tag` | The `config.<name>` lines of configure.py reported as tool provenance | tools/measuring_tools.py |
+| `TAGS`, `PINS`, `VERIFY` | The `config.<name>` lines of configure.py (or the JSON pin files) reported as tool provenance, and the commands that confirm each image-installed tool's version against the pin | tools/measuring_tools.py |
 | `## Project` | The repository's own agent rules | AGENTS.md |
 
 `config/site.json` may also carry `"artwork": {"cover": "cover.webp", "width": 1112, "height": 1600}`

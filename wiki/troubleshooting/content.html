@@ -104,7 +104,7 @@
 </tr>
 <tr>
 <td>Numbers look wrong on the page but the build is green</td>
-<td>Compare with <code>ninja ... progress</code> locally at the same commit. <code>linked</code> only counts <code>Matching</code> units; <code>matched</code> counts exact functions anywhere; <code>fuzzy</code> is size-weighted. A new split or a renamed unit changes <code>files</code> counts without changing bytes.</td>
+<td>Compare with a local measurement at the same commit (<code>ninja ... progress</code> with dtk-template). <code>linked</code> only counts <code>Matching</code> units; <code>matched</code> counts exact functions anywhere; <code>fuzzy</code> is size-weighted. A new split or a renamed unit changes <code>files</code> counts without changing bytes.</td>
 </tr>
 <tr>
 <td><code>measuring_tools: BUILD_IMAGE is not a digest-pinned image reference</code></td>
@@ -113,6 +113,14 @@
 <tr>
 <td><code>measuring_tools: configure.py has no objdiff_tag</code></td>
 <td>The <code>config.&lt;tag&gt; = "&lt;version&gt;"</code> line is missing or formatted differently; edit <code>TAGS</code> in <code>tools/measuring_tools.py</code> or the line.</td>
+</tr>
+<tr>
+<td><code>measuring_tools: dtk reports 'dtk 1.8.4'; the repository pins v1.8.3</code></td>
+<td>The image's tool and the repository's pin disagree: an image digest bumped without the pin, or the pin without the image. Change the one that is wrong, deliberately (<a href="/wiki/build-environment/">Build environment</a>); never publish a provenance the image does not match.</td>
+</tr>
+<tr>
+<td><code>measuring_tools: cannot run dtk --version to verify dtk</code></td>
+<td><code>VERIFY</code> in <code>tools/measuring_tools.py</code> names a command the image does not have at that path; fix the command or the image.</td>
 </tr>
 </tbody>
 </table></div>

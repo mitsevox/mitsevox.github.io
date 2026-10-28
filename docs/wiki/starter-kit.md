@@ -14,7 +14,7 @@ Download the [repository starter archive](/wiki/downloads/repository-starter.zip
 | `.github/workflows/validate.yml.template` | `.github/workflows/validate.yml` | [CI](/wiki/ci/) |
 | `config/targets.json`, `config/site.json`, `config/ci-targets.json`, `config/README.md` | `config/` | [Targets](/wiki/targets/), [Evidence](/wiki/evidence/) |
 | `include/version.h` | `include/` | [Build, verify, measure](/wiki/build-verify-measure/) |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/) |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/), [Contribution workflow](/wiki/contribution-workflow/), [Publishing](/wiki/publishing/) |
 | `tests/test_targets.py` | `tests/` | [CI](/wiki/ci/) |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the private repository | [Build environment](/wiki/build-environment/) |
 | `scaffold.json` | nowhere; the scaffold check reads it | this one |
@@ -40,7 +40,7 @@ Every project-specific value, and where it goes:
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |
 | Project checks | optional step and its command | `validate.yml.template` |
 | Credential names | `DATA_APP_CLIENT_ID` (repository variable), `DATA_APP_PRIVATE_KEY` (secret of the `publish` environment) | `validate.yml.template` PARAMETER 4 |
-| Reported tool versions | `dtk_tag`, `objdiff_tag` | `tools/measuring_tools.py` |
+| Reported and verified tool versions | `TAGS` (the `configure.py` lines) or `PINS` (JSON pin files), and `VERIFY` (the command that prints each image-installed tool's version) | `tools/measuring_tools.py` |
 | Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
 
@@ -50,7 +50,7 @@ Every project-specific value, and where it goes:
 
 | Class | Files | Checked |
 | --- | --- | --- |
-| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
+| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/tier.py`, `tools/credits.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
 | Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish, report-check and scaffold-check actions, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
