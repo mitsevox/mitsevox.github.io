@@ -115,9 +115,11 @@ class ConversionTests(unittest.TestCase):
         self.assertFalse([c for f in m['files'] for c in f.get('children', []) if c['name'].endswith('(other code)')])
         self.assertEqual(sum(f['size'] for f in m['sections'] if f['kind'] == 'code'), 40)
         # Counted bytes outside the functions that the sections do not leave: refused, named.
-        unit['measures']['total_code'] = '28'
-        with self.assertRaisesRegex(publish.ContractError, 'counts 4 bytes outside its functions, its code sections leave 8'):
-            publish.map_document(r, SECTIONS)
+        for count, outside in (('28', 4), ('20', -4)):
+            unit['measures']['total_code'] = count
+            with self.subTest(total_code=count), self.assertRaisesRegex(
+                    publish.ContractError, 'counts %d bytes outside its functions, its code sections leave 8' % outside):
+                publish.map_document(r, SECTIONS)
 
     def test_function_outside_code_sections_is_named(self):
         with self.assertRaisesRegex(publish.ContractError, 'outside the code sections'):

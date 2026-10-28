@@ -121,9 +121,10 @@ def data_fuzzy_bytes(unit, code_sections):
 def other_code(unit, code_sections):
     """The bytes of a unit's code sections that no function covers (alignment padding, code its
     producer does not split into functions), as [(section, start, end, matched)] in address order.
-    objdiff counts every byte of a code section in matched_code; the matched bytes that no exact
-    function accounts for are given to these pieces in address order, so the map and the summary
-    agree. A dtk-template report counts no such bytes (see below), so it gets none."""
+    Only for a producer that counts every byte of its code sections in total_code and matched_code
+    (nflstreet2's): the matched bytes that no exact function accounts for are given to these pieces
+    in address order, so the map and the summary agree. objdiff counts functions only, so a
+    dtk-template report gets none (see below)."""
     sections = sorted((s['name'], int(s['metadata']['virtual_address']), num(s.get('size')))
                       for s in unit.get('sections', []) if s['name'] in code_sections and num(s.get('size')))
     covered = merged((int(f['metadata']['virtual_address']), int(f['metadata']['virtual_address']) + num(f.get('size')))
@@ -147,7 +148,7 @@ def other_code(unit, code_sections):
     # for bytes total_code leaves out would make the map's code larger than the summary's.
     total = sum(end - start for _, start, end in pieces)
     counted = num(unit.get('measures', {}).get('total_code')) - sum(num(f.get('size')) for f in unit.get('functions', []))
-    if counted <= 0:
+    if counted == 0:
         return []
     require(counted == total, '%s: total_code counts %d bytes outside its functions, its code sections leave %d'
             % (unit['name'], counted, total))
