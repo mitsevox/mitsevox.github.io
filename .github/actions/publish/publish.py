@@ -362,8 +362,9 @@ def check_latest(latest, game, target):
     require(isinstance(modules, dict), 'latest.json: modules is missing')
     for key in ('map', 'contributors'):
         name = modules.get(key)
-        # A bare file name beside latest.json; never a path.
-        require(name is None or (isinstance(name, str) and name and '/' not in name and name not in ('.', '..')),
+        # A bare file name beside latest.json; never a path (a browser reads `\` as `/` in a URL).
+        require(name is None or (isinstance(name, str) and name and '/' not in name and '\\' not in name
+                                 and name not in ('.', '..')),
                 'latest.json: modules.%s is not a file name: %r' % (key, name))
 
 

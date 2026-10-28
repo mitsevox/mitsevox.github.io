@@ -53,7 +53,14 @@ def huge_report():
 
 class CheckDataTreeTests(unittest.TestCase):
     def test_both_readers_accept_what_the_publisher_writes(self):
-        result = check(tree_from(report(), report()))
+        tree = tree_from(report(), report())
+        # A target archived after it was published keeps its measurement, and both readers still
+        # check it: more than the page shows, exactly what every publish enforces.
+        game_path = tree / 'data/game/game.json'
+        game = json.loads(game_path.read_text())
+        game['targets'][1]['status'] = 'archived'
+        game_path.write_text(json.dumps(game))
+        result = check(tree)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn('publish.py check: 2 target(s) accepted', result.stdout)
         self.assertIn('page validator: 2 map(s) accepted', result.stdout)
