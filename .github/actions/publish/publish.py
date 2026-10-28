@@ -95,9 +95,12 @@ def fuzzy_bytes(function):
 
 def data_fuzzy_bytes(unit, code_sections):
     # objdiff reports a match percent per data section and rolls only 100% sections up into
-    # matched_data; size-weighted, as for functions.
-    return math.fsum(num(s.get('size')) * min(s.get('fuzzy_match_percent', 0), 100) / 100
-                     for s in unit.get('sections', []) if s['name'] not in code_sections)
+    # matched_data; size-weighted, as for functions. A percent turned back into bytes can land a
+    # rounding step outside [matched_data, total_data], which the page rejects, so it is held there.
+    m = unit.get('measures', {})
+    fuzzy = math.fsum(num(s.get('size')) * min(s.get('fuzzy_match_percent', 0), 100) / 100
+                      for s in unit.get('sections', []) if s['name'] not in code_sections)
+    return min(max(fuzzy, num(m.get('matched_data'))), num(m.get('total_data')))
 
 
 def other_code(unit, code_sections):
@@ -314,8 +317,10 @@ def check_measure(m, label):
         value = m.get(key)
         require(value is None or (isinstance(value, int) and 0 <= value <= total), label + ': invalid ' + key)
     fuzzy = m.get('fuzzy')
+    # Exactly the page's bounds (assets/report-map-validation.js): no tolerance, or a measure
+    # this check accepts can still be one the page refuses to draw.
     require(fuzzy is None or (isinstance(fuzzy, (int, float)) and math.isfinite(fuzzy)
-                              and (m.get('matched') or 0) - 1e-6 <= fuzzy <= total + 1e-6), label + ': invalid fuzzy')
+                              and (m.get('matched') or 0) <= fuzzy <= total), label + ': invalid fuzzy')
 
 
 def check_counts(c, label):

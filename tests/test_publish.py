@@ -100,6 +100,44 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaisesRegex(publish.ContractError, 'outside the code sections'):
             publish.map_document(report(), ('.init',))
 
+    def rounding_report(self):
+        # nflstreet2's dvd.c: 408 of 632 data bytes exact, sent as one percent on each of its six
+        # data extents. Back in bytes they sum to 407.99999999999994, a rounding step below
+        # matched_data.
+        r = report()
+        unit = r['units'][0]
+        address = 2147500000
+        unit['sections'][1:] = []
+        for size in (384, 152, 24, 60, 8, 4):
+            unit['sections'].append({'name': '.data', 'size': str(size), 'fuzzy_match_percent': 100 * 408 / 632,
+                                     'metadata': {'virtual_address': str(address)}})
+            address += size
+        unit['measures'].update(total_data='632', matched_data='408')
+        r['measures'].update(total_data='632', matched_data='408', complete_data='632')
+        return r
+
+    def test_data_fuzzy_stays_within_matched_and_total(self):
+        r = self.rounding_report()
+        s = publish.summary(r, SECTIONS)
+        m = publish.map_document(r, SECTIONS)
+        publish.check_map(m, s)
+        tile = next(f for f in m['files'] if f['kind'] == 'data')
+        self.assertEqual((tile['matched'], tile['fuzzy']), (408, 408))
+
+    def test_the_page_accepts_the_map(self):
+        # The page validates every map again before drawing it; run its own check on ours.
+        for r in (report(), self.rounding_report()):
+            s = publish.summary(r, SECTIONS)
+            measures = {kind: {k: s[kind][k] for k in ('total', 'linked', 'matched', 'fuzzy')}
+                        for kind in ('code', 'data')}
+            script = ("import {validateMap} from './assets/report-map-validation.js';\n"
+                      "const [map, measures] = JSON.parse(process.argv[1]);\n"
+                      "validateMap(map, measures);\n")
+            payload = json.dumps([publish.map_document(r, SECTIONS), measures])
+            result = subprocess.run(['node', '--input-type=module', '-e', script, payload],
+                                    cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_map_check_catches_drift(self):
         s = publish.summary(report(), SECTIONS)
         m = publish.map_document(report(), SECTIONS)
