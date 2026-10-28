@@ -10,8 +10,8 @@ export function withTarget(project, id) {
   return {
     ...project, target:id, selectedTarget:target, unknownTarget:!target, available:!!report, report,
     targetSha1:target?.sha1, reportBase:report ? `${project.base}${id}/` : null,
-    // A single-target game shows its id inline instead of a picker.
-    targetCatalog:target && project.targets.length > 1 ? project.targets : null,
+    // Every game is a list of targets, so every game shows the picker, even with one entry.
+    targetCatalog:target ? project.targets : null,
     modules:{map:!!report?.modules.map, timeline:!!report, contributors:!!report?.modules.contributors,
       functionCounts:counted(s?.functions), fileCounts:counted(s?.files)},
     contributionsEnabled:!!report && !!project.contributions?.accepting,
