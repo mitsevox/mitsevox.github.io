@@ -1,9 +1,5 @@
 {
   "schemaVersion": 1,
   "shared": ["src/**", "include/**", "asm/**", "configure.py", "tools/**", ".github/workflows/validate.yml", "config/targets.json", "config/ci-targets.json", "config/site.json"],
-  "targets": {
-    "GAME01-rev0": ["config/GAME01-rev0/**", "orig/GAME01-rev0/**"],
-    "GAME01-rev1": ["config/GAME01-rev1/**", "orig/GAME01-rev1/**"]
-  },
-  "nonBuild": ["*.md", "docs/**", "references/**", "tests/**", ".github/workflows/review.yml", ".github/pull_request_template.md", ".gitignore", ".gitattributes"]
+  "nonBuild": ["*.md", "docs/**", "references/**", "tests/**", ".github/pull_request_template.md", ".gitignore", ".gitattributes"]
 }

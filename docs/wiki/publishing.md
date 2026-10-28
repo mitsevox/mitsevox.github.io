@@ -22,7 +22,7 @@ Then, in the producer repository (Settings, Secrets and variables, Actions):
 | Variable | `DATA_APP_CLIENT_ID` | The App's client id |
 | Secret | `DATA_APP_PRIVATE_KEY` | The full contents of the `.pem` file |
 
-The names are yours; `validate.yml` passes them to the action as `app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}` and `app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}` (PARAMETER 4). The reference repository uses the names `PORTFOLIO_APP_CLIENT_ID` and `PORTFOLIO_APP_PRIVATE_KEY`.
+The names are yours; `validate.yml` passes them to the action as `app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}` and `app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}` (PARAMETER 4).
 
 ## The action's inputs
 

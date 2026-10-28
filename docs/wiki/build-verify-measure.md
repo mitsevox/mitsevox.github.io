@@ -8,25 +8,20 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
 
 ## Local setup for a dtk-template project
 
-1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). dtk-template names its config folder after the game ID (`config/GAMEID/`); rename it to the target id (`config/GAME01-rev0/`) before adding anything, and use the target id wherever the template says version. Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you.
-2. Wire `configure.py` to the target list so the active targets are the only versions it accepts and `--version` takes a target id. Replace dtk-template's hard-coded `VERSIONS` list with:
+1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). dtk-template names its config folder after the game ID (`config/GAMEID/`); rename it to the target id (`config/GAME01-rev0/`) before adding anything, and use the target id wherever the template says version. Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you. Record the template's revision in `CREDITS.md` and link its documentation from the README rather than copying it into the repository.
+2. Wire `configure.py` to the target list so the active targets are the only versions it accepts, `--version` takes a target id and the target's define is derived. Replace dtk-template's hard-coded `VERSIONS` list with:
 
     ```python
-    from tools.targets import registry, build_targets
+    from tools.targets import registry, build_targets, define
 
     TARGET_REGISTRY = registry()
     VERSIONS = build_targets(TARGET_REGISTRY)
     DEFAULT_VERSION = VERSIONS.index(TARGET_REGISTRY['defaultTarget'])
     ```
 
-    and add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
+    add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`, point `config.config_path` and `config.check_sha_path` at `config/<version>/config.yml` and `config/<version>/build.sha1`, and pass `f"-D{define(config.version)}"` in `cflags_base` next to the template's `-DBUILD_VERSION=`. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
 3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag.
-4. Place your own copy of the original at `orig/<target id>/sys/main.dol` (the path `config.yml` and `tools/verify_target.py` name; `orig/*/*` is ignored by Git) and verify it:
-
-    ```sh
-    python3 tools/verify_target.py --target GAME01-rev0
-    ```
-
+4. Place your own copy of the original at `orig/<target id>/sys/main.dol`, the path `config.yml` names (`orig/*/*` is ignored by Git). The toolkit refuses an original whose hash differs from `config.yml`, and `python3 tools/targets.py check` confirms that `config.yml`, `build.sha1` and `targets.json` agree.
 5. Configure and build:
 
     ```sh
@@ -43,6 +38,8 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     ```
 
     `progress` prints the per-category summary; `build/<target id>/report.json` is the objdiff report CI publishes. This is exactly the command the starter `validate.yml` runs, after the same `configure.py` call with the image's tool paths.
+
+With more than one active target, repeat steps 5 and 6 per target; the README's Building section shows the loop. A shared change is safe for every target only when every target has been built.
 
 ## What the three measures mean
 
@@ -62,6 +59,27 @@ The action checks the report's own totals against its function list and refuses 
 
 Useful partial reconstruction stays in its normal file under `src/` and is registered as a `NonMatching` object. The combined executable still matches because the original bytes for that unit remain linked; objdiff measures the source separately. Reviewers and CI treat matching incompleteness as progress, not as a failure. See [Contribution workflow](/wiki/contribution-workflow/) for how partial units are reviewed and promoted.
 
+## Version differences
+
+Every target has one preprocessor define, `VERSION_<ID>`: the id upper-cased with `-` and `.` replaced by `_`, so `GAME01-rev0` compiles with `VERSION_GAME01_REV0`. `tools/targets.py` derives it and `configure.py` passes it; no file stores it. dtk-template also passes a numeric `BUILD_VERSION`; it stays defined for compatibility and is never read, because `BUILD_VERSION >= 1` stops meaning anything the day a region is inserted between two revisions.
+
+- A difference lives in the shared file under `#if VERSION_GAME01_REV0` or `#if !VERSION_GAME01_REV0`. A condition is a boolean expression of `VERSION_` tokens and group macros, with `!`, `&&` and `||` only, and nothing else: no numeric comparison, no other macro in the same condition. A version condition nested inside an ordinary `#ifdef` is fine; the two must not mix in one line.
+- When two or more targets share a difference, name the group once in `include/version.h`: `#define REGION_USA (VERSION_GAME01_REV0 || VERSION_GAME01_REV1)`. The header exists from the first commit with the rule as its comment, so the first divergent PR cannot invent a second scheme.
+- Inline blocks are the default. When a function would carry three or more blocks, or more than about a third of its lines inside blocks, write the whole function once per variant under one function-level `#if ... #else ... #endif`, in the same file. Never a `src/<id>/` file for a unit two targets share.
+- A unit that matches on some targets only is `Object(MatchingFor("GAME01-rev0"), "unit.cpp")`; a unit absent from a target is absent from that target's `splits.txt`. Compiler or flag differences between targets are whole profiles chosen by `config.version` in `configure.py`, with a `compiler` evidence row in each target's `evidence.tsv`.
+
+`tools/versions.py` reads this convention back:
+
+```sh
+python3 tools/versions.py view --target GAME01-rev0 src/unit.cpp
+python3 tools/versions.py diff --target GAME01-rev0 --target GAME01-rev1 src/unit.cpp
+python3 tools/versions.py check
+```
+
+`view` prints the file as one target compiles it: it resolves exactly the directives whose condition is a version expression and leaves every other directive and all macros untouched, so what you read is still source, not preprocessor output. `diff` is the unified diff between two targets' views; a reviewer of a change to a file with version blocks reads it instead of tracing the branches by eye. `check` fails on a `VERSION_` token that is not a known define or group, a `MatchingFor` argument that is not a known target id, a version condition mixed with other macros, and any `BUILD_VERSION` in `src/` or `include/`. The `Tool tests` job runs `check`; the scaffold check runs it too.
+
+A function decompiled for one target counts for another automatically when, on that target, `splits.txt` names the unit, `configure.py` says `Matching` or `MatchingFor` for it, and `symbols.txt` gives the function the same name, because objdiff pairs by symbol name. Different addresses are a per-target `symbols.txt` and `splits.txt` matter and never touch source; a function present on one target only, or data that differs, is an `#if` block with `MatchingFor` until both targets link.
+
 ## Reading the report
 
 The publish action reads these parts of `report.json`, so any producer must write them the way objdiff does:
@@ -79,10 +97,11 @@ Every function must lie inside one of the code sections of its unit, or the acti
 
 ## Other platforms
 
-The publish action converts objdiff reports and nothing else. objdiff supports several architectures, so a project on another platform that produces `report.json` with `objdiff-cli report generate` can use the whole pipeline unchanged apart from these parameters:
+The per-target directory, the define rule, the planner, the tiers, the Targets table and the settings are toolchain-neutral. The publish action converts objdiff reports and nothing else, and objdiff supports several architectures, so a project on another platform that produces `report.json` with `objdiff-cli report generate` can use the whole pipeline unchanged apart from these parameters:
 
-- the original's path under `orig/<target id>/` (`ORIGINAL` in `tools/verify_target.py`, `PARAMETER 2` in `validate.yml`, the `COPY` in the Dockerfile);
+- the original's path under `orig/<target id>/` (`PARAMETER 2` in `validate.yml`, the `COPY` in the Dockerfile, the toolchain's own config);
 - the configure and build commands (`PARAMETER 3` in `validate.yml`), which must fail unless the complete executable matches and must write `build/<target id>/report.json`;
+- `config/<target id>/` holds a splat or custom configuration instead of dtk's three files; `tools/versions.py` reads the same `#if` convention, and the `MatchingFor` equivalent lives in whatever generates the build;
 - the `code-sections` and `unit-prefix` inputs of the publish action if the defaults do not fit;
 - the `TAGS` dictionary in `tools/measuring_tools.py`, which names the version lines of `configure.py` to report.
 

@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "description": "The scaffold spec: what every decompilation repository shares. Read by the scaffold check in the site repository; the paths are repository-relative and <id> stands for a target id from config/targets.json.",
+  "required": [
+    "README.md", "CONTRIBUTING.md", "AGENTS.md", "CREDITS.md", ".gitignore", ".gitattributes",
+    "config/targets.json", "config/site.json", "config/ci-targets.json", "config/README.md",
+    "include/version.h",
+    "tools/__init__.py", "tools/targets.py", "tools/ci_targets.py", "tools/measuring_tools.py",
+    "tools/versions.py", "tools/evidence.py", "tools/new_target.py",
+    "tests/test_targets.py",
+    ".github/workflows/validate.yml", ".github/pull_request_template.md"
+  ],
+  "buildEntry": ["configure.py", "Makefile", "build.py"],
+  "perTarget": {
+    "every": ["orig/<id>/.gitkeep", "config/<id>/README.md"],
+    "active": ["config/<id>/build.sha1", "config/<id>/evidence.tsv"],
+    "activeWithDtk": ["config/<id>/config.yml", "config/<id>/splits.txt", "config/<id>/symbols.txt"]
+  },
+  "rootAllowlist": [
+    "README.md", "CONTRIBUTING.md", "AGENTS.md", "CREDITS.md", "CLAUDE.md", "LICENSE",
+    ".gitignore", ".gitattributes", ".flake8", ".git",
+    "configure.py", "Makefile", "build.py",
+    "src", "include", "extern", "tools", "tests", "docs", "references", "licenses", "orig", "build",
+    "config", ".github", ".vscode"
+  ],
+  "naming": {
+    "targetId": "[A-Za-z0-9._-]+",
+    "slug": "[a-z0-9][a-z0-9-]*",
+    "unnamedFunction": "(?:fn|func)_[0-9A-Fa-f]+",
+    "aggregateCheck": "Validate targets"
+  },
+  "readmeHeadings": [
+    "## Targets", "## Building", "## CI and the progress site", "## Contributing", "## Layout", "## Credits and licenses"
+  ],
+  "byteIdentical": [
+    "tools/targets.py", "tools/ci_targets.py", "tools/versions.py", "tools/evidence.py", "tools/new_target.py",
+    "tests/test_targets.py", "config/README.md"
+  ],
+  "outline": {
+    "README.md": "readmeHeadings",
+    "CONTRIBUTING.md": "sectionHeadings",
+    "AGENTS.md": "kitHeader",
+    ".github/pull_request_template.md": "contains",
+    ".github/workflows/validate.yml": "workflow"
+  },
+  "mustContain": {".github/pull_request_template.md": ["## Targets"]},
+  "workflow": {
+    "path": ".github/workflows/validate.yml",
+    "jobs": ["Plan affected targets", "Tool tests", "Validate ${{ matrix.target }}", "Validate targets"],
+    "steps": [
+      "Select affected target inputs", "Run tool tests", "Check the scaffold",
+      "Require a repository contribution branch", "Provide target original", "Configure target",
+      "Build, verify complete executable and measure progress", "List measuring tools", "Publish to the site",
+      "Require all selected target validations"
+    ],
+    "optionalSteps": ["Project checks"],
+    "publishAction": "mitsevox/mitsevox.github.io/.github/actions/publish@main",
+    "scaffoldAction": "mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main",
+    "imageVariable": "BUILD_IMAGE",
+    "imagePattern": "ghcr\\.io/[^@\\s]+@sha256:[0-9a-f]{64}",
+    "workflowDirectory": ".github/workflows"
+  },
+  "forbidden": ["docs/dtk", "config/<id>/config.example.yml"],
+  "ciTargetsForbiddenKeys": ["targets"],
+  "referencesMaxBytes": 4194304,
+  "gitignore": ["orig/*/*", "build/", "*.dol", "*.elf"]
+}

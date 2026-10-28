@@ -1,0 +1,49 @@
+# A Game: Full Title
+
+PARAMETERS: everything in this file is the project's own. Keep the seven headings below, in this order; the scaffold check compares them by text. Copy to README.md.
+
+A matching decompilation of **A Game: Full Title** (GameCube, 2002). The goal is source that compiles back to a byte-identical copy of each original executable, with names, types and source structure supported by evidence.
+
+## Targets
+
+| Id | Region | Revision | Status | Original SHA-1 |
+| --- | --- | --- | --- | --- |
+| `GAME01-rev0` | USA | 0 | active | `0000000000000000000000000000000000000000` |
+| `GAME01-rev1` | USA | 1 | planned | `1111111111111111111111111111111111111111` |
+
+`config/targets.json` is the registry; each target's inputs are in `config/<id>/`.
+
+## Building
+
+You need your own copy of each game disc. Keep disc images and extracted files outside public Git.
+
+1. Place the original at `orig/<id>/sys/main.dol`.
+2. `python3 configure.py --version <id>` then `ninja -f build/<id>/build.ninja`. The build fails unless the relinked executable matches `config/<id>/build.sha1`.
+3. `ninja -f build/<id>/build.ninja progress build/<id>/report.json` measures the target.
+
+To check every active target: `for id in $(python3 -c 'from tools.targets import build_targets; print(*build_targets())'); do python3 configure.py --version "$id" && ninja -f "build/$id/build.ninja"; done`.
+
+Pinned tool versions are in `configure.py`; the build structure is [dtk-template](https://github.com/encounter/dtk-template) at the revision named in `CREDITS.md`.
+
+## CI and the progress site
+
+`.github/workflows/validate.yml` builds every affected target in the private build image and publishes each measurement to the [progress site](https://mitsevox.github.io/games/game/) on `main`. Pull requests publish nothing.
+
+## Contributing
+
+The project owner is **OWNER_LOGIN**, the sole merge authority. See [CONTRIBUTING.md](CONTRIBUTING.md) for the tiers, the task loop and the review checklist; agents start with [AGENTS.md](AGENTS.md).
+
+## Layout
+
+| Directory | Purpose |
+| --- | --- |
+| `src/`, `include/` | Shared reconstructed source and headers; version differences under `#if VERSION_<ID>` (`include/version.h`) |
+| `config/<id>/` | One target's toolkit inputs, `build.sha1` and `evidence.tsv` |
+| `orig/<id>/` | Where the original goes locally; ignored by Git |
+| `build/<id>/` | Generated; ignored |
+| `tools/`, `tests/` | The kit tools, dtk-template's tools and the project's own, with their tests |
+| `docs/`, `references/` | Durable project knowledge and regenerable reference material |
+
+## Credits and licenses
+
+Imported source is credited in [CREDITS.md](CREDITS.md); licenses are under `licenses/`.

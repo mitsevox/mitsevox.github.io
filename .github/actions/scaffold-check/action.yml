@@ -1,0 +1,30 @@
+name: Scaffold check
+description: >-
+  Check a decompilation repository against the scaffold spec (docs/wiki/starter/scaffold.json) and
+  the starter kit at this action's revision. Prints one warning per finding and exits 0; with
+  strict: true it fails instead. Run it in the Tool tests job after the repository's own tests.
+inputs:
+  strict:
+    description: Fail the step on any finding instead of warning.
+    default: 'false'
+  path:
+    description: The checkout to check.
+    default: '.'
+  settings:
+    description: Also read the repository settings the default token can see and compare them with config/repo-standard.json.
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - name: Check the scaffold
+      shell: sh
+      env:
+        GH_TOKEN: ${{ github.token }}
+        STRICT: ${{ inputs.strict }}
+        REPO_PATH: ${{ inputs.path }}
+        SETTINGS: ${{ inputs.settings }}
+      run: |
+        set -- --repo "$REPO_PATH" --github
+        if [ "$STRICT" = true ]; then set -- "$@" --strict; fi
+        if [ "$SETTINGS" = true ]; then set -- "$@" --settings "$GITHUB_REPOSITORY"; fi
+        python3 "$GITHUB_ACTION_PATH/scaffold_check.py" "$@"

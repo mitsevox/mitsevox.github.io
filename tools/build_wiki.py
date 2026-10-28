@@ -64,7 +64,7 @@ downloads.mkdir(exist_ok=True)
 (downloads / "handbook.md").write_text("# Decompilation project guide\n\nReference snapshot: 2026-10-28. Project repository rules take precedence.\n\n"+"\n\n---\n\n".join(handbook))
 with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFLATED) as archive:
     for path in sorted((SOURCE / "starter").rglob("*")):
-        if path.is_file():
+        if path.is_file() and "__pycache__" not in path.parts:
             info = zipfile.ZipInfo("repository-starter/"+str(path.relative_to(SOURCE / "starter")), date_time=(2026,10,25,0,0,0))
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, path.read_bytes())

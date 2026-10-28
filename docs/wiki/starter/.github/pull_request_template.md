@@ -1,15 +1,23 @@
 ## Scope
 
-Task/issue, affected unit or tools, dependencies, and unresolved work.
+Tier (A, B or C), task or issue, affected units or tools, dependencies, and unresolved work.
+
+## Targets
+
+One row per active target. A shared change is safe for a target only when its row is filled from a build of that target.
+
+| Target | Byte-identical | Units touched (Matching state there) | Progress delta (`ninja ... progress`) | Evidence rows added |
+| --- | --- | --- | --- | --- |
+| GAME01-rev0 | yes / no | | | |
 
 ## Evidence and validation
 
-Evidence records and test/build commands with results. Identify what was checked; a baseline relink does not validate reconstructed source.
+Evidence records and the test and build commands with their results, per target. Identify what was checked; a baseline relink does not validate reconstructed source. For a file with a new `#if VERSION_` block, the `python3 tools/versions.py diff` output was read.
 
 ## Review
 
 - Reviewed revision: full commit SHA
-- Independent accuracy pass: record link, or justified N/A
-- Fresh hostile pass and recheck: record link and verdict
+- Accuracy record (tier A): link, or justified N/A
+- Hostile record (tiers A and B): link and verdict
 
-Request the owner's decision only after reviews and required CI cover the final revision. New substantive changes require renewed review. Contributors do not merge.
+Request the owner's decision only after the records and required CI cover the final revision. New substantive changes require renewed review. Contributors do not merge.

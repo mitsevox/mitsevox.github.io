@@ -6,7 +6,7 @@ Reference snapshot: 2026-10-28. Project repository rules take precedence.
 
 How to set up a decompilation repository that builds in a private environment, accepts reviewed contributions and publishes its progress to this site.
 
-This guide is written for someone, or some agent, dropped into an empty repository with a game binary and no other context. Followed in order, it ends with a repository whose every push to `main` builds the target, verifies it byte for byte, measures it with objdiff and publishes the measurement to the progress site. The only things it cannot decide for you are your project's parameters: the platform, the compiler versions and tooling, the split configuration, the target ids and the presentation. Everything else is specified exactly, and every command, file name, field and secret named here matches the shipped code.
+This guide is written for someone, or some agent, dropped into an empty repository with a game binary and no other context. Followed in order, it ends with a repository whose every push to `main` builds each target, verifies it byte for byte, measures it with objdiff and publishes the measurement to the progress site. The only things it cannot decide for you are your project's parameters: the platform, the compiler versions and tooling, the split configuration, the target ids and the presentation. Everything else is specified exactly, every command, file name, field and secret named here matches the shipped code, and a scaffold check in CI keeps the repository matching the guide afterwards.
 
 ## The three repositories
 
@@ -18,16 +18,16 @@ Each game is three repositories. Two are yours; the third is shared by every gam
 | `owner/game-build` | private | The original executables and the toolchain, built into a container image on GitHub Container Registry. Also private. |
 | [`mitsevox/decomp-data`](https://github.com/mitsevox/decomp-data) | public, shared | The published measurements of every game, served by GitHub Pages at `https://mitsevox.github.io/decomp-data/`. |
 
-The site itself, [`mitsevox/mitsevox.github.io`](https://github.com/mitsevox/mitsevox.github.io), is a static page that reads the data repository at view time. It also hosts the publish action and the data contract that the producer uses. Adding a game changes nothing in the site repository.
+The site itself, [`mitsevox/mitsevox.github.io`](https://github.com/mitsevox/mitsevox.github.io), is a static page that reads the data repository at view time. It also hosts the publish action, the scaffold check, the starter kit, the scaffold spec, the repository settings standard and the data contract. Adding a game changes nothing in the site repository.
 
 ```text
 owner/game (public)                        owner/game-build (private)
   push to main                               push to main
   validate.yml                               image.yml
     plan: which targets changed                docker build: /orig/<target>/..., toolchain
-    tests: tool tests                          push ghcr.io/owner/game-build:main, print digest
+    tests: tool tests, scaffold check          push ghcr.io/owner/game-build:main, print digest
     Validate <target>, inside the image  <---  referenced by digest
-      copy and verify the original
+      copy the original
       configure, build, check the executable hash
       objdiff report -> build/<target>/report.json
       publish action (main only) -----------> mitsevox/decomp-data (public)
@@ -47,31 +47,34 @@ mitsevox.github.io/games/game/  reads  /decomp-data/ at view time
 | `OWNER_LOGIN` | the owner's GitHub login |
 | `game` | the game's slug on the site, `[a-z0-9][a-z0-9-]*` |
 | `GAME01-rev0` | a target id, `[A-Za-z0-9._-]+`; `GAME01` is its label, `0` its revision |
+| `VERSION_GAME01_REV0` | that target's preprocessor define, derived from the id |
 | `ghcr.io/owner/game-build@sha256:...` | the build image, always referenced by digest |
-| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | the repository variable and secret that hold the publishing credential (names are yours to choose) |
+| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | the repository variable and secret that hold the publishing credential |
 
-The examples are for a GameCube target built with decomp-toolkit and dtk-template, because that is what the reference repositories use. Another platform changes the toolchain, the original's path inside the image and the build commands; it changes nothing in CI structure, publishing or the site.
+The examples are for a GameCube target built with decomp-toolkit and dtk-template, because that is what the reference repositories use. Another platform changes the toolchain, the original's path inside the image and the build commands; it changes nothing in the layout, the CI structure, publishing or the site.
 
 ## The setup path
 
-1. [Repository layout](/wiki/repository-layout/): create the public repository with the tracked and ignored paths.
-2. [Targets](/wiki/targets/): write `config/targets.json`, `config/site.json` and `config/ci-targets.json`.
+1. [Repository layout](/wiki/repository-layout/): create the public repository with the tracked and ignored paths and the root allowlist.
+2. [Targets](/wiki/targets/): write `config/targets.json`, `config/site.json` and `config/ci-targets.json`; scaffold `config/<id>/` with `tools/new_target.py`.
 3. [Build environment](/wiki/build-environment/): create the private repository, build the image, make the package readable by the public repository, note the digest.
-4. [Build, verify, measure](/wiki/build-verify-measure/): get a byte-identical relink locally and an objdiff `report.json`.
+4. [Build, verify, measure](/wiki/build-verify-measure/): get a byte-identical relink locally and an objdiff `report.json`; learn how version differences are written and read.
 5. [Evidence](/wiki/evidence/) and the [contribution workflow](/wiki/contribution-workflow/): adopt `AGENTS.md`, `CONTRIBUTING.md` and the PR template.
-6. [Review gate](/wiki/review-gate/): install `review.yml`, set `REVIEW_OWNER`, make the status required.
-7. [CI](/wiki/ci/): install `validate.yml` with your image digest and build commands.
-8. [Publishing](/wiki/publishing/): create the GitHub App credential, add the variable and secret, push to `main`.
+6. [CI](/wiki/ci/): install `validate.yml` with your image digest and build commands; the scaffold check runs in it.
+7. [Publishing](/wiki/publishing/): create the GitHub App credential, add the variable and secret, push to `main`.
+8. [Repository settings](/wiki/repository-settings/): apply the settings standard to both repositories.
 9. [The site](/wiki/site/): check the page, commit cover art to the data repository.
 
-[Data contract](/wiki/data-contract/) describes what the publish action writes; [Troubleshooting](/wiki/troubleshooting/) lists the failure messages; [Starter kit](/wiki/starter-kit/) is the download with every copyable file.
+[Data contract](/wiki/data-contract/) describes what the publish action writes; [Troubleshooting](/wiki/troubleshooting/) lists the failure messages; [Starter kit](/wiki/starter-kit/) is the download with every copyable file and the scaffold spec.
 
 ## What done looks like
 
 - A push to `main` runs `Validate` with the jobs `Plan affected targets`, `Tool tests`, `Validate <target id>` for each affected active target and `Validate targets`.
+- The `Tool tests` job's `Check the scaffold` step reports no warnings.
 - The `Validate <target id>` job ends with `Publish to the site`, and the data repository gains a commit titled `game GAME01-rev0: <sha>, <n>% code linked`.
 - The data repository's `Deploy` workflow runs, and `https://mitsevox.github.io/games/game/` shows the new measurement within a few minutes.
-- A pull request runs the same build without the publish step, and cannot merge until `Validate targets` and `Owner review clearance` pass.
+- A pull request runs the same build without the publish step, and cannot merge until `Validate targets` passes and the owner merges it.
+- `python3 tools/repo_settings.py --repo owner/game --check` reports no drift.
 
 ## Glossary
 
@@ -79,19 +82,20 @@ The examples are for a GameCube target built with decomp-toolkit and dtk-templat
 | --- | --- |
 | target | One original binary the project matches: a game id plus a disc revision, region or platform. Identified by a stable id. |
 | active | A target that is built, verified and measured. `planned` and `archived` targets are listed on the page but never built. |
+| define | `VERSION_<ID>`: the id upper-cased with `-` and `.` replaced by `_`. The preprocessor symbol under which a target's differences live. |
+| group | A macro in `include/version.h` naming two or more targets that share a difference, such as a region. |
 | original | The unmodified executable, kept in the private image and never in the public repository. |
 | build image | The private container image with the originals and the toolchain, referenced by digest. |
 | objdiff report | `report.json`, written by `objdiff-cli report generate`; the only measurement input the publish action reads. |
 | linked | Bytes of units that compile from source into the byte-identical executable (`Matching` objects). |
 | matched | Bytes that match exactly whether linked or not (exact functions in `NonMatching` units count). |
 | fuzzy | Size-weighted similarity of every function and data section. |
+| tier | A, B or C: what a PR touches decides which review records it needs. |
+| review record | A PR comment that starts with `Revision:`, `Targets:` and an `Accuracy:` or `Hostile:` verdict. |
+| scaffold check | The composite action in the site repository that compares a checkout with the kit and the spec, in warn mode. |
 | publish action | `mitsevox/mitsevox.github.io/.github/actions/publish`, which converts the report into the contract files and pushes them. |
 | data repository | `mitsevox/decomp-data`: one directory per game and target, served by Pages. |
 | contract | The schema-1 file format (`contract/README.md`); `publish.py check` is its executable form. |
-| review record | A PR comment that starts with `Revision:` and an `Accuracy:` or `Hostile:` verdict. |
-| owner clearance | The owner's comment that names the head revision and two passing review records. |
-| `REVIEW_OWNER` | The login whose clearance comments the review gate trusts. |
-| merge gate | Optional: an agent acting under the owner's account to which the owner delegates clearance and merging. |
 
 ## Using this guide with an agent
 
@@ -106,48 +110,61 @@ What the public repository tracks, what it ignores and where each file lives.
 
 ## The public repository
 
-This is the layout of a GameCube or Wii project built with [dtk-template](https://github.com/encounter/dtk-template), with the files this guide adds marked. Keep the names: the CI workflow, the tools and the publish action refer to them.
+This is the layout of a GameCube or Wii project built with [dtk-template](https://github.com/encounter/dtk-template), with the files the starter kit provides marked. Keep the names: the CI workflow, the tools, the scaffold check and the publish action refer to them.
 
 ```text
 game/
-  README.md                      target, owner, build commands
-  CONTRIBUTING.md                contribution, review and merge policy   (starter)
-  AGENTS.md                      agent instructions                      (starter)
-  .gitignore                     originals, generated output             (starter)
-  .gitattributes                 optional: line endings for toolkit files
+  README.md                      targets, owner, build commands; seven fixed headings
+  CONTRIBUTING.md                tiers, task loop, matching integrity, checklist  (starter)
+  AGENTS.md                      fixed header, then the project's own section    (starter)
+  CLAUDE.md                      one line: @AGENTS.md                            (starter)
+  CREDITS.md                     origin and license of imported source           (starter)
+  .gitignore, .gitattributes     originals, generated output; LF for toolkit files (starter)
   configure.py                   build configuration: libraries, objects, flags (dtk-template)
   config/
-    targets.json                 the target list, schema 1               (starter)
-    site.json                    presentation on the site                (starter)
-    ci-targets.json              which paths affect which target         (starter)
-    README.md                    evidence record format                  (starter)
+    targets.json                 the target list, schema 1                      (starter)
+    site.json                    presentation on the site                       (starter)
+    ci-targets.json              which shared paths affect every target         (starter)
+    README.md                    evidence record format                         (starter)
     GAME01-rev0/                 one directory per target, named by its id
       config.yml                 decomp-toolkit project: original path, hash, symbols, splits
       splits.txt, symbols.txt    toolkit inputs
       build.sha1                 expected hash of the built executable
       evidence.tsv               curated claims
-  src/                           reconstructed source, complete and partial
-  include/                       shared declarations
+      README.md                  the target in one paragraph
+  src/                           reconstructed source, shared by every target
+  include/
+    version.h                    the version-difference rule and group macros   (starter)
   tools/
-    __init__.py                                                          (starter)
-    targets.py                   reads and validates config/targets.json (starter)
-    ci_targets.py                selects affected targets in CI          (starter)
-    verify_target.py             checks the original's SHA-1             (starter)
-    measuring_tools.py           lists tool versions for provenance      (starter)
+    __init__.py                                                                 (starter)
+    targets.py                   reads config/targets.json, derives the define  (starter)
+    ci_targets.py                selects affected targets in CI                 (starter)
+    versions.py                  view, diff and check version differences       (starter)
+    evidence.py                  checks evidence.tsv                            (starter)
+    new_target.py                scaffolds config/<id>/                         (starter)
+    measuring_tools.py           lists tool versions for provenance             (starter)
     project.py, ninja_syntax.py, download_tool.py, ...   dtk-template
   tests/
-    test_targets.py                                                      (starter)
-    review_gate.mjs                                                      (starter)
-  docs/                          durable documentation
+    test_targets.py                                                             (starter)
+  docs/                          durable project knowledge
+  references/                    text only, regenerable by a named tool, no file over 4 MB
+  licenses/                      license texts of imported source
   orig/GAME01-rev0/.gitkeep      where the original goes locally; the file itself is ignored
   build/                         generated, ignored
   .github/
-    workflows/validate.yml                                               (starter)
-    workflows/review.yml                                                 (starter)
-    pull_request_template.md                                             (starter)
+    workflows/validate.yml                                                      (starter)
+    pull_request_template.md                                                    (starter)
 ```
 
 Three directories are keyed by the target id and nothing else: `config/<target id>/` for inputs, `orig/<target id>/` for the original, `build/<target id>/` for everything generated, including `build.ninja`, `objdiff.json` and `report.json`. Switching targets never overwrites another target's files. This holds for a project with a single target too: there is no flat, unkeyed layout to grow out of later.
+
+## Shared and per target
+
+A file is per target only when it holds an address, a hash or a unit list of one binary: `config/<id>/config.yml`, `splits.txt`, `symbols.txt`, `build.sha1`, `evidence.tsv`, `README.md`, an `ldscript.tpl` when the toolkit needs one, and tool reports. Everything else has one copy: `src/`, `include/`, `configure.py` listing the union of units, `tools/`, `tests/`, `docs/`, `references/` and the three JSON files under `config/`. A unit that exists on some targets only is simply absent from the other targets' `splits.txt`; there is no per-target source file and no unit-to-target table. Version differences inside a shared file are `#if VERSION_<ID>` blocks, described in [Build, verify, measure](/wiki/build-verify-measure/#version-differences).
+
+## The root allowlist
+
+The root holds the required files plus these directories and nothing else: `src/`, `include/`, `extern/` (verbatim imported source trees, each with its own credits), `tools/`, `tests/`, `docs/`, `references/`, `licenses/`, `orig/`, `build/`, `config/`, `.github/`, `.vscode/`, and the files `LICENSE`, `CLAUDE.md` and `.flake8`. Anything else at the root is a warning from the scaffold check; project material goes under `docs/`, `tools/` or `references/`. Two things never exist: a copy of upstream toolkit documentation under `docs/dtk/`, and `config/<id>/config.example.yml`; link dtk-template at its pinned revision from the README instead.
 
 ## Tracked and ignored
 
@@ -157,7 +174,7 @@ Public Git holds reviewed source, headers, tools, curated evidence and configura
 - generated objects, build directories, objdiff and editor configuration (`build/`, `build.ninja`, `objdiff.json`, `compile_commands.json`);
 - complete debug exports, private analysis databases or discarded trial variants.
 
-The starter `.gitignore` covers these for a dtk-template project. A `.gitignore` entry does not remove a file already tracked; inspect `git status` before every commit that touches `orig/`.
+The starter `.gitignore` covers these for a dtk-template project; the scaffold check requires it to cover `orig/*/*`, `build/`, `*.dol` and `*.elf` at least. A `.gitignore` entry does not remove a file already tracked; inspect `git status` before every commit that touches `orig/`.
 
 ## The private repository
 
@@ -191,17 +208,19 @@ Only active targets have a directory. See [Data contract](/wiki/data-contract/).
 
 ## Naming
 
-- Target ids are `[A-Za-z0-9._-]+` and stable forever: they name directories, the site's `?target=` value and the data directory. `<label>-rev<revision>` is the convention the examples use.
+- Target ids are `[A-Za-z0-9._-]+` and stable forever: they name directories, the site's `?target=` value and the data directory. The convention is `<label>-rev<N>` for discs with a game id (`GAME01-rev0`) and `<serial>-v<version>` where the platform carries a serial and a version (`SLUS-20349-v1.01`).
+- A target's define is `VERSION_<ID>` with the id upper-cased and `-` and `.` replaced by `_`: `GAME01-rev0` gives `VERSION_GAME01_REV0`, `SLUS-20349-v1.01` gives `VERSION_SLUS_20349_V1_01`. `tools/targets.py define <id>` prints it; nothing stores it.
 - The slug is `[a-z0-9][a-z0-9-]*` and names the game on the site: `/games/<slug>/` and `data/<slug>/`.
-- Unknown functions keep tool-generated address labels (`fn_<hex>` with decomp-toolkit, `func_<hex>` with splat). The publish action counts a function as `named` only when its symbol is not such a label, so a descriptive name is a claim and needs evidence.
+- Unit names are source paths. Unknown functions keep tool-generated address labels (`fn_<hex>` with decomp-toolkit, `func_<hex>` with splat). The publish action counts a function as `named` only when its symbol is not such a label, so a descriptive name is a claim and needs evidence.
 - Files under `src/` use recovered paths when established; a descriptive file name counts as named while its boundaries remain provisional.
+- Branch names are free. The aggregate CI check is always named `Validate targets`.
 
 
 ---
 
 # Targets
 
-`config/targets.json`, `config/site.json` and `config/ci-targets.json`, field by field.
+`config/targets.json`, `config/site.json` and `config/ci-targets.json`, field by field, and what adding a target takes.
 
 A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement.
 
@@ -226,7 +245,7 @@ A target is one original binary. A game with one disc revision has one target; a
 | --- | --- | --- |
 | `schema` | Format version | Always `1` |
 | `defaultTarget` | The target the game page and hub card show first | Must be listed, and must be `active` |
-| `id` | The target's identity: directory names, `?target=`, the data directory | `[A-Za-z0-9._-]+`, unique, never changed once published |
+| `id` | The target's identity: directory names, `?target=`, the data directory, the define | `[A-Za-z0-9._-]+`, unique, never changed once published; no two ids may give the same define |
 | `platform` | Lower-case platform name | `[a-z0-9]+`, for example `gamecube`, `wii`, `ps2` |
 | `label` | Display: the game id on disc; the target picker groups by it | Non-empty string |
 | `region` | Display | Non-empty string |
@@ -236,7 +255,11 @@ A target is one original binary. A game with one disc revision has one target; a
 
 Two readers validate this file and both must accept it. `tools/targets.py` (starter) rejects any other field, requires exactly `schema`, `defaultTarget` and `targets` at the top level, and requires `defaultTarget` to be active. The publish action's `publish.py` reads the seven fields above, requires the default to be listed and writes the list verbatim into `game.json`. Run `python3 -m unittest discover -s tests -p 'test_*.py'` after every edit: `tests/test_targets.py` loads the file.
 
-Every active target needs a directory `config/<id>/`, an original in the build image at `/orig/<id>/<original path>`, and an entry in `config/ci-targets.json`. A `planned` or `archived` target needs only the `ci-targets.json` entry (the planner requires every listed target to be covered) and may have an empty `config/<id>/`.
+`tools/targets.py` is the one reader of this file in the repository: `configure.py` takes its version list from it, the CI planner derives each target's paths from it, and `python3 tools/targets.py check` confirms that the three places a hash lives agree per target (`targets.json`, `config/<id>/config.yml` and `config/<id>/build.sha1`) and that every target has its files. The `Tool tests` job runs it.
+
+## What `active` requires
+
+An active target has an entry here with the original's SHA-1; `config/<id>/` with the toolkit inputs (`config.yml`, `splits.txt`, `symbols.txt` for decomp-toolkit), `build.sha1`, `evidence.tsv` and `README.md`; `orig/<id>/.gitkeep`; the original in the private image at `/orig/<id>/<original path>`; and a byte-identical relink proven by CI. Progress is not a condition: a target at a true 0 percent, every unit `NonMatching`, is active. A `planned` or `archived` target needs `config/<id>/README.md` and `orig/<id>/.gitkeep` only.
 
 To find the SHA-1 of an original:
 
@@ -280,11 +303,7 @@ The publish action copies this file into `game.json` on every publish, adding `r
   "schemaVersion": 1,
   "shared": ["src/**", "include/**", "asm/**", "configure.py", "tools/**", ".github/workflows/validate.yml",
              "config/targets.json", "config/ci-targets.json", "config/site.json"],
-  "targets": {
-    "GAME01-rev0": ["config/GAME01-rev0/**", "orig/GAME01-rev0/**"],
-    "GAME01-rev1": ["config/GAME01-rev1/**", "orig/GAME01-rev1/**"]
-  },
-  "nonBuild": ["*.md", "docs/**", "references/**", "tests/**", ".github/workflows/review.yml",
+  "nonBuild": ["*.md", "docs/**", "references/**", "tests/**",
                ".github/pull_request_template.md", ".gitignore", ".gitattributes"]
 }
 ```
@@ -294,20 +313,21 @@ The publish action copies this file into `game.json` on every publish, adding `r
 | A changed path that matches | Selects |
 | --- | --- |
 | a `shared` pattern | every active target |
-| a `targets.<id>` pattern | that target, if active |
+| `config/<id>/**` or `orig/<id>/**` | that target, if active |
 | a `nonBuild` pattern only | nothing |
 | no pattern at all | every active target (unknown paths never skip validation) |
 
-Patterns are `fnmatch` globs matched against the repository-relative path; `*` and `**` both match across `/`. Rules: `schemaVersion` is `1`; the four keys are exactly `schemaVersion`, `shared`, `targets` and `nonBuild`; `targets` must name every target in `targets.json`, including planned and archived ones; no pattern may start with `/` or contain `..`. A manual run (`workflow_dispatch`), a push with no known base (first push, force push) and a changed path that cannot be diffed all select every active target.
+The per-target patterns are not written down: every target owns `config/<id>/**` and `orig/<id>/**`, and the planner derives them from `targets.json`, so adding a target never touches this file. Patterns are `fnmatch` globs matched against the repository-relative path; `*` and `**` both match across `/`. Rules: `schemaVersion` is `1`; the keys are exactly `schemaVersion`, `shared` and `nonBuild` (a `targets` key is a scaffold-check warning); no pattern may start with `/` or contain `..`. A manual run (`workflow_dispatch`), a push with no known base (first push, force push) and a changed path that cannot be diffed all select every active target.
 
 A change that selects no target still runs the `Tool tests` job and passes the `Validate targets` check.
 
-## Adding or changing a target
+## Adding a target
 
-1. Commit the original to the private repository under `orig/<id>/`, add its `COPY` and checksum lines to the Dockerfile and the `image.yml` verification, push, and take the new digest ([Build environment](/wiki/build-environment/)).
-2. Add the entry to `config/targets.json` (`status: active`), its patterns to `config/ci-targets.json` and its inputs to `config/<id>/`.
-3. Point `validate.yml` at the new digest.
-4. Push to `main`. The data directory `data/<slug>/<id>/` appears with the first publish.
+1. Hash the executable and add a `planned` entry to `config/targets.json`. Commit the original to the private repository under `orig/<id>/`, add its `COPY` and checksum lines to the Dockerfile and the `image.yml` verification, push, and take the new digest ([Build environment](/wiki/build-environment/)). By hand; minutes.
+2. `python3 tools/new_target.py <id>` writes `config/<id>/config.yml` with the original's path and hash from the registry, an empty `evidence.tsv` with its header row, a `README.md` stub and `orig/<id>/.gitkeep`. It refuses an id the registry does not list and never overwrites a file.
+3. Run the toolkit's analysis on the new original for a first `symbols.txt` and `splits.txt`, build, and confirm that the relink is byte-identical with every unit `NonMatching`. Write `config/<id>/build.sha1`, set `status: active`, and point `validate.yml` at the new digest. Hand-driven; hours.
+4. Push to `main`. The planner builds the new target because `config/<id>/` changed, and the first `main` run publishes it: `data/<slug>/<id>/` appears in the data repository.
+5. Then widen the shared work: a function already decompiled for a sibling counts on the new target as soon as the new target's `splits.txt` names the same unit, `configure.py` says `Matching` or `MatchingFor` for it there, and its `symbols.txt` gives the function the same name. Nothing is copied between targets; each target's own objdiff report scores it. Seeding `symbols.txt` and `splits.txt` from the sibling is the real cost of a new revision; a symbol-porting tool belongs here once a second original has passed step 3.
 
 Setting a published target to `archived` keeps its data directory and history in the data repository, but the site reads `latest.json` only for `active` targets, so the page lists it without a measurement. Removing a target from the list entirely removes it from `game.json` on the next publish; the data directory is deleted by hand, if at all.
 
@@ -348,7 +368,7 @@ What the final image must provide, whatever the platform, because `validate.yml`
 
 | Requirement | Why |
 | --- | --- |
-| `/orig/<target id>/<original path>` for every active target | The `Provide and verify target original` step copies it into the checkout |
+| `/orig/<target id>/<original path>` for every active target | The `Provide target original` step copies it into the checkout |
 | `sh`, `git`, `python3` | Composite action steps run with `sh`; `tools/` and `publish.py` are Python; `publish.py` runs `git log`, `git clone` and `git push` |
 | `gcompat` on Alpine | The Actions runner mounts its own glibc Node.js into the container to run `actions/checkout` and the token-minting action |
 | The toolchain at fixed paths | The configure command in `validate.yml` names them (`/usr/local/bin/dtk`, `/binutils`, `/compilers` in the starter) |
@@ -369,19 +389,21 @@ These steps are done once, on GitHub, by the owner:
 
 1. Open the package `game-build` under the owner's packages and confirm its visibility is **private**. A package created by a workflow from a private repository starts private; check anyway.
 2. In the package settings, under **Manage Actions access**, add the repository `owner/game` with the **Read** role. This is what lets the public repository's workflow pull the image with its own `GITHUB_TOKEN`.
-3. Copy the digest from the `Publish image` step summary into `validate.yml` (`container.image`).
+3. Copy the digest from the `Publish image` step summary into `validate.yml` (the `BUILD_IMAGE` variable).
 
 The public workflow's `target` job declares `permissions: packages: read` and pulls with `credentials: {username: github.actor, password: secrets.GITHUB_TOKEN}`. No personal token is involved.
 
 ## Referencing the image by digest
 
-`validate.yml` names the image as `ghcr.io/owner/game-build@sha256:<64 hex digits>`, never `:main`. The digest is part of the measurement's provenance: `tools/measuring_tools.py` extracts exactly that line and the publish action records it as the `build-environment` tool in `latest.json`. Changing the digest is a reviewed change to `validate.yml`, and it is an owner decision: the image defines the compiler and the original, so a different image can change every number.
+`validate.yml` names the image once, as `BUILD_IMAGE: ghcr.io/owner/game-build@sha256:<64 hex digits>`, never `:main`; the target job runs in it and the variable is exported to every step. The digest is part of the measurement's provenance: `tools/measuring_tools.py` reads `BUILD_IMAGE` and the publish action records it as the `build-environment` tool in `latest.json`. The scaffold check warns on an image referenced by tag. Changing the digest is a reviewed change to `validate.yml`, and it is an owner decision: the image defines the compiler and the original, so a different image can change every number.
 
-The reference repositories keep the digest line commented with the image workflow run that produced it.
+Keep the digest line commented with the image workflow run that produced it. Pulling `:main` in `validate.yml` is never acceptable, and no bot bumps the digest.
+
+Two later conveniences have known triggers and are not built before them: a small tool that reads the image run summary and rewrites the digest line, once the third bump has been done by hand; and a shared toolchain base image with each game's image adding only `/orig/<id>/`, once two repositories build on the same compiler pack.
 
 ## Other platforms
 
-The pattern does not depend on the platform. For another console, the Dockerfile's `dependencies` stage fetches that platform's toolchain, the original goes under `/orig/<target id>/` at whatever path your build expects (the `ORIGINAL` constant in `tools/verify_target.py` and `PARAMETER 2` in `validate.yml` name it), and the configure and build commands in `validate.yml` change. A single image may hold several targets, and a reference binary from another platform may be added for comparison in the same way; it is just one more `COPY` with a checksum.
+The pattern does not depend on the platform. For another console, the Dockerfile's `dependencies` stage fetches that platform's toolchain, the original goes under `/orig/<target id>/` at whatever path your build expects (`PARAMETER 2` in `validate.yml` and the toolchain's own configuration name it), and the configure and build commands in `validate.yml` change. A single image may hold several targets, and a reference binary from another platform may be added for comparison in the same way; it is just one more `COPY` with a checksum.
 
 ## Local builds
 
@@ -400,25 +422,20 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
 
 ## Local setup for a dtk-template project
 
-1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). dtk-template names its config folder after the game ID (`config/GAMEID/`); rename it to the target id (`config/GAME01-rev0/`) before adding anything, and use the target id wherever the template says version. Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you.
-2. Wire `configure.py` to the target list so the active targets are the only versions it accepts and `--version` takes a target id. Replace dtk-template's hard-coded `VERSIONS` list with:
+1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). dtk-template names its config folder after the game ID (`config/GAMEID/`); rename it to the target id (`config/GAME01-rev0/`) before adding anything, and use the target id wherever the template says version. Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you. Record the template's revision in `CREDITS.md` and link its documentation from the README rather than copying it into the repository.
+2. Wire `configure.py` to the target list so the active targets are the only versions it accepts, `--version` takes a target id and the target's define is derived. Replace dtk-template's hard-coded `VERSIONS` list with:
 
     ```python
-    from tools.targets import registry, build_targets
+    from tools.targets import registry, build_targets, define
 
     TARGET_REGISTRY = registry()
     VERSIONS = build_targets(TARGET_REGISTRY)
     DEFAULT_VERSION = VERSIONS.index(TARGET_REGISTRY['defaultTarget'])
     ```
 
-    and add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
+    add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`, point `config.config_path` and `config.check_sha_path` at `config/<version>/config.yml` and `config/<version>/build.sha1`, and pass `f"-D{define(config.version)}"` in `cflags_base` next to the template's `-DBUILD_VERSION=`. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
 3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag.
-4. Place your own copy of the original at `orig/<target id>/sys/main.dol` (the path `config.yml` and `tools/verify_target.py` name; `orig/*/*` is ignored by Git) and verify it:
-
-    ```sh
-    python3 tools/verify_target.py --target GAME01-rev0
-    ```
-
+4. Place your own copy of the original at `orig/<target id>/sys/main.dol`, the path `config.yml` names (`orig/*/*` is ignored by Git). The toolkit refuses an original whose hash differs from `config.yml`, and `python3 tools/targets.py check` confirms that `config.yml`, `build.sha1` and `targets.json` agree.
 5. Configure and build:
 
     ```sh
@@ -435,6 +452,8 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     ```
 
     `progress` prints the per-category summary; `build/<target id>/report.json` is the objdiff report CI publishes. This is exactly the command the starter `validate.yml` runs, after the same `configure.py` call with the image's tool paths.
+
+With more than one active target, repeat steps 5 and 6 per target; the README's Building section shows the loop. A shared change is safe for every target only when every target has been built.
 
 ## What the three measures mean
 
@@ -454,6 +473,27 @@ The action checks the report's own totals against its function list and refuses 
 
 Useful partial reconstruction stays in its normal file under `src/` and is registered as a `NonMatching` object. The combined executable still matches because the original bytes for that unit remain linked; objdiff measures the source separately. Reviewers and CI treat matching incompleteness as progress, not as a failure. See [Contribution workflow](/wiki/contribution-workflow/) for how partial units are reviewed and promoted.
 
+## Version differences
+
+Every target has one preprocessor define, `VERSION_<ID>`: the id upper-cased with `-` and `.` replaced by `_`, so `GAME01-rev0` compiles with `VERSION_GAME01_REV0`. `tools/targets.py` derives it and `configure.py` passes it; no file stores it. dtk-template also passes a numeric `BUILD_VERSION`; it stays defined for compatibility and is never read, because `BUILD_VERSION >= 1` stops meaning anything the day a region is inserted between two revisions.
+
+- A difference lives in the shared file under `#if VERSION_GAME01_REV0` or `#if !VERSION_GAME01_REV0`. A condition is a boolean expression of `VERSION_` tokens and group macros, with `!`, `&&` and `||` only, and nothing else: no numeric comparison, no other macro in the same condition. A version condition nested inside an ordinary `#ifdef` is fine; the two must not mix in one line.
+- When two or more targets share a difference, name the group once in `include/version.h`: `#define REGION_USA (VERSION_GAME01_REV0 || VERSION_GAME01_REV1)`. The header exists from the first commit with the rule as its comment, so the first divergent PR cannot invent a second scheme.
+- Inline blocks are the default. When a function would carry three or more blocks, or more than about a third of its lines inside blocks, write the whole function once per variant under one function-level `#if ... #else ... #endif`, in the same file. Never a `src/<id>/` file for a unit two targets share.
+- A unit that matches on some targets only is `Object(MatchingFor("GAME01-rev0"), "unit.cpp")`; a unit absent from a target is absent from that target's `splits.txt`. Compiler or flag differences between targets are whole profiles chosen by `config.version` in `configure.py`, with a `compiler` evidence row in each target's `evidence.tsv`.
+
+`tools/versions.py` reads this convention back:
+
+```sh
+python3 tools/versions.py view --target GAME01-rev0 src/unit.cpp
+python3 tools/versions.py diff --target GAME01-rev0 --target GAME01-rev1 src/unit.cpp
+python3 tools/versions.py check
+```
+
+`view` prints the file as one target compiles it: it resolves exactly the directives whose condition is a version expression and leaves every other directive and all macros untouched, so what you read is still source, not preprocessor output. `diff` is the unified diff between two targets' views; a reviewer of a change to a file with version blocks reads it instead of tracing the branches by eye. `check` fails on a `VERSION_` token that is not a known define or group, a `MatchingFor` argument that is not a known target id, a version condition mixed with other macros, and any `BUILD_VERSION` in `src/` or `include/`. The `Tool tests` job runs `check`; the scaffold check runs it too.
+
+A function decompiled for one target counts for another automatically when, on that target, `splits.txt` names the unit, `configure.py` says `Matching` or `MatchingFor` for it, and `symbols.txt` gives the function the same name, because objdiff pairs by symbol name. Different addresses are a per-target `symbols.txt` and `splits.txt` matter and never touch source; a function present on one target only, or data that differs, is an `#if` block with `MatchingFor` until both targets link.
+
 ## Reading the report
 
 The publish action reads these parts of `report.json`, so any producer must write them the way objdiff does:
@@ -471,10 +511,11 @@ Every function must lie inside one of the code sections of its unit, or the acti
 
 ## Other platforms
 
-The publish action converts objdiff reports and nothing else. objdiff supports several architectures, so a project on another platform that produces `report.json` with `objdiff-cli report generate` can use the whole pipeline unchanged apart from these parameters:
+The per-target directory, the define rule, the planner, the tiers, the Targets table and the settings are toolchain-neutral. The publish action converts objdiff reports and nothing else, and objdiff supports several architectures, so a project on another platform that produces `report.json` with `objdiff-cli report generate` can use the whole pipeline unchanged apart from these parameters:
 
-- the original's path under `orig/<target id>/` (`ORIGINAL` in `tools/verify_target.py`, `PARAMETER 2` in `validate.yml`, the `COPY` in the Dockerfile);
+- the original's path under `orig/<target id>/` (`PARAMETER 2` in `validate.yml`, the `COPY` in the Dockerfile, the toolchain's own config);
 - the configure and build commands (`PARAMETER 3` in `validate.yml`), which must fail unless the complete executable matches and must write `build/<target id>/report.json`;
+- `config/<target id>/` holds a splat or custom configuration instead of dtk's three files; `tools/versions.py` reads the same `#if` convention, and the `MatchingFor` equivalent lives in whatever generates the build;
 - the `code-sections` and `unit-prefix` inputs of the publish action if the defaults do not fit;
 - the `TAGS` dictionary in `tools/measuring_tools.py`, which names the version lines of `configure.py` to report.
 
@@ -494,6 +535,8 @@ A byte match proves that the compiler produced the same code from the submitted 
 Inventory what the target and its references actually contain: the parsed filesystem, executables, symbols, debug information, linker maps, diagnostic strings, SDK references and related builds. Record hashes or revisions and which files were parsed. A claim that an artifact does not exist must say how thoroughly it was searched; a file-name search or a few strings is not enough.
 
 Related builds (another platform, another revision, another game on the same engine) suggest names and behavior. They do not prove the target's offsets, field widths, original names or source boundaries. Keep target evidence, reference evidence and inferred meaning separate.
+
+Reference material that agents read on every task lives under `references/`: text only, regenerable by a named tool, no file over 4 MB. The scaffold check warns on anything larger.
 
 ## Bounded tasks
 
@@ -529,13 +572,19 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 | Column | Values |
 | --- | --- |
 | `kind` | `name`, `function`, `data`, `unit-anchor`, `unit`, `type`, `field`, `external`, `compiler`, `assembly`, `source-form`, `linker` |
-| `start`, `end` | Hexadecimal virtual addresses, end exclusive; `-` when unknown or inapplicable |
+| `start`, `end` | Virtual addresses as `0x` plus eight upper-case hex digits, end exclusive; `-` when unknown or inapplicable |
 | `subject` | The symbol, source path, type or field concerned |
 | `origin` | `target` (present in the target's bytes, symbols or debug information), `signature` (a named tool signature), `related` (another identified build), `inferred` (interpretation of the code) |
-| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other |
+| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data` and `unit` rows |
 | `evidence` | A reproducible locator and what it establishes and leaves unknown |
 
 Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
+
+## What earns a row
+
+A row is a claim a person or agent made that a reviewer must be able to challenge: an `inferred` name, a `unit` boundary, a `type` or `field` layout read from loads and stores, a `compiler`, `source-form` or `linker` claim. Tool output is not transcribed row by row. Symbol extents from the toolkit, debug names from a related build, signature hits from a library map: these are reproducible from `references/` plus a tool at a pinned revision, so they get one row per tool run, with kind `unit-anchor` or `name`, origin `related` or `signature`, a subject that names the tool with its inputs and revision, and the regenerable report's path as the evidence. The table then stays readable in review, and the report is the evidence.
+
+`python3 tools/evidence.py check` runs in the `Tool tests` job and in the scaffold check: the header row, eight columns, the address format, the kinds and origins, edges only on the rows that have extents, non-empty subject and evidence. It checks form, not truth; the hostile checklist's `Names` row is the provenance check, and the publish action counts a function as named only when its symbol is not a tool label, so an unnamed function can never be published as named.
 
 ## Matching integrity
 
@@ -553,7 +602,7 @@ When evidence runs out, keep the useful partial reconstruction as a `NonMatching
 
 ## Imported and SDK code
 
-Retain the origin, source revision, license and local modifications of anything imported. A fingerprint match is a candidate, especially for a short function; inspect target-specific calls, data ownership and compilation boundaries before importing. Imported code gets the same accuracy and hostile reviews as new reconstruction.
+Retain the origin, source revision, license and local modifications of anything imported, in `CREDITS.md` and under `licenses/`; a verbatim imported tree goes under `extern/` with its own credits. A fingerprint match is a candidate, especially for a short function; inspect target-specific calls, data ownership and compilation boundaries before importing. Imported code whose every name is `target`, `signature` or `related` is a tier B change: it gets the hostile review, not the blind accuracy pass.
 
 Comments in source explain intent, invariants and non-obvious relationships. Matching scores, compiler experiments, agent notes and review history belong in `evidence.tsv` or the PR, never in source comments.
 
@@ -562,31 +611,72 @@ Comments in source explain intent, invariants and non-obvious relationships. Mat
 
 # Contribution workflow
 
-Bounded tasks, isolated branches, independent reviews and an owner-only merge.
+Review tiers sized to what a PR touches, draft PRs as reservations, independent records and an owner-only merge.
 
-This is the default contribution policy. It is written for people and agents alike: the same rules, the same records, the same gate. The starter `CONTRIBUTING.md` states it in full and `AGENTS.md` summarizes it for agents; both go into the repository with the parameters filled in. The owner may adopt a different policy, but then `CONTRIBUTING.md`, `AGENTS.md` and the [review gate](/wiki/review-gate/) change together.
+This is the contribution policy for a one-owner project where agents do most of the work. It is written for people and agents alike: the same rules, the same records, the same authority. The starter `CONTRIBUTING.md` states it in full and `AGENTS.md` summarizes it for agents; both go into the repository with the parameters filled in, and the scaffold check keeps their section headings and `AGENTS.md`'s header matching the kit.
+
+## What protects matching integrity
+
+In order: CI proves that the complete executable of every affected target is byte-identical and measures each unit per target; the matching-integrity rules in `CONTRIBUTING.md`; a reviewer who did not write the code reads reconstructed source against the disassembly and the evidence before an inferred name or boundary is published; the owner decides what merges. Everything else is proportionate to the risk a change carries.
 
 ## Authority
 
-Only the owner (`OWNER_LOGIN`) merges into `main`. Contributors and agents prepare branches, open PRs and review. A `SHIP` verdict, a green CI run and an owner clearance comment are three different states, and none of them lets a contributor merge.
+Only the owner (`OWNER_LOGIN`) merges into `main`. Contributors and agents prepare branches, open PRs and review. A `SHIP` verdict and a green CI run are two different states, and neither lets a contributor merge. The authority is procedural: agents author under the owner's login, so a native approval rule would not tell an author from a reviewer, and the ruleset on `main` requires a pull request and the `Validate targets` check and nothing else ([Repository settings](/wiki/repository-settings/)).
 
-Optionally, the owner delegates clearance and merging to a **merge gate**: one agent acting under the owner's account, on a standing basis the owner can revoke. The gate checks reviewer independence, commissions missing reviews from fresh reviewers, posts clearance and squash-merges; it never authors contributions, never pushes to `main`, and escalates to the owner anything the rules reserve for the owner (matching-integrity exceptions, workflow and approval-control changes, dependency changes). If there is no merge gate, delete that section of the starter `CONTRIBUTING.md` and the references to it in `AGENTS.md`.
+Nobody but the owner changes branch rules, repository settings, the build image or its digest, or the access controls around them. A dependency problem is reported in an issue, not fixed by changing the dependency.
 
-Nobody but the owner changes branch protection, `review.yml`, `REVIEW_OWNER`, the build image or its access controls. A dependency problem is reported in an issue, not fixed by changing the dependency.
+## Tiers
+
+The paths a PR touches decide what it needs before merge. The author states the tier in the PR's Scope line; the owner checks the claim against the diff.
+
+| Tier | Touches | Required before merge |
+| --- | --- | --- |
+| A | `src/` or `include/` with new or changed inferred names, types, fields or unit boundaries; `splits.txt`; `symbols.txt`; compiler profiles | CI green, one blind accuracy record, one hostile record |
+| B | `src/` or `include/` where every name and layout is `target`, `signature` or `related` (library imports, already-named code); promotions from `NonMatching` to `Matching` | CI green, one hostile record |
+| C | `tools/`, `tests/`, `docs/`, `references/`, workflows, `config/*.json`, root documents | CI green |
+
+The blind accuracy pass stays for tier A only: it is the one check that catches a wrong inferred name, and it reconciles nothing when the names come from an SDK or a sibling build.
 
 ## One task, start to finish
 
-1. **Reserve.** Check open PRs and active branches. Record a bounded reservation in an issue or draft PR: the specific functions or unit, the branch and the shared files it touches. Reserve the batch being worked on, not a subsystem. A reservation expires after 48 hours without a progress update; release scope you abandon, and check existing branches before taking over expired work.
+1. **Claim.** Check open PRs and branches. Open a draft PR early with the unit names and target ids in its title; that is the reservation, and it ends when the PR closes. There is no expiry bookkeeping.
 2. **Branch.** Work on a dedicated branch from current `main`, in your own checkout or worktree: `git switch -c your-task`. Branches live in the repository, not in forks; CI refuses to build a fork's pull request because fork builds would otherwise reach the private image.
 3. **Establish evidence.** Boundaries, types and references before source; see [Evidence](/wiki/evidence/). Search existing headers and accepted units before declaring a shared address.
-4. **Reconstruct and measure.** Compile and compare with objdiff. Keep discarded variants local. Register partial work as a `NonMatching` object in `configure.py` so CI measures it; promote to `Matching` when the unit links byte-identically. The source file does not move on promotion.
-5. **Record.** Add `evidence.tsv` rows for every name, boundary, type and compiler claim in the same PR. Keep source comments free of scores and process notes.
-6. **Self-check.** Build the complete executable (`ninja -f build/<target id>/build.ninja`) and confirm it still matches; run `ninja ... progress` and compare with the base revision; list unresolved functions and shared-file changes.
-7. **Blind accuracy review.** A reviewer who did not author or shape the reconstruction interprets the scoped functions with the proposed names and comments withheld, then reconciles that interpretation with the submission and posts an `Accuracy:` record.
-8. **Hostile review.** A fresh reviewer applies the checklist in `CONTRIBUTING.md` (source fidelity, compiler settings, types and layouts, names, comments, unit boundaries, comparison integrity, validation) and posts a `Hostile:` record with `SHIP`, `FIX`, `REDO` or `BLOCKED`.
-9. **Resolve and recheck.** Fix findings; the reviewer rechecks the delta, not the whole PR, and posts a final-revision record that cites the earlier one.
-10. **Submit.** Fill the PR template: scope, evidence and validation, review records. Request the owner's decision only when CI and both records cover the final revision.
-11. **Owner clearance and merge.** The owner (or merge gate) posts the clearance comment; `Owner review clearance` turns green; the owner merges. On `main`, CI builds and publishes.
+4. **Reconstruct and measure.** Compile and compare with objdiff. Keep discarded variants local. Register partial work as a `NonMatching` object in `configure.py` so CI measures it; promote to `Matching` when the unit links byte-identically. The source file does not move on promotion. A version difference goes under `#if VERSION_<ID>` in the shared file ([Build, verify, measure](/wiki/build-verify-measure/#version-differences)).
+5. **Record.** Add `evidence.tsv` rows for every name, boundary, type and compiler claim in the same PR, to each affected target's file. Keep source comments free of scores and process notes.
+6. **Check every target.** Before calling a shared change safe for every target: build every active target and confirm `build.sha1` on each; run objdiff per target for each touched unit; run `python3 tools/versions.py diff` on every file you added a block to and read the result; add the evidence rows per target. CI enforces the first two; the hostile checklist's `Unit boundaries` and `Validation` rows cover the rest. Fill the Targets table of the PR template from these results, one row per active target.
+7. **Review.** Tier A: a reviewer who did not author or shape the reconstruction interprets the scoped functions with the proposed names and comments withheld, reconciles that interpretation with the submission and posts an `Accuracy:` record; then a fresh reviewer applies the checklist in `CONTRIBUTING.md` (source fidelity, compiler settings, types and layouts, names, comments, unit boundaries, comparison integrity, validation) and posts a `Hostile:` record with `SHIP`, `FIX`, `REDO` or `BLOCKED`. Tier B: the hostile record only. Tier C: none.
+8. **Resolve and recheck.** Fix findings; the reviewer rechecks the delta, not the whole PR, and posts a final-revision record that cites the earlier one.
+9. **Submit.** Fill the PR template: scope with the tier, the Targets table, evidence and validation, the records. Request the owner's decision only when CI and the records cover the final revision.
+10. **Merge.** The owner merges. On `main`, CI builds and publishes each affected target.
+
+## Review records
+
+Each pass is one PR comment. The first line is the revision, the second the targets the record covers, the third the verdict; each header occurs once, outside quotes and code fences, so a record covering one target can never be read as covering both.
+
+```text
+Revision: FULL_COMMIT_SHA
+Targets: GAME01-rev0, GAME01-rev1
+Accuracy: PASS
+
+Reviewer: identity and prior involvement
+Scope: functions, files and configuration checked
+Evidence: references and validation artifacts used
+Findings: results, uncertainties and resolutions
+```
+
+```text
+Revision: FULL_COMMIT_SHA
+Targets: GAME01-rev0
+Hostile: SHIP
+
+Reviewer: identity and prior involvement
+Checklist: PASS / FAIL / BLOCKED / justified N/A per category
+Findings: location, evidence and required correction
+Coverage: earlier records carried forward and delta checked
+```
+
+Accepted values: `Accuracy: PASS` or `Accuracy: N/A - <reason>` (the reason is required), and `Hostile: SHIP`, `FIX`, `REDO` or `BLOCKED`. Nothing parses these comments; they are for the owner and the next reviewer to read, and the format exists so that they can be read at a glance.
 
 ## Reviewer independence
 
@@ -598,120 +688,32 @@ Partial source is reviewed for fidelity, evidence and comparison integrity. A me
 
 After a fix, the reviewer checks the finding, the correction and its affected dependencies and carries the rest of the coverage forward by linking the earlier record and its revision. A replacement reviewer may continue from that record. A full restart needs a concrete reason that invalidates coverage across the PR.
 
-After refreshing from `main`, verify the diff, conflict resolutions and shared declarations, then post final-revision records that cite the earlier ones and name the checked delta. An earlier verdict does not cover a new head; the review gate enforces this mechanically by comparing the revision in each record with the PR head.
+After refreshing from `main`, verify the diff, conflict resolutions and shared declarations, then post final-revision records that cite the earlier ones and name the checked delta. An earlier verdict does not cover a new head.
 
 Compatible bounded contributions may be batched into one PR with each original PR, author revision and review coverage identified; the combined delta is reviewed and CI runs on the combined tree. Compiler-profile and comparison changes get their own review and never ride along in unrelated work.
 
 ## Delivery
 
-Every handoff states: changed files, evidence, the validation commands and their results on which revision, unresolved findings and the exact review and publication state. "Implemented", "reviewed", "CI passed", "owner cleared", "merged" and "published" are different states. Do not keep running diaries of agent activity in the repository; PRs and issues are the record.
+Every handoff states: changed files, evidence, the validation commands and their results per target on which revision, unresolved findings and the exact review and publication state. "Implemented", "reviewed", "CI passed", "merged" and "published" are different states. Do not keep running diaries of agent activity in the repository; PRs and issues are the record.
 
 ## The files
 
 | File | What to fill in |
 | --- | --- |
-| `CONTRIBUTING.md` | `OWNER_LOGIN`, `owner/game`, the target directory, the README's build section link; delete the merge-gate section if unused |
-| `AGENTS.md` | `OWNER_LOGIN`, the target directory; delete the merge-gate sentence if unused |
-| `.github/pull_request_template.md` | Nothing; it is generic |
-| `README.md` | Yours: the game, platform, region and revision, the original's SHA-1, the owner, the build commands, links to `CONTRIBUTING.md` and `AGENTS.md`; the README is what the other two files point readers at |
-
-The record formats and the clearance comment the gate checks are specified in the next chapter and repeated in `CONTRIBUTING.md`.
-
-
----
-
-# Review gate
-
-Review records, the owner clearance comment and the status check that verifies them.
-
-The gate is one workflow, `.github/workflows/review.yml`, that publishes a commit status named `Owner review clearance` on the PR head. It is `success` only when the owner has posted a clearance comment that names the current head and links two passing review records on that PR. It runs trusted default-branch code, checks out nothing and holds no build credential; it reads PR comments and writes one status. The starter ships it as `review.yml.template` together with `tests/review_gate.mjs`, which exercises the script without GitHub.
-
-## Review records
-
-Each review pass is one PR discussion comment. The first line is the revision, the second the verdict; each header occurs exactly once in the comment, outside quotes and code fences.
-
-```text
-Revision: FULL_COMMIT_SHA
-Accuracy: PASS
-
-Reviewer: identity and prior involvement
-Scope: functions, files and configuration checked
-Evidence: references and validation artifacts used
-Findings: results, uncertainties and resolutions
-```
-
-```text
-Revision: FULL_COMMIT_SHA
-Hostile: SHIP
-
-Reviewer: identity and prior involvement
-Checklist: PASS / FAIL / BLOCKED / justified N/A per category
-Findings: location, evidence and required correction
-Coverage: earlier records carried forward and delta checked
-```
-
-Accepted values: `Accuracy: PASS` or `Accuracy: N/A - <reason>` (the reason is required; a documentation-only change is the usual case), and `Hostile: SHIP`. `FIX`, `REDO` and `BLOCKED` are valid hostile verdicts but do not clear. The gate parses the headers only; the rest of the comment is for people.
-
-## Owner clearance
-
-After checking reviewer independence, coverage and the resolution of findings, the owner (or the merge gate, acting under the owner's login) posts:
-
-```text
-<!-- owner-review-clearance -->
-Revision: FULL_COMMIT_SHA
-Accuracy: https://github.com/owner/game/pull/NUMBER#issuecomment-ID
-Hostile: https://github.com/owner/game/pull/NUMBER#issuecomment-ID
-```
-
-The marker is the literal first line. The two links point at two different comments on the same PR. To withdraw clearance, edit the latest clearance comment and remove its revision or links; the gate re-evaluates on every comment edit.
-
-## What the check verifies
-
-On `pull_request_target` (opened, reopened, synchronize, ready for review, converted to draft), on every PR comment created, edited or deleted, and on manual dispatch with a PR number, the job:
-
-1. Fetches the PR. If it is not open, or its head repository differs from the base repository, it stops without setting a status: fork PRs are never cleared.
-2. Sets `Owner review clearance` to `pending` on the head SHA.
-3. Collects the comments by `REVIEW_OWNER` that start with the marker, takes the most recently updated one, and parses `Revision`, `Accuracy` and `Hostile` from its first three lines.
-4. Requires: `Revision` equals the head SHA; both links are `https://github.com/<owner>/<repo>/pull/<number>#issuecomment-<id>` on this PR; the two links differ.
-5. Fetches each linked comment and requires: it belongs to this PR; its first line is `Revision: <head SHA>`; its second line is `Accuracy: PASS`, `Accuracy: N/A - <non-empty reason>` or `Hostile: SHIP` for the respective lane. A linked comment that no longer exists makes the clearance invalid.
-6. Requires the PR not to be a draft.
-7. Sets the status to `success` with the clearance comment as its link, or leaves it `pending`.
-
-| Case | Result |
-| --- | --- |
-| Current head, owner clearance, two distinct passing records on this PR, PR not a draft | success |
-| No clearance, or clearance by another login | pending |
-| New commits after the clearance | pending until new records and a new clearance name the new head |
-| Same link twice, a link to another PR, malformed headers, a second `Revision:` line, a failing or stale verdict | pending |
-| Draft PR | pending |
-| Clearance edited to remove its revision or links, or a later clearance comment without them | pending |
-| A linked review comment edited to another revision or deleted | pending |
-| PR from a fork | no status is set |
-
-`tests/review_gate.mjs` covers each row; `node --test tests/review_gate.mjs` runs it and the `Tool tests` CI job runs it on every push.
-
-## Installing the gate
-
-1. Copy `review.yml.template` to `.github/workflows/review.yml`. The only parameter is `REVIEW_OWNER`: set the repository variable `REVIEW_OWNER` to the owner's login (Settings, Secrets and variables, Actions, Variables), or replace `${{ vars.REVIEW_OWNER }}` with the literal login. The script throws if the value is empty.
-2. Copy `tests/review_gate.mjs` and set its `owner` and `repository` constants; run it.
-3. Merge the workflow to `main` first. `pull_request_target` and `issue_comment` run the workflow file from the default branch, so the gate does nothing for any PR until it is on `main`.
-4. Open a test PR, post records and a clearance, and watch the status change; post a new commit and watch it go back to pending.
-5. Only then, in branch protection for `main`, require the status checks `Owner review clearance` and `Validate targets`, require pull requests, and restrict pushes, force pushes and deletion. Verify who can bypass the rules; a documented policy enforces nothing by itself. GitHub's [branch protection documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches) describes the options.
-
-The workflow's permissions are `contents: read`, `pull-requests: read`, `issues: read` and `statuses: write`; it pins `actions/github-script` by commit SHA. Keep it that way: it is the one workflow that runs on comment events from anyone who can comment.
-
-## What the gate cannot do
-
-It authenticates the owner's clearance and the record references. It cannot prove that a reviewer was independent or that the review was any good; those judgments stay with the owner, directly or through the merge gate. Agents other than the merge gate must not post clearance on the owner's behalf, and clearance never authorizes anyone but the owner to merge.
+| `CONTRIBUTING.md` | `OWNER_LOGIN` and `owner/game`; the section headings stay as in the kit |
+| `AGENTS.md` | Nothing in the header; the project's own rules go under `## Project` |
+| `CLAUDE.md` | Nothing; it imports `AGENTS.md` |
+| `.github/pull_request_template.md` | The target ids in the Targets table |
+| `README.md` | Yours, under the seven headings of the kit template: the targets table, the build commands per target, the owner, links to `CONTRIBUTING.md` and `AGENTS.md`, the layout table, the credits |
 
 
 ---
 
 # CI
 
-`validate.yml`: plan the affected targets, run the tool tests, build each target in the image, publish on `main`.
+`validate.yml`: plan the affected targets, run the tool tests and the scaffold check, build each target in the image, publish on `main`.
 
-One workflow does everything. It runs on every push to `main`, every pull request and on manual dispatch. Pull requests get the full build and nothing else; pushes to `main` additionally publish. There is no cache, no artifact and no second workflow to keep in step: the starter `validate.yml.template` is the whole thing, and the four parameters marked in it are the only edits.
+One workflow does everything. It runs on every push to `main`, every pull request and on manual dispatch. Pull requests get the full build and nothing else; pushes to `main` additionally publish. There is no cache, no artifact and no second workflow to keep in step: the starter `validate.yml.template` is the whole thing, the four parameters marked in it are the only edits, and one optional step is the only addition. The scaffold check compares the file's job and step names with the kit on every run.
 
 ## Jobs
 
@@ -719,37 +721,47 @@ One workflow does everything. It runs on every push to `main`, every pull reques
 Plan affected targets ──┐
                         ├──> Validate <target id>  (one job per affected active target, in the image)
 Tool tests ─────────────┘            │
-                                     └──> Validate targets  (the aggregate check branch protection requires)
+                                     └──> Validate targets  (the aggregate check the ruleset requires)
 ```
 
 ### Plan affected targets
 
-Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `python3 tools/ci_targets.py`. The planner reads the event: for a pull request it diffs the base SHA against the head, for a push it diffs `before` against the pushed commit, and for `workflow_dispatch`, a push without a usable `before` (first push, force push) or `--force-all` it selects every active target. It applies `config/ci-targets.json` ([Targets](/wiki/targets/)) and writes two outputs:
+Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `python3 tools/ci_targets.py`. The planner reads the event: for a pull request it diffs the base SHA against the head, for a push it diffs `before` against the pushed commit, and for `workflow_dispatch`, a push without a usable `before` (first push, force push) or `--force-all` it selects every active target. It applies `config/ci-targets.json` ([Targets](/wiki/targets/)), with each target's `config/<id>/**` and `orig/<id>/**` derived from the registry, and writes two outputs:
 
 - `matrix`: `{"include":[{"target":"GAME01-rev0"}, ...]}`
 - `has_targets`: `true` or `false`
 
+Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every `include/**` change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.
+
 ### Tool tests
 
-Runs on the plain runner, outside the image, on every event:
+Runs on the plain runner, outside the image, on every event, in two steps:
 
 ```sh
-node --test tests/review_gate.mjs
+# Run tool tests
 python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 tools/targets.py check
+python3 tools/versions.py check
+python3 tools/evidence.py check
+# Check the scaffold
+uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
 ```
 
-Add the project's own tests under `tests/test_*.py`; they run here. Keep anything that needs the toolchain out of this job.
+The first step runs the project's tests (add yours under `tests/test_*.py`) and the three kit checks: the hashes agree per target, the version blocks use known tokens only, the evidence records are well formed. The second is the scaffold check, a composite action in the site repository. GitHub clones the whole site repository to run it, so the check compares the checkout against the starter kit and the scaffold spec at the action's own revision, and the kit, the spec and the check can never disagree. It prints one `::warning::` per finding and exits 0; `with: strict: true` makes it fail instead, which the owner flips once every repository has been clean for a month. With the default token it also reads the repository's description, topics, features, merge settings and the rules on `main` and warns where they differ from the [settings standard](/wiki/repository-settings/). Keep anything that needs the toolchain out of this job.
 
 ### Validate `<target id>`
 
-One job per selected target, `fail-fast: false`, so one target's failure does not cancel another's build or publish. It runs inside the private image:
+One job per selected target, `fail-fast: false`, so one target's failure does not cancel another's build or publish. It runs inside the private image, named once at the top of the file:
 
 ```yaml
+env:
+  BUILD_IMAGE: ghcr.io/owner/game-build@sha256:<digest>     # PARAMETER 1
+...
     permissions:
       contents: read
       packages: read
     container:
-      image: ghcr.io/owner/game-build@sha256:<digest>     # PARAMETER 1
+      image: ${{ env.BUILD_IMAGE }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -761,17 +773,18 @@ One job per selected target, `fail-fast: false`, so one target's failure does no
 | --- | --- |
 | `Require a repository contribution branch` | `test "$SOURCE_REPOSITORY" = "$GITHUB_REPOSITORY"`, where `SOURCE_REPOSITORY` is the PR head repository or, outside PRs, the repository itself. A fork's PR fails here, before the original is touched. |
 | `actions/checkout` | `persist-credentials: false`; the default depth is enough because the publish step only needs `HEAD`. |
-| `Provide and verify target original` | `mkdir -p orig/$TARGET_ID/sys`, `cp /orig/$TARGET_ID/sys/main.dol orig/$TARGET_ID/sys/main.dol`, `python3 tools/verify_target.py --target "$TARGET_ID"`. PARAMETER 2 is the path. |
+| `Provide target original` | `mkdir -p orig/$TARGET_ID/sys`, `cp /orig/$TARGET_ID/sys/main.dol orig/$TARGET_ID/sys/main.dol`. PARAMETER 2 is the path. The toolkit checks the hash against `config.yml` when it splits; a third check of the same bytes is not needed. |
 | `Configure target` | `python3 configure.py --version "$TARGET_ID" --dtk /usr/local/bin/dtk --binutils /binutils --compilers /compilers`. PARAMETER 3. |
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
-| `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py` and captures its lines in the output `lines` with a random heredoc delimiter. |
+| `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
+| `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool tags from `configure.py`, and captures its lines in the output `lines` with a random heredoc delimiter. |
 | `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the variable and secret. |
 
 The two `main`-only steps use the condition `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`, so a push and a manual run on `main` both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
 
 ### Validate targets
 
-Runs always, after the others, and fails unless `plan` and `tests` succeeded and the target jobs either all succeeded (when `has_targets` was `true`) or were skipped (when it was `false`). Its name, `Validate targets`, is the single check to require in branch protection; the per-target job names vary with the matrix and cannot be required one by one.
+Runs always, after the others, and fails unless `plan` and `tests` succeeded and the target jobs either all succeeded (when `has_targets` was `true`) or were skipped (when it was `false`). Its name, `Validate targets`, is the single check the `main` ruleset requires; the per-target job names vary with the matrix and cannot be required one by one.
 
 ## Workflow-level settings
 
@@ -783,7 +796,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 ```
 
-A new push to a PR cancels that PR's running validation; pushes to `main` queue instead, so every `main` commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential.
+A new push to a PR cancels that PR's running validation; pushes to `main` queue instead, so every `main` commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to `BUILD_IMAGE`.
 
 ## Installing it
 
@@ -792,12 +805,12 @@ A new push to a PR cancels that PR's running validation; pushes to `main` queue 
 3. Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally ([Build, verify, measure](/wiki/build-verify-measure/)). The image's tool paths replace the local ones.
 4. Fill PARAMETER 4 with the variable and secret names from [Publishing](/wiki/publishing/); the step is harmless until they exist, because it only runs on `main`.
 5. Copy the `tools/` and `tests/` starter files and `config/ci-targets.json`.
-6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (SHA-1), the toolchain (configure) and the match (`build.sha1`).
+6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (`build.sha1`). The `Check the scaffold` step lists what still differs from the kit.
 7. Merge. The first `main` run publishes, provided the credential is in place.
 
 ## What a pull request proves
 
-A green `Validate targets` on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, and objdiff produced a report. It does not mean the reconstruction is right; that is what the [review gate](/wiki/review-gate/) is for. Pull requests publish nothing, so a PR cannot change the site.
+A green `Validate targets` on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, and objdiff produced a report. It does not mean the reconstruction is right; that is what the review tiers in [Contribution workflow](/wiki/contribution-workflow/) are for. Pull requests publish nothing, so a PR cannot change the site.
 
 
 ---
@@ -826,7 +839,7 @@ Then, in the producer repository (Settings, Secrets and variables, Actions):
 | Variable | `DATA_APP_CLIENT_ID` | The App's client id |
 | Secret | `DATA_APP_PRIVATE_KEY` | The full contents of the `.pem` file |
 
-The names are yours; `validate.yml` passes them to the action as `app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}` and `app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}` (PARAMETER 4). The reference repository uses the names `PORTFOLIO_APP_CLIENT_ID` and `PORTFOLIO_APP_PRIVATE_KEY`.
+The names are yours; `validate.yml` passes them to the action as `app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}` and `app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}` (PARAMETER 4).
 
 ## The action's inputs
 
@@ -892,6 +905,83 @@ python3 site/.github/actions/publish/publish.py check /tmp/tree
 - A pull request has passed `Validate targets`.
 
 Then merge. The first publish creates `data/<slug>/` and adds the slug to `index.json`; no one edits the data repository for a new game except to add cover art ([The site](/wiki/site/)).
+
+
+---
+
+# Repository settings
+
+Branch rules, merge method, Actions permissions, credentials, security features and presentation, applied by a script and re-checked monthly.
+
+Settings are part of the standard because they are what makes the rest enforceable: a required check means nothing on a branch that accepts direct pushes, and a read-only default token is what keeps a workflow from approving its own PR. Two kinds of repository are in scope, the public source repository and the private build repository. The data repository and the site are the publishing side and have their own settings.
+
+## The standard
+
+| Setting | Source repository | Build repository |
+| --- | --- | --- |
+| Default branch | `main` | `main` |
+| Ruleset on `main` | require a pull request; required check `Validate targets`; block force pushes and deletion; no bypass actors | require a pull request; required check `Build environment image`; block force pushes and deletion |
+| Merge method | squash only | squash only |
+| Auto-delete head branches | on | on |
+| Allowed actions | GitHub-owned, plus `mitsevox/mitsevox.github.io/.github/actions/*` | GitHub-owned only |
+| Default `GITHUB_TOKEN` | read-only; workflows declare their own `permissions` | read-only |
+| Actions may approve pull requests | off | off |
+| Fork pull request approval | required for all outside collaborators (the fork guard in `validate.yml` is the second line) | not applicable |
+| Artifact and log retention | 30 days | 30 days |
+| Variable and secret | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY`; nothing else | none; `GITHUB_TOKEN` publishes the image |
+| Package | not applicable | private; `Manage Actions access` grants the source repository `Read` |
+| Secret scanning, push protection, Dependabot alerts, private vulnerability reporting | on | on where the plan allows |
+| Dependabot version updates | off; pinned actions are bumped by hand twice a year | off |
+| Issues | on | off |
+| Wiki, Projects, Discussions | off | off |
+| Description, homepage, topics | `<Title> (<console>, <year>) decompilation`; `https://mitsevox.github.io/games/<slug>/`; `decompilation`, `<platform>`, `<slug>` | `Private build environment for <owner>/<game>`; none; none |
+
+A single setting may differ for one repository (a merge method, say) when its process needs it; that is a row in the per-repository overrides of the configuration file, never a change to the table.
+
+## The script
+
+The standard is data: [`config/repo-standard.json`](https://github.com/mitsevox/mitsevox.github.io/blob/main/config/repo-standard.json) in the site repository holds the table keyed by kind, a `repositories` block that names each repository with the values its description, homepage and topics are built from, and the overrides. [`tools/repo_settings.py`](https://github.com/mitsevox/mitsevox.github.io/blob/main/tools/repo_settings.py) reads it and talks to the GitHub REST API; standard-library Python, about 250 lines, idempotent.
+
+```sh
+export GH_TOKEN="$(gh auth token)"
+python3 tools/repo_settings.py --repo owner/game --check
+python3 tools/repo_settings.py --repo owner/game --apply
+python3 tools/repo_settings.py --all --check
+```
+
+`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` ruleset (created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
+
+What the script cannot set, and prints as hand steps:
+
+- the variable and secret (set them in Settings, Secrets and variables, Actions, and delete any others);
+- the private package's `Manage Actions access` grant to the source repository;
+- the GitHub App that writes the data repository ([Publishing](/wiki/publishing/));
+- removing a `.github/dependabot.yml` if one exists.
+
+The owner runs `--apply` with their own token once per repository after it adopts the standard, and after any deliberate change to the table.
+
+## Keeping it true
+
+Two readers keep the settings from drifting back:
+
+1. **The scaffold check**, in every repository's `Tool tests` job ([CI](/wiki/ci/)), reads what the default `GITHUB_TOKEN` can see without any extra permission: the description, homepage, topics, features, merge settings and the rules that apply to `main` (`GET /repos/{owner}/{repo}/rules/branches/main`). It warns on each difference next to its other findings. It can read neither Actions permissions nor secrets, and it never writes.
+2. **The monthly check** in the site repository, `.github/workflows/settings-check.yml`, runs `--check` for every listed repository with a fine-grained personal access token limited to `Administration: read` and `Metadata: read` on those repositories, expiring yearly, stored as the secret `SETTINGS_READ_TOKEN`. On drift it opens one issue in the site repository, or updates the open one, with the full report. It never applies anything, and no write-capable administration token ever exists in CI.
+
+The monthly workflow is committed with manual dispatch only. Once the token exists, the owner creates the secret and adds the `schedule` block that the file's comment shows; nothing else changes. When the token expires, the check fails loudly at its first step rather than passing silently.
+
+## Owner steps when adopting the standard
+
+1. Merge the repository's scaffold PR, so that `validate.yml` and the `Validate targets` check exist before the ruleset requires them.
+2. Run `python3 tools/repo_settings.py --repo owner/game --apply` and `--repo owner/game-build --apply` from a site repository checkout.
+3. Do the printed hand steps: rename or create `DATA_APP_CLIENT_ID` and `DATA_APP_PRIVATE_KEY`, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
+4. Once, for the site repository: create the read-only token and the `SETTINGS_READ_TOKEN` secret, then enable the monthly schedule.
+
+## Assumptions to confirm
+
+- Rulesets on a private repository need a paid plan; on a free plan they exist for public repositories only, so the build repository's ruleset may be unavailable and `--check` will keep reporting it.
+- The actions-allowlist, retention and fork-approval endpoints behave as documented for personal accounts.
+- `Manage Actions access` is still the package-level grant that lets the source repository pull the image.
+- Every agent authors under the owner's login. That is what makes a native approval rule pointless and the procedural merge authority of [Contribution workflow](/wiki/contribution-workflow/) the right shape. If agents ever get their own accounts, add one required approving review from the owner with stale approvals dismissed, and nothing else changes.
 
 
 ---
@@ -1061,10 +1151,13 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | --- | --- |
 | `Invalid target registry`, `Unknown target fields`, `Invalid target identity`, `Invalid target status`, `Duplicate target` | `config/targets.json` breaks a rule in [Targets](/wiki/targets/): exactly the seven fields per target, lower-case platform, 40 lower-case hex digits, status in `active`, `planned`, `archived`. |
 | `Default target is not active` | `defaultTarget` names a planned or archived target. |
-| `Invalid CI dependency map`, `CI dependencies must cover every known target`, `Unsafe CI dependency patterns` | `config/ci-targets.json`: the four keys, an entry for every target in `targets.json`, no leading `/` or `..` in patterns. |
+| `Invalid CI dependency map`, `Unsafe CI dependency patterns` | `config/ci-targets.json`: exactly the keys `schemaVersion`, `shared` and `nonBuild`, no leading `/` or `..` in patterns. |
+| `Target defines collide` | Two ids in `targets.json` give the same `VERSION_` define (`a-b` and `a.b`, say); rename one. |
 | `Diff endpoints must be full commit SHAs` | The planner ran outside Actions or with an unusual event; run it with `--force-all` to audit everything. |
-| `Configure REVIEW_OWNER before adopting clearance` | The `REVIEW_OWNER` variable is empty; `tests/review_gate.mjs` passes its own value, so this appears in the live workflow only. |
-| `node --test` fails after editing `review.yml` | The test reads the script from the workflow file; keep the `script: |` block and its indentation intact. |
+| `config/<id>/build.sha1 differs from targets.json`, `config/<id>/config.yml hash differs from targets.json`, `config/<id>/<file> is missing` | `tools/targets.py check`: the three hashes of a target disagree, or an active target lacks a file. Fix the odd one out; the original's hash is the truth. |
+| `unknown VERSION_ token`, `version condition mixed with other macros`, `BUILD_VERSION is never read in source`, `MatchingFor argument ... is not a known target id` | `tools/versions.py check`: see the Version differences section of [Build, verify, measure](/wiki/build-verify-measure/). |
+| `evidence.tsv:<line>: ...` | `tools/evidence.py check`: the row breaks the format in `config/README.md` (columns, address form, kind, origin, edges). |
+| `::warning file=...::` lines in `Check the scaffold` | The checkout drifts from the kit or the spec ([Starter kit](/wiki/starter-kit/#the-scaffold-spec)). Warnings do not fail the job until the owner sets `strict: true`. |
 
 ## Image and original
 
@@ -1072,9 +1165,7 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | --- | --- |
 | The job fails while initializing the container (pull denied, unauthorized, manifest unknown) | The package is not readable by the public repository, or the digest is wrong. In the private package's settings add `owner/game` under Manage Actions access with Read, and copy the digest from the image workflow's summary. |
 | `cp: cannot stat '/orig/<id>/sys/main.dol'` | The image does not hold that target, or the path differs from PARAMETER 2. Add the `COPY` and checksum to the Dockerfile and rebuild, or fix the path in both places. |
-| `Missing/unsafe target original` | `orig/<id>/<ORIGINAL>` is absent or a symlink; locally, put your copy there. |
-| `Original executable SHA-1 differs` | The file is not the binary `targets.json` names. Fix the file or, if the file is right, the `sha1` field (then the image's checksum line too). |
-| `Target is not active` | `verify_target.py` was run for a planned or archived target. |
+| The toolkit reports a hash mismatch when splitting | The file at `orig/<id>/<path>` is not the binary `config.yml` names. Fix the file or, if the file is right, the hash in `config.yml`, `build.sha1` and `targets.json` together (then the image's checksum line too). |
 | `sha1sum: WARNING: 1 computed checksum did NOT match` during `docker build` | The original committed to the private repository differs from the Dockerfile's checksum line. |
 
 ## Build and measurement
@@ -1085,7 +1176,7 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | The link succeeds but the hash check against `config/<id>/build.sha1` fails | A `Matching` object no longer matches, or `build.sha1` is wrong. Mark the object `NonMatching` until it matches; `build.sha1` must equal the original's `sha1`. |
 | `ninja: error: ... report.json` or no report written | The `progress`/`report.json` targets need objdiff; check `config.objdiff_tag` and network access from the image, or pass `--objdiff` to a local binary. |
 | Numbers look wrong on the page but the build is green | Compare with `ninja ... progress` locally at the same commit. `linked` only counts `Matching` units; `matched` counts exact functions anywhere; `fuzzy` is size-weighted. A new split or a renamed unit changes `files` counts without changing bytes. |
-| `measuring_tools: validate.yml names no single pinned build image` | The `image:` line is not of the form `ghcr.io/<name>@sha256:<64 hex>`, or appears more than once. |
+| `measuring_tools: BUILD_IMAGE is not a digest-pinned image reference` | The `BUILD_IMAGE` variable in `validate.yml` is not of the form `ghcr.io/<name>@sha256:<64 hex>`, or the tool was run outside the workflow without it in the environment. |
 | `measuring_tools: configure.py has no objdiff_tag` | The `config.<tag> = "<version>"` line is missing or formatted differently; edit `TAGS` in `tools/measuring_tools.py` or the line. |
 
 ## Publish step
@@ -1119,13 +1210,13 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | No Contribute link | `contributions.accepting` is `false`, or there is no `guideUrl`, or the target has no report. |
 | The history chart has one point | Expected after the first publish; every later `main` publish adds one. |
 
-## Review gate
+## Settings
 
 | Symptom | Cause and fix |
 | --- | --- |
-| `Owner review clearance` stays pending | In order: the PR is a draft; the clearance is not by `REVIEW_OWNER`; `Revision:` is not the current head; the two links are the same, malformed or point at another PR; a linked record's revision or verdict is wrong; a header line appears twice. The acceptance matrix in [Review gate](/wiki/review-gate/) lists every case. |
-| The workflow does not run on comments | It is not on the default branch yet, or the comment is on an issue rather than a PR. |
-| The status never appears on a PR from a fork | By design; fork PRs are not cleared and not built. |
+| `repo_settings.py --check` reports `found unreadable` | The token lacks `Administration: read` for that setting, or the endpoint does not exist on this plan (rulesets on a private repository, say). Unreadable counts as drift on purpose. |
+| The monthly check fails at `Require the read-only token` | The `SETTINGS_READ_TOKEN` secret is missing or expired; create a new yearly token ([Repository settings](/wiki/repository-settings/)). |
+| `Check the scaffold` warns `settings: ...` | The repository's description, topics, features, merge settings or `main` rules differ from the standard; run `--apply` with the owner's token. |
 
 ## Recovery
 
@@ -1136,25 +1227,27 @@ A bad publish is a `git revert` in the data repository; the next publish appends
 
 # Starter kit
 
-The downloadable files, their parameters, the acceptance checklist and an agent prompt.
+The downloadable files, their parameters, the scaffold spec, the acceptance checklist and an agent prompt.
 
-Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It unpacks to `repository-starter/` and contains every copyable file this guide refers to, the data contract, and nothing that pretends to be a build system. The same files are browsable in the site repository under [`docs/wiki/starter/`](https://github.com/mitsevox/mitsevox.github.io/tree/main/docs/wiki/starter).
+Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It unpacks to `repository-starter/` and contains every copyable file this guide refers to, the scaffold spec, the data contract, and nothing that pretends to be a build system. The same files are browsable in the site repository under [`docs/wiki/starter/`](https://github.com/mitsevox/mitsevox.github.io/tree/main/docs/wiki/starter).
 
 ## Contents
 
 | File | Copy to | Chapter |
 | --- | --- | --- |
 | `README.md` | nowhere; it lists the parameters | this one |
-| `AGENTS.md`, `CONTRIBUTING.md`, `.gitignore`, `.github/pull_request_template.md` | the repository root and `.github/` | [Contribution workflow](/wiki/contribution-workflow/) |
+| `README.md.template` | `README.md` | [Contribution workflow](/wiki/contribution-workflow/) |
+| `AGENTS.md`, `CLAUDE.md`, `CONTRIBUTING.md`, `CREDITS.md`, `.gitignore`, `.gitattributes`, `.github/pull_request_template.md` | the repository root and `.github/` | [Contribution workflow](/wiki/contribution-workflow/), [Repository layout](/wiki/repository-layout/) |
 | `.github/workflows/validate.yml.template` | `.github/workflows/validate.yml` | [CI](/wiki/ci/) |
-| `.github/workflows/review.yml.template` | `.github/workflows/review.yml` | [Review gate](/wiki/review-gate/) |
 | `config/targets.json`, `config/site.json`, `config/ci-targets.json`, `config/README.md` | `config/` | [Targets](/wiki/targets/), [Evidence](/wiki/evidence/) |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/verify_target.py`, `tools/measuring_tools.py` | `tools/` | [Targets](/wiki/targets/), [CI](/wiki/ci/) |
-| `tests/test_targets.py`, `tests/review_gate.mjs` | `tests/` | [CI](/wiki/ci/), [Review gate](/wiki/review-gate/) |
+| `include/version.h` | `include/` | [Build, verify, measure](/wiki/build-verify-measure/) |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/measuring_tools.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/) |
+| `tests/test_targets.py` | `tests/` | [CI](/wiki/ci/) |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the private repository | [Build environment](/wiki/build-environment/) |
+| `scaffold.json` | nowhere; the scaffold check reads it | this one |
 | `contract/README.md` | reference only | [Data contract](/wiki/data-contract/) |
 
-Not included, because they are the project's own: `README.md`, `configure.py` and the rest of dtk-template, `config/<target id>/`, `src/` and `include/`.
+Not included, because they are the project's own: `configure.py` and the rest of dtk-template, `config/<target id>/` (scaffolded by `tools/new_target.py`), `src/` and `include/` beyond `version.h`.
 
 ## Parameters
 
@@ -1162,31 +1255,45 @@ Every project-specific value, and where it goes:
 
 | Parameter | Value | Files |
 | --- | --- | --- |
-| Public repository | `owner/game` | `CONTRIBUTING.md`, `tests/review_gate.mjs`, `build-image/README.md` |
-| Owner login | `OWNER_LOGIN`; also the `REVIEW_OWNER` variable | `AGENTS.md`, `CONTRIBUTING.md`, `tests/review_gate.mjs` |
-| Slug | `game` | `config/site.json` |
-| Target ids | `GAME01-rev0`, `GAME01-rev1` | `config/targets.json`, `config/ci-targets.json`, `AGENTS.md`, `CONTRIBUTING.md`, `build-image/*` |
+| Public repository | `owner/game` | `CONTRIBUTING.md`, `build-image/README.md` |
+| Owner login | `OWNER_LOGIN` | `CONTRIBUTING.md`, `README.md.template` |
+| Slug | `game` | `config/site.json`, `README.md.template` |
+| Target ids | `GAME01-rev0`, `GAME01-rev1` | `config/targets.json`, `.github/pull_request_template.md`, `README.md.template`, `build-image/*` |
 | Target display strings | `label`, `region`, `revision` | `config/targets.json` |
 | Original SHA-1 | 40 lower-case hex digits | `config/targets.json`, `build-image/Dockerfile` |
 | Presentation | `title`, `shortTitle`, `console`, `year`, `contributions`, `artwork` | `config/site.json` |
-| Build image | `owner/game-build` and its digest | `validate.yml.template` PARAMETER 1, `build-image/README.md` |
-| Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `tools/verify_target.py`, `build-image/*` |
+| Build image | `owner/game-build` and its digest | `validate.yml.template` PARAMETER 1 (`BUILD_IMAGE`), `build-image/README.md` |
+| Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `build-image/*`, `config/<id>/config.yml` |
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |
+| Project checks | optional step and its command | `validate.yml.template` |
 | Credential names | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | `validate.yml.template` PARAMETER 4 |
 | Reported tool versions | `dtk_tag`, `objdiff_tag` | `tools/measuring_tools.py` |
+| Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
+
+## The scaffold spec
+
+`scaffold.json` says which of these files must stay byte-identical to the kit, which are checked by outline, and which are free, and the scaffold check in CI enforces it ([CI](/wiki/ci/)).
+
+| Class | Files | Checked |
+| --- | --- | --- |
+| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
+| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest) | Headings or the fixed part; the body is free |
+| Free | Everything else | Nothing |
+
+The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
 
 ## Acceptance checklist
 
 The repository is set up when each line is true and can be shown with a run, a commit or a URL.
 
 - The public repository has the layout in [Repository layout](/wiki/repository-layout/); `git status` after a local build shows no original or generated file.
-- `python3 -m unittest discover -s tests -p 'test_*.py'` and `node --test tests/review_gate.mjs` pass locally.
-- `python3 tools/verify_target.py --target <id>` reports the SHA-1 verified, and `ninja -f build/<id>/build.ninja` produces the byte-identical executable.
+- `python3 -m unittest discover -s tests -p 'test_*.py'`, `python3 tools/targets.py check`, `python3 tools/versions.py check` and `python3 tools/evidence.py check` pass locally.
+- `ninja -f build/<id>/build.ninja` produces the byte-identical executable for every active target.
 - `ninja -f build/<id>/build.ninja progress build/<id>/report.json` writes a report that `publish.py publish --dry-run` converts and `publish.py check` accepts.
-- The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest.
-- A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and shows `Owner review clearance` pending.
-- `review.yml` is on `main`; a test clearance turns the status green; a new commit turns it pending. Branch protection requires both checks.
+- The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
+- A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
+- The `main` ruleset requires a pull request and `Validate targets`; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
 - The GitHub App is installed on the data repository; the producer holds the variable and the secret.
 - The first `main` run's `Publish to the site` step printed `published <slug>/<id> <sha>`; the data repository has the commit; `https://mitsevox.github.io/games/<slug>/` shows it.
 - Cover art is committed to the data repository and `artwork` is in `config/site.json`, or the owner has decided to go without.
@@ -1200,13 +1307,14 @@ ids with labels, regions, revisions and SHA-1s>, <slug and presentation>, <owner
 <public repository>, <private build repository>. Do not invent any other value.
 
 Work through the chapters in the order Start here gives. Copy each starter file to its destination
-and fill only the marked parameters. Where the guide names a command, run it and report its output;
-where a step needs the owner (creating the private repository, committing the original, installing
-the GitHub App, setting repository variables, secrets, package access or branch protection), stop
+and fill only the marked parameters; put the project's own rules under the Project section of
+AGENTS.md and nowhere else. Where the guide names a command, run it and report its output; where a
+step needs the owner (creating the private repository, committing the original, installing the
+GitHub App, setting repository variables, secrets, package access or repository settings), stop
 and list exactly what the owner must do.
 
 Finish with the acceptance checklist from the Starter kit chapter: for each line, the evidence
 (command output, commit, run or URL) or the reason it is not yet true. Never substitute a
 placeholder for a real value to make a check pass, never commit an original, and never change the
-build image, the review workflow or branch protection on your own.
+build image, the workflow skeleton or the repository settings on your own.
 ```

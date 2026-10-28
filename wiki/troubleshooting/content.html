@@ -2,7 +2,7 @@
 <aside class="wiki-sidebar">
 <div data-ui="wiki-search"></div>
 <p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
-<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/" aria-current="page"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">08</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">09</span>Publishing</a><a href="/wiki/repository-settings/"><span class="wiki-nav-number">10</span>Repository settings</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/" aria-current="page"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
 <div class="wiki-reading"><div class="wiki-meta"><span>Reference <span aria-hidden="true">/</span> 13</span><a href="/docs/wiki/troubleshooting.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="troubleshooting">Troubleshooting</h1>
 <p>Failure messages from the build, the publish action and the page, with their causes.</p>
@@ -25,20 +25,32 @@
 <td><code>defaultTarget</code> names a planned or archived target.</td>
 </tr>
 <tr>
-<td><code>Invalid CI dependency map</code>, <code>CI dependencies must cover every known target</code>, <code>Unsafe CI dependency patterns</code></td>
-<td><code>config/ci-targets.json</code>: the four keys, an entry for every target in <code>targets.json</code>, no leading <code>/</code> or <code>..</code> in patterns.</td>
+<td><code>Invalid CI dependency map</code>, <code>Unsafe CI dependency patterns</code></td>
+<td><code>config/ci-targets.json</code>: exactly the keys <code>schemaVersion</code>, <code>shared</code> and <code>nonBuild</code>, no leading <code>/</code> or <code>..</code> in patterns.</td>
+</tr>
+<tr>
+<td><code>Target defines collide</code></td>
+<td>Two ids in <code>targets.json</code> give the same <code>VERSION_</code> define (<code>a-b</code> and <code>a.b</code>, say); rename one.</td>
 </tr>
 <tr>
 <td><code>Diff endpoints must be full commit SHAs</code></td>
 <td>The planner ran outside Actions or with an unusual event; run it with <code>--force-all</code> to audit everything.</td>
 </tr>
 <tr>
-<td><code>Configure REVIEW_OWNER before adopting clearance</code></td>
-<td>The <code>REVIEW_OWNER</code> variable is empty; <code>tests/review_gate.mjs</code> passes its own value, so this appears in the live workflow only.</td>
+<td><code>config/&lt;id&gt;/build.sha1 differs from targets.json</code>, <code>config/&lt;id&gt;/config.yml hash differs from targets.json</code>, <code>config/&lt;id&gt;/&lt;file&gt; is missing</code></td>
+<td><code>tools/targets.py check</code>: the three hashes of a target disagree, or an active target lacks a file. Fix the odd one out; the original's hash is the truth.</td>
 </tr>
 <tr>
-<td><code>node --test</code> fails after editing <code>review.yml</code></td>
-<td>The test reads the script from the workflow file; keep the <code>script: |</code> block and its indentation intact.</td>
+<td><code>unknown VERSION_ token</code>, <code>version condition mixed with other macros</code>, <code>BUILD_VERSION is never read in source</code>, <code>MatchingFor argument ... is not a known target id</code></td>
+<td><code>tools/versions.py check</code>: see the Version differences section of <a href="/wiki/build-verify-measure/">Build, verify, measure</a>.</td>
+</tr>
+<tr>
+<td><code>evidence.tsv:&lt;line&gt;: ...</code></td>
+<td><code>tools/evidence.py check</code>: the row breaks the format in <code>config/README.md</code> (columns, address form, kind, origin, edges).</td>
+</tr>
+<tr>
+<td><code>::warning file=...::</code> lines in <code>Check the scaffold</code></td>
+<td>The checkout drifts from the kit or the spec (<a href="/wiki/starter-kit/#the-scaffold-spec">Starter kit</a>). Warnings do not fail the job until the owner sets <code>strict: true</code>.</td>
 </tr>
 </tbody>
 </table></div>
@@ -60,16 +72,8 @@
 <td>The image does not hold that target, or the path differs from PARAMETER 2. Add the <code>COPY</code> and checksum to the Dockerfile and rebuild, or fix the path in both places.</td>
 </tr>
 <tr>
-<td><code>Missing/unsafe target original</code></td>
-<td><code>orig/&lt;id&gt;/&lt;ORIGINAL&gt;</code> is absent or a symlink; locally, put your copy there.</td>
-</tr>
-<tr>
-<td><code>Original executable SHA-1 differs</code></td>
-<td>The file is not the binary <code>targets.json</code> names. Fix the file or, if the file is right, the <code>sha1</code> field (then the image's checksum line too).</td>
-</tr>
-<tr>
-<td><code>Target is not active</code></td>
-<td><code>verify_target.py</code> was run for a planned or archived target.</td>
+<td>The toolkit reports a hash mismatch when splitting</td>
+<td>The file at <code>orig/&lt;id&gt;/&lt;path&gt;</code> is not the binary <code>config.yml</code> names. Fix the file or, if the file is right, the hash in <code>config.yml</code>, <code>build.sha1</code> and <code>targets.json</code> together (then the image's checksum line too).</td>
 </tr>
 <tr>
 <td><code>sha1sum: WARNING: 1 computed checksum did NOT match</code> during <code>docker build</code></td>
@@ -103,8 +107,8 @@
 <td>Compare with <code>ninja ... progress</code> locally at the same commit. <code>linked</code> only counts <code>Matching</code> units; <code>matched</code> counts exact functions anywhere; <code>fuzzy</code> is size-weighted. A new split or a renamed unit changes <code>files</code> counts without changing bytes.</td>
 </tr>
 <tr>
-<td><code>measuring_tools: validate.yml names no single pinned build image</code></td>
-<td>The <code>image:</code> line is not of the form <code>ghcr.io/&lt;name&gt;@sha256:&lt;64 hex&gt;</code>, or appears more than once.</td>
+<td><code>measuring_tools: BUILD_IMAGE is not a digest-pinned image reference</code></td>
+<td>The <code>BUILD_IMAGE</code> variable in <code>validate.yml</code> is not of the form <code>ghcr.io/&lt;name&gt;@sha256:&lt;64 hex&gt;</code>, or the tool was run outside the workflow without it in the environment.</td>
 </tr>
 <tr>
 <td><code>measuring_tools: configure.py has no objdiff_tag</code></td>
@@ -211,7 +215,7 @@
 </tr>
 </tbody>
 </table></div>
-<h2 id="review-gate">Review gate</h2>
+<h2 id="settings">Settings</h2>
 <div class="wiki-table"><table>
 <thead>
 <tr>
@@ -221,19 +225,19 @@
 </thead>
 <tbody>
 <tr>
-<td><code>Owner review clearance</code> stays pending</td>
-<td>In order: the PR is a draft; the clearance is not by <code>REVIEW_OWNER</code>; <code>Revision:</code> is not the current head; the two links are the same, malformed or point at another PR; a linked record's revision or verdict is wrong; a header line appears twice. The acceptance matrix in <a href="/wiki/review-gate/">Review gate</a> lists every case.</td>
+<td><code>repo_settings.py --check</code> reports <code>found unreadable</code></td>
+<td>The token lacks <code>Administration: read</code> for that setting, or the endpoint does not exist on this plan (rulesets on a private repository, say). Unreadable counts as drift on purpose.</td>
 </tr>
 <tr>
-<td>The workflow does not run on comments</td>
-<td>It is not on the default branch yet, or the comment is on an issue rather than a PR.</td>
+<td>The monthly check fails at <code>Require the read-only token</code></td>
+<td>The <code>SETTINGS_READ_TOKEN</code> secret is missing or expired; create a new yearly token (<a href="/wiki/repository-settings/">Repository settings</a>).</td>
 </tr>
 <tr>
-<td>The status never appears on a PR from a fork</td>
-<td>By design; fork PRs are not cleared and not built.</td>
+<td><code>Check the scaffold</code> warns <code>settings: ...</code></td>
+<td>The repository's description, topics, features, merge settings or <code>main</code> rules differ from the standard; run <code>--apply</code> with the owner's token.</td>
 </tr>
 </tbody>
 </table></div>
 <h2 id="recovery">Recovery</h2>
 <p>A bad publish is a <code>git revert</code> in the data repository; the next publish appends on top. A bad image digest is a revert of the <code>validate.yml</code> change. Never edit measurement files in the data repository by hand, and never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/site/"><small>Previous</small><span>The site</span></a><a href="/wiki/starter-kit/"><small>Next</small><span>Starter kit</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#plan-and-tool-tests">Plan and tool tests</a><a href="#image-and-original">Image and original</a><a href="#build-and-measurement">Build and measurement</a><a href="#publish-step">Publish step</a><a href="#deploy-and-page">Deploy and page</a><a href="#review-gate">Review gate</a><a href="#recovery">Recovery</a></nav></aside></main>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#plan-and-tool-tests">Plan and tool tests</a><a href="#image-and-original">Image and original</a><a href="#build-and-measurement">Build and measurement</a><a href="#publish-step">Publish step</a><a href="#deploy-and-page">Deploy and page</a><a href="#settings">Settings</a><a href="#recovery">Recovery</a></nav></aside></main>

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Compute affected targets from explicit dependencies; unknown paths fail broad."""
+"""Compute affected targets from explicit dependencies; unknown paths fail broad.
+
+config/ci-targets.json lists `shared` patterns (select every active target) and `nonBuild`
+patterns (select nothing). The per-target patterns are not listed: every target owns
+config/<id>/** and orig/<id>/**, derived here from config/targets.json."""
 import argparse
 import fnmatch
 import json
@@ -16,21 +20,24 @@ ROOT=Path(__file__).resolve().parents[1]
 SHA=re.compile(r'[a-f0-9]{40}')
 
 
+def target_patterns(targets):
+    return {target['id']:['config/%s/**'%target['id'],'orig/%s/**'%target['id']] for target in targets['targets']}
+
+
 def affected(paths,targets,dependencies,force=False):
     active=set(build_targets(targets))
-    if set(dependencies)!={'schemaVersion','shared','targets','nonBuild'} or dependencies['schemaVersion']!=1:
+    if set(dependencies)!={'schemaVersion','shared','nonBuild'} or dependencies['schemaVersion']!=1:
         raise ValueError('Invalid CI dependency map')
-    known={target['id'] for target in targets['targets']}
-    if set(dependencies['targets'])!=known:raise ValueError('CI dependencies must cover every known target')
-    patterns=[dependencies['shared'],dependencies['nonBuild'],*dependencies['targets'].values()]
+    patterns=[dependencies['shared'],dependencies['nonBuild']]
     if any(not isinstance(group,list) or any(not isinstance(p,str) or not p or p.startswith('/') or '..' in p.split('/') for p in group) for group in patterns):raise ValueError('Unsafe CI dependency patterns')
     if force:return sorted(active)
+    owned=target_patterns(targets)
     selected=set()
     def matches(path,patterns):return any(fnmatch.fnmatchcase(path,p) for p in patterns)
     for path in paths:
         if not path or path.startswith('/') or '..' in path.split('/'):raise ValueError('Unsafe changed path')
         if matches(path,dependencies['shared']):selected.update(active);continue
-        owners={key for key,patterns in dependencies['targets'].items() if matches(path,patterns)}
+        owners={key for key,patterns in owned.items() if matches(path,patterns)}
         if owners:selected.update(owners&active);continue
         if matches(path,dependencies['nonBuild']):continue
         # Missing dependency knowledge must never silently skip validation.

@@ -1,0 +1,57 @@
+name: Repository settings check
+
+# Runs tools/repo_settings.py --check for every repository listed in config/repo-standard.json and
+# opens (or updates) one issue when anything drifts. It never applies a setting: the token is a
+# fine-grained personal access token limited to Administration: read and Metadata: read on those
+# repositories, expiring yearly, stored as the secret SETTINGS_READ_TOKEN.
+#
+# Disabled until that token exists: the workflow runs on manual dispatch only. Once the secret is
+# set, add the monthly schedule below and the workflow needs no other change.
+#
+#   schedule:
+#     - cron: '17 6 1 * *'
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check settings
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Require the read-only token
+        env:
+          SETTINGS_READ_TOKEN: ${{ secrets.SETTINGS_READ_TOKEN }}
+        run: test -n "$SETTINGS_READ_TOKEN" || { echo '::error::Create the SETTINGS_READ_TOKEN secret first (Repository settings chapter of the wiki)'; exit 1; }
+      - name: Check every listed repository
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.SETTINGS_READ_TOKEN }}
+        run: |
+          if python3 tools/repo_settings.py --all --check | tee drift.txt; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Open or update the drift issue
+        if: steps.check.outputs.drift == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title='Repository settings drift'
+          { echo 'Found by the monthly settings check. Apply with `python3 tools/repo_settings.py --repo <owner/name> --apply` using your own token, then close this issue.'; echo; echo '```text'; cat drift.txt; echo '```'; } > body.md
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [ -n "$number" ]; then
+            gh issue edit "$number" --repo "$GITHUB_REPOSITORY" --body-file body.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file body.md
+          fi

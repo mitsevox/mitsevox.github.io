@@ -2,36 +2,45 @@
 <aside class="wiki-sidebar">
 <div data-ui="wiki-search"></div>
 <p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
-<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/" aria-current="page"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
-<div class="wiki-reading"><div class="wiki-meta"><span>Pipeline <span aria-hidden="true">/</span> 09</span><a href="/docs/wiki/ci.md" download>Markdown ↓</a></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/" aria-current="page"><span class="wiki-nav-number">08</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">09</span>Publishing</a><a href="/wiki/repository-settings/"><span class="wiki-nav-number">10</span>Repository settings</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Pipeline <span aria-hidden="true">/</span> 08</span><a href="/docs/wiki/ci.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="ci">CI</h1>
-<p><code>validate.yml</code>: plan the affected targets, run the tool tests, build each target in the image, publish on <code>main</code>.</p>
-<p>One workflow does everything. It runs on every push to <code>main</code>, every pull request and on manual dispatch. Pull requests get the full build and nothing else; pushes to <code>main</code> additionally publish. There is no cache, no artifact and no second workflow to keep in step: the starter <code>validate.yml.template</code> is the whole thing, and the four parameters marked in it are the only edits.</p>
+<p><code>validate.yml</code>: plan the affected targets, run the tool tests and the scaffold check, build each target in the image, publish on <code>main</code>.</p>
+<p>One workflow does everything. It runs on every push to <code>main</code>, every pull request and on manual dispatch. Pull requests get the full build and nothing else; pushes to <code>main</code> additionally publish. There is no cache, no artifact and no second workflow to keep in step: the starter <code>validate.yml.template</code> is the whole thing, the four parameters marked in it are the only edits, and one optional step is the only addition. The scaffold check compares the file's job and step names with the kit on every run.</p>
 <h2 id="jobs">Jobs</h2>
 <pre><code class="language-text">Plan affected targets ──┐
                         ├──&gt; Validate &lt;target id&gt;  (one job per affected active target, in the image)
 Tool tests ─────────────┘            │
-                                     └──&gt; Validate targets  (the aggregate check branch protection requires)
+                                     └──&gt; Validate targets  (the aggregate check the ruleset requires)
 </code></pre>
 <h3 id="plan-affected-targets">Plan affected targets</h3>
-<p>Checks out with <code>fetch-depth: 0</code> (the planner diffs two commits) and runs <code>python3 tools/ci_targets.py</code>. The planner reads the event: for a pull request it diffs the base SHA against the head, for a push it diffs <code>before</code> against the pushed commit, and for <code>workflow_dispatch</code>, a push without a usable <code>before</code> (first push, force push) or <code>--force-all</code> it selects every active target. It applies <code>config/ci-targets.json</code> (<a href="/wiki/targets/">Targets</a>) and writes two outputs:</p>
+<p>Checks out with <code>fetch-depth: 0</code> (the planner diffs two commits) and runs <code>python3 tools/ci_targets.py</code>. The planner reads the event: for a pull request it diffs the base SHA against the head, for a push it diffs <code>before</code> against the pushed commit, and for <code>workflow_dispatch</code>, a push without a usable <code>before</code> (first push, force push) or <code>--force-all</code> it selects every active target. It applies <code>config/ci-targets.json</code> (<a href="/wiki/targets/">Targets</a>), with each target's <code>config/&lt;id&gt;/**</code> and <code>orig/&lt;id&gt;/**</code> derived from the registry, and writes two outputs:</p>
 <ul>
 <li><code>matrix</code>: <code>{"include":[{"target":"GAME01-rev0"}, ...]}</code></li>
 <li><code>has_targets</code>: <code>true</code> or <code>false</code></li>
 </ul>
+<p>Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every <code>include/**</code> change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.</p>
 <h3 id="tool-tests">Tool tests</h3>
-<p>Runs on the plain runner, outside the image, on every event:</p>
-<pre><code class="language-sh">node --test tests/review_gate.mjs
+<p>Runs on the plain runner, outside the image, on every event, in two steps:</p>
+<pre><code class="language-sh"># Run tool tests
 python3 -m unittest discover -s tests -p 'test_*.py' -v
+python3 tools/targets.py check
+python3 tools/versions.py check
+python3 tools/evidence.py check
+# Check the scaffold
+uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
 </code></pre>
-<p>Add the project's own tests under <code>tests/test_*.py</code>; they run here. Keep anything that needs the toolchain out of this job.</p>
+<p>The first step runs the project's tests (add yours under <code>tests/test_*.py</code>) and the three kit checks: the hashes agree per target, the version blocks use known tokens only, the evidence records are well formed. The second is the scaffold check, a composite action in the site repository. GitHub clones the whole site repository to run it, so the check compares the checkout against the starter kit and the scaffold spec at the action's own revision, and the kit, the spec and the check can never disagree. It prints one <code>::warning::</code> per finding and exits 0; <code>with: strict: true</code> makes it fail instead, which the owner flips once every repository has been clean for a month. With the default token it also reads the repository's description, topics, features, merge settings and the rules on <code>main</code> and warns where they differ from the <a href="/wiki/repository-settings/">settings standard</a>. Keep anything that needs the toolchain out of this job.</p>
 <h3 id="validate-target-id">Validate <code>&lt;target id&gt;</code></h3>
-<p>One job per selected target, <code>fail-fast: false</code>, so one target's failure does not cancel another's build or publish. It runs inside the private image:</p>
-<pre><code class="language-yaml">    permissions:
+<p>One job per selected target, <code>fail-fast: false</code>, so one target's failure does not cancel another's build or publish. It runs inside the private image, named once at the top of the file:</p>
+<pre><code class="language-yaml">env:
+  BUILD_IMAGE: ghcr.io/owner/game-build@sha256:&lt;digest&gt;     # PARAMETER 1
+...
+    permissions:
       contents: read
       packages: read
     container:
-      image: ghcr.io/owner/game-build@sha256:&lt;digest&gt;     # PARAMETER 1
+      image: ${{ env.BUILD_IMAGE }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -55,8 +64,8 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 <td><code>persist-credentials: false</code>; the default depth is enough because the publish step only needs <code>HEAD</code>.</td>
 </tr>
 <tr>
-<td><code>Provide and verify target original</code></td>
-<td><code>mkdir -p orig/$TARGET_ID/sys</code>, <code>cp /orig/$TARGET_ID/sys/main.dol orig/$TARGET_ID/sys/main.dol</code>, <code>python3 tools/verify_target.py --target "$TARGET_ID"</code>. PARAMETER 2 is the path.</td>
+<td><code>Provide target original</code></td>
+<td><code>mkdir -p orig/$TARGET_ID/sys</code>, <code>cp /orig/$TARGET_ID/sys/main.dol orig/$TARGET_ID/sys/main.dol</code>. PARAMETER 2 is the path. The toolkit checks the hash against <code>config.yml</code> when it splits; a third check of the same bytes is not needed.</td>
 </tr>
 <tr>
 <td><code>Configure target</code></td>
@@ -67,8 +76,12 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 <td><code>ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"</code>, then writes the output <code>measured-at</code> as the current UTC time in <code>%Y-%m-%dT%H:%M:%SZ</code>. PARAMETER 3. The build fails unless the executable's hash matches.</td>
 </tr>
 <tr>
+<td><code>Project checks</code>, optional</td>
+<td>The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name.</td>
+</tr>
+<tr>
 <td><code>List measuring tools</code> (<code>id: tools</code>), <code>main</code> only</td>
-<td>Runs <code>python3 tools/measuring_tools.py</code> and captures its lines in the output <code>lines</code> with a random heredoc delimiter.</td>
+<td>Runs <code>python3 tools/measuring_tools.py</code>, which reads <code>BUILD_IMAGE</code> from the environment and the tool tags from <code>configure.py</code>, and captures its lines in the output <code>lines</code> with a random heredoc delimiter.</td>
 </tr>
 <tr>
 <td><code>Publish to the site</code>, <code>main</code> only</td>
@@ -78,7 +91,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 </table></div>
 <p>The two <code>main</code>-only steps use the condition <code>github.ref == 'refs/heads/main' &amp;&amp; github.event_name != 'pull_request'</code>, so a push and a manual run on <code>main</code> both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.</p>
 <h3 id="validate-targets">Validate targets</h3>
-<p>Runs always, after the others, and fails unless <code>plan</code> and <code>tests</code> succeeded and the target jobs either all succeeded (when <code>has_targets</code> was <code>true</code>) or were skipped (when it was <code>false</code>). Its name, <code>Validate targets</code>, is the single check to require in branch protection; the per-target job names vary with the matrix and cannot be required one by one.</p>
+<p>Runs always, after the others, and fails unless <code>plan</code> and <code>tests</code> succeeded and the target jobs either all succeeded (when <code>has_targets</code> was <code>true</code>) or were skipped (when it was <code>false</code>). Its name, <code>Validate targets</code>, is the single check the <code>main</code> ruleset requires; the per-target job names vary with the matrix and cannot be required one by one.</p>
 <h2 id="workflow-level-settings">Workflow-level settings</h2>
 <pre><code class="language-yaml">permissions:
   contents: read
@@ -86,7 +99,7 @@ concurrency:
   group: validate-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 </code></pre>
-<p>A new push to a PR cancels that PR's running validation; pushes to <code>main</code> queue instead, so every <code>main</code> commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential.</p>
+<p>A new push to a PR cancels that PR's running validation; pushes to <code>main</code> queue instead, so every <code>main</code> commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to <code>BUILD_IMAGE</code>.</p>
 <h2 id="installing-it">Installing it</h2>
 <ol>
 <li>Copy <code>validate.yml.template</code> to <code>.github/workflows/validate.yml</code>.</li>
@@ -94,9 +107,9 @@ concurrency:
 <li>Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally (<a href="/wiki/build-verify-measure/">Build, verify, measure</a>). The image's tool paths replace the local ones.</li>
 <li>Fill PARAMETER 4 with the variable and secret names from <a href="/wiki/publishing/">Publishing</a>; the step is harmless until they exist, because it only runs on <code>main</code>.</li>
 <li>Copy the <code>tools/</code> and <code>tests/</code> starter files and <code>config/ci-targets.json</code>.</li>
-<li>Open a pull request with all of it and watch the four jobs. The first run of <code>Validate &lt;target id&gt;</code> proves the image pull (package access), the original (SHA-1), the toolchain (configure) and the match (<code>build.sha1</code>).</li>
+<li>Open a pull request with all of it and watch the four jobs. The first run of <code>Validate &lt;target id&gt;</code> proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (<code>build.sha1</code>). The <code>Check the scaffold</code> step lists what still differs from the kit.</li>
 <li>Merge. The first <code>main</code> run publishes, provided the credential is in place.</li>
 </ol>
 <h2 id="what-a-pull-request-proves">What a pull request proves</h2>
-<p>A green <code>Validate targets</code> on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, and objdiff produced a report. It does not mean the reconstruction is right; that is what the <a href="/wiki/review-gate/">review gate</a> is for. Pull requests publish nothing, so a PR cannot change the site.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/review-gate/"><small>Previous</small><span>Review gate</span></a><a href="/wiki/publishing/"><small>Next</small><span>Publishing</span></a></nav></div>
+<p>A green <code>Validate targets</code> on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, and objdiff produced a report. It does not mean the reconstruction is right; that is what the review tiers in <a href="/wiki/contribution-workflow/">Contribution workflow</a> are for. Pull requests publish nothing, so a PR cannot change the site.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/contribution-workflow/"><small>Previous</small><span>Contribution workflow</span></a><a href="/wiki/publishing/"><small>Next</small><span>Publishing</span></a></nav></div>
 <aside class="wiki-on-page"><nav aria-label="On this page"><a href="#jobs">Jobs</a><a href="#workflow-level-settings">Workflow-level settings</a><a href="#installing-it">Installing it</a><a href="#what-a-pull-request-proves">What a pull request proves</a></nav></aside></main>
