@@ -75,6 +75,27 @@ class ConversionTests(unittest.TestCase):
         publish.check_map(m, s)
         self.assertEqual([f['name'] for f in m['files']], ['game/unit', 'auto_80000020_text', 'game/unit'])
 
+    def test_code_outside_functions_gets_its_own_tile(self):
+        # A producer whose functions do not cover a code section (padding, unsplit code) counts the
+        # rest in matched_code; the map shows it as one non-function tile per section piece.
+        r = report()
+        unit = r['units'][0]
+        unit['functions'][1]['size'] = '8'  # Fuzzy now ends at 0x80000018; 8 bytes follow it
+        unit['measures']['matched_code'] = '20'
+        r['measures']['matched_code'] = '20'
+        s = publish.summary(r, SECTIONS)
+        self.assertEqual((s['code']['total'], s['code']['matched']), (48, 20))
+        self.assertEqual(s['code']['fuzzy'], 16 + 4 + 4)  # exact, half of fuzzy, then 4 other bytes
+        m = publish.map_document(r, SECTIONS)
+        publish.check_map(m, s)
+        other = [c for c in m['files'][0]['children'] if c['name'].endswith('(other code)')]
+        self.assertEqual([(c['address'], c['size'], c['matched']) for c in other], [('0x80000018', 8, 4)])
+        self.assertNotIn('type', other[0])
+        self.assertEqual(s['functions']['total'], 3)
+        unit['measures']['matched_code'] = '40'
+        with self.assertRaisesRegex(publish.ContractError, 'does not fit'):
+            publish.summary(r, SECTIONS)
+
     def test_function_outside_code_sections_is_named(self):
         with self.assertRaisesRegex(publish.ContractError, 'outside the code sections'):
             publish.map_document(report(), ('.init',))
