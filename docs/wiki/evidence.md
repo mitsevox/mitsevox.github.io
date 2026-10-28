@@ -8,7 +8,7 @@ A byte match proves that the compiler produced the same code from the submitted 
 
 Inventory what the target and its references actually contain: the parsed filesystem, executables, symbols, debug information, linker maps, diagnostic strings, SDK references and related builds. Record hashes or revisions and which files were parsed. A claim that an artifact does not exist must say how thoroughly it was searched; a file-name search or a few strings is not enough.
 
-Related builds (another platform, another revision, another game on the same engine) suggest names and behavior. They do not prove the target's offsets, field widths, original names or source boundaries. Keep target evidence, reference evidence and inferred meaning separate.
+Related builds (another platform, another revision, another game on the same engine) suggest names and behavior. They do not prove the target's offsets, field widths, original names or source boundaries. Keep target evidence, reference evidence and inferred meaning separate. A claim is per target, because it carries addresses: a name recovered on one target and carried to a sibling is a `related` row in the sibling's `evidence.tsv`, with `provisional` edges on its unit rows, until the sibling's own bytes confirm it ([Multiple targets](/wiki/multi-target/)).
 
 Reference material that agents read on every task lives under `references/`: text only, regenerable by a named tool, no file over 4 MB. The scaffold check warns on anything larger.
 

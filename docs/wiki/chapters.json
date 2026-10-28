@@ -36,6 +36,12 @@
     "group": "Reconstruction"
   },
   {
+    "slug": "multi-target",
+    "title": "Multiple targets",
+    "summary": "Activating a second original safely, sharing one source tree, carrying a map across, validating on every target, and a target's life.",
+    "group": "Reconstruction"
+  },
+  {
     "slug": "contribution-workflow",
     "title": "Contribution workflow",
     "summary": "Review tiers sized to what a PR touches, draft PRs as reservations, independent records and an owner-only merge.",
