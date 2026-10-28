@@ -1,6 +1,7 @@
 """The publisher: objdiff report -> contract files, history append rules and the tree check."""
 import copy
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -143,6 +144,45 @@ class ConversionTests(unittest.TestCase):
         m = publish.map_document(report(), SECTIONS)
         m['files'][0]['children'][0]['matched'] = 0
         with self.assertRaises(publish.ContractError):
+            publish.check_map(m, s)
+
+    def page_rejects(self, map_doc, s):
+        measures = {kind: {k: s[kind][k] for k in ('total', 'linked', 'matched', 'fuzzy')} for kind in ('code', 'data')}
+        script = ("import {validateMap} from './assets/report-map-validation.js';\n"
+                  "const [map, measures] = JSON.parse(process.argv[1]);\n"
+                  "validateMap(map, measures);\n")
+        result = subprocess.run(['node', '--input-type=module', '-e', script, json.dumps([map_doc, measures])],
+                                cwd=ROOT, capture_output=True, text=True)
+        return result.returncode != 0
+
+    def test_map_check_is_exactly_as_strict_as_the_page(self):
+        # The page sums children with an absolute tolerance of 1e-6 and no relative one. A big
+        # unit whose group fuzzy is 1.5e-6 off its children is refused by the page; a relative
+        # tolerance would have let the publisher accept it.
+        r = report()
+        unit, auto = r['units']
+        big = 4000000  # the exact function grows by this; everything after it moves up by this
+        unit['sections'][0]['size'] = str(32 + big)
+        unit['sections'][1]['metadata']['virtual_address'] = str(2147500000 + big)
+        unit['functions'][0]['size'] = str(16 + big)
+        unit['functions'][1]['metadata']['virtual_address'] = str(2147483664 + big)
+        unit['measures'].update(total_code=str(32 + big), matched_code=str(16 + big))
+        auto['sections'][0]['metadata']['virtual_address'] = str(2147483680 + big)
+        auto['functions'][0]['metadata']['virtual_address'] = str(2147483680 + big)
+        r['measures'].update(total_code=str(48 + big), matched_code=str(16 + big), complete_code=str(32 + big))
+        s = publish.summary(r, SECTIONS)
+        self.assertEqual(s['code']['fuzzy'], 16 + big + 8)
+        m = publish.map_document(r, SECTIONS)
+        publish.check_map(m, s)
+        m['files'][0]['fuzzy'] += 1.5e-6
+        self.assertTrue(self.page_rejects(m, s))
+        with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
+            publish.check_map(m, s)
+        # The page needs a name on every node.
+        m = publish.map_document(r, SECTIONS)
+        del m['files'][0]['children'][0]['name']
+        self.assertTrue(self.page_rejects(m, s))
+        with self.assertRaisesRegex(publish.ContractError, 'no name'):
             publish.check_map(m, s)
 
 
@@ -357,6 +397,18 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(current['source']['title'], 'Measured commit')
             self.assertEqual(current['tools'], [{'name': 'objdiff', 'version': 'v3.6.1'}])
             self.assertEqual(publish.check_tree(out), 1)
+            # The report check of a pull request: credits on, but the merged pull request does
+            # not exist yet, so --no-credits converts without reading GitHub.
+            (source / 'config/site.json').write_text(json.dumps(dict(SITE, contributors=True)))
+            command = [sys.executable, str(ROOT / '.github/actions/publish/publish.py'), 'publish', '--dry-run',
+                       '--target', 'GAME01-rev0', '--report', 'report.json', '--repository', 'owner/game',
+                       '--output', str(temp / 'check')]
+            refused = subprocess.run(command, cwd=source, capture_output=True, text=True, env={**os.environ, 'GITHUB_TOKEN': ''})
+            self.assertIn('GITHUB_TOKEN is required', refused.stderr)
+            checked = subprocess.run(command + ['--no-credits'], cwd=source, capture_output=True, text=True)
+            self.assertEqual(checked.returncode, 0, checked.stderr)
+            self.assertIn('checked 1 target(s)', checked.stdout)
+            self.assertIsNone(json.loads((temp / 'check/data/game/GAME01-rev0/latest.json').read_text())['modules']['contributors'])
 
 
 if __name__ == '__main__':

@@ -4,7 +4,9 @@
 publish  objdiff report.json -> latest.json, map.json and one history row, plus contributors.json
          when site.json switches contributors on; clone the data repository, write, check,
          commit and push, retrying when another run wins
-         (--dry-run writes into --output, or a temporary tree, and pushes nothing)
+         (--dry-run writes into --output, or a temporary tree, and pushes nothing;
+         --no-credits skips the credits, which need the merged pull request: the report
+         check a pull request runs)
 check    validate a whole data tree against the contract (contract/README.md)
 
 The producer is the only writer and the only validator: everything written here is checked
@@ -383,11 +385,16 @@ def merged_ranges(ranges):
 
 
 def check_map(document, s):
-    """Every byte the summary counts appears once in each view, and each parent is its children's sum."""
+    """Every byte the summary counts appears once in each view, and each parent is its children's sum.
+    The bounds are exactly the page's (assets/report-map-validation.js), so that nothing this
+    check accepts is a map the page refuses to draw."""
     require(document.get('schema') == SCHEMA, 'map.json: unsupported schema')
+    for field in ('sections', 'files'):
+        require(isinstance(document.get(field), list) and document[field], 'map: %s is empty' % field)
 
     def close(a, b):
-        return math.isclose(a, b, abs_tol=1e-6, rel_tol=1e-12)
+        # The page compares sums with an absolute tolerance of 1e-6 and no relative one.
+        return abs(a - b) <= 1e-6
 
     def node_extents(item):
         if 'mapped_extents' in item:
@@ -401,6 +408,7 @@ def check_map(document, s):
     functions, exact = {}, set()
 
     def walk(item, kind, inventory):
+        require(isinstance(item.get('name'), str), 'map: a node has no name')
         require(item.get('kind') == kind, 'map: kind differs at %r' % item.get('name'))
         for key in ('source', 'comparison_source'):
             if key in item:
@@ -765,7 +773,7 @@ def convert(args):
 def publish(args):
     game, latest, map_doc = convert(args)
     credits = None
-    if read_json(args.site).get('contributors') is True:
+    if read_json(args.site).get('contributors') is True and not args.no_credits:
         credits = build_credits(args, latest['source']['revision'])
     if args.dry_run:
         tree = Path(args.output or tempfile.mkdtemp(prefix='decomp-data-'))
@@ -829,6 +837,7 @@ def main(argv=None):
     p.add_argument('--data-repository', default='mitsevox/decomp-data')
     p.add_argument('--credits', help='credit overrides (default config/<target>/credits.tsv when it exists)')
     p.add_argument('--dry-run', action='store_true')
+    p.add_argument('--no-credits', action='store_true', help='skip the credits even when site.json switches them on')
     check = commands.add_parser('check')
     check.add_argument('tree')
     args = parser.parse_args(argv)

@@ -96,17 +96,17 @@ The action's script runs anywhere with Python 3 and Git. From the producer check
 git clone https://github.com/mitsevox/mitsevox.github.io site
 python3 site/.github/actions/publish/publish.py publish --target GAME01-rev0 \
   --report build/GAME01-rev0/report.json --repository owner/game \
-  --tools "$(python3 tools/measuring_tools.py)" --dry-run --output /tmp/tree
+  --tools "$(python3 tools/measuring_tools.py)" --dry-run --no-credits --output /tmp/tree
 python3 site/.github/actions/publish/publish.py check /tmp/tree
 ```
 
-`--dry-run` writes the files into `--output` (or a temporary directory) and pushes nothing; `check` validates a whole tree. `--repository` is required outside Actions because `GITHUB_REPOSITORY` is unset; `source.runUrl` is `null` locally. This is the fastest way to find out whether a report converts before the first `main` push, and the only way to inspect the generated files.
+`--dry-run` writes the files into `--output` (or a temporary directory) and pushes nothing; `--no-credits` leaves the credits out, which otherwise need the merged pull request on GitHub; `check` validates a whole tree. `--repository` is required outside Actions because `GITHUB_REPOSITORY` is unset; `source.runUrl` is `null` locally. This is the same conversion the `Check the report` step runs on every pull request ([CI](/wiki/ci/)), and the only way to inspect the generated files. Both write into an empty tree: whether the measurement merges with the published history (one row per revision, in order) is checked by the publish itself.
 
 ## Before the first push to main
 
 - The App is installed on the data repository with Contents read and write.
 - The producer has the variable and the `publish` environment with its branch policy and secret, and `validate.yml` names them.
 - `config/targets.json` and `config/site.json` validate (`python3 -m unittest discover -s tests -p 'test_*.py'` and a dry run).
-- A pull request has passed `Validate targets`.
+- A pull request has passed `Validate targets`, whose `Check the report` step converted this target's report.
 
 Then merge. The first publish creates `data/<slug>/` and adds the slug to `index.json`; no one edits the data repository for a new game except to add cover art ([The site](/wiki/site/)).

@@ -73,7 +73,7 @@ The examples are for a GameCube target built with decomp-toolkit and dtk-templat
 - The `Tool tests` job's `Check the scaffold` step reports no warnings.
 - The `Validate <target id>` job ends with `Publish to the site`, and the data repository gains a commit titled `game GAME01-rev0: <sha>, <n>% code linked`.
 - The data repository's `Deploy` workflow runs, and `https://mitsevox.github.io/games/game/` shows the new measurement within a few minutes.
-- A pull request runs the same build without the publish step, and cannot merge until `Validate targets` passes and the owner merges it.
+- A pull request runs the same build, checks that the report converts and skips the publish step; it cannot merge until `Validate targets` passes and the owner merges it.
 - `python3 tools/repo_settings.py --repo owner/game --check` reports no drift.
 
 ## Glossary
@@ -792,6 +792,7 @@ The job references a deployment environment: `publish` on a `main` run, `validat
 | `Provide target original` | `mkdir -p orig/$TARGET_ID/sys`, `cp /orig/$TARGET_ID/sys/main.dol orig/$TARGET_ID/sys/main.dol`. PARAMETER 2 is the path. The toolkit checks the hash against `config.yml` when it splits; a third check of the same bytes is not needed. |
 | `Configure target` | `python3 configure.py --version "$TARGET_ID" --dtk /usr/local/bin/dtk --binutils /binutils --compilers /compilers`. PARAMETER 3. |
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
+| `Check the report` | `uses: mitsevox/mitsevox.github.io/.github/actions/check-report@main` with `target` and `report`, on every event. It converts the report into the contract files with the same code as the publish step, into an empty tree, and checks them, without a credential and without credits. A report the site would refuse fails the pull request here, not the `main` publish. A repository that passes `code-sections` or `unit-prefix` to the publish step passes the same values here. |
 | `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
 | `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names), and captures its lines in the output `lines` with a random heredoc delimiter. |
 | `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the repository variable and the `publish` environment's secret. |
@@ -821,7 +822,7 @@ A new push to a PR cancels that PR's running validation; pushes to `main` queue 
 3. Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally ([Build, verify, measure](/wiki/build-verify-measure/)). The image's tool paths replace the local ones.
 4. Fill PARAMETER 4 with the variable and environment secret names from [Publishing](/wiki/publishing/); the step is harmless until they exist, because it only runs on `main`. The first pull request run creates the empty `validate` environment; the owner creates `publish` by hand.
 5. Copy the `tools/` and `tests/` starter files and `config/ci-targets.json`.
-6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (`build.sha1`). The `Check the scaffold` step lists what still differs from the kit.
+6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure), the match (`build.sha1`) and, in `Check the report`, that the report converts into the site's contract. The `Check the scaffold` step lists what still differs from the kit.
 7. Merge. The first `main` run publishes, provided the credential is in place.
 
 ## Builds without configure.py
@@ -830,14 +831,14 @@ A repository whose build is not dtk-template's (its own scripts, a Makefile) kee
 
 - **Entry point.** `build.py` or a `Makefile` at the root (the scaffold accepts either in place of `configure.py`).
 - **PARAMETER 2.** The image still holds `/orig/<target id>/sys/main.dol`; the step copies it wherever the build reads it.
-- **PARAMETER 3.** `Configure target` runs the build's setup (or `true` when there is none). `Build, verify complete executable and measure progress` runs one command that fails unless the complete executable is byte-identical, prints `build/<target id>/main.dol: OK` (the line every repository's build ends with) and writes an objdiff-shaped `build/<target id>/report.json` that `publish.py publish --dry-run` accepts: `measures` with `total_functions` and `matched_functions`, and units whose sections carry real names and `metadata.virtual_address`.
+- **PARAMETER 3.** `Configure target` runs the build's setup (or `true` when there is none). `Build, verify complete executable and measure progress` runs one command that fails unless the complete executable is byte-identical, prints `build/<target id>/main.dol: OK` (the line every repository's build ends with) and writes an objdiff-shaped `build/<target id>/report.json` that `Check the report` accepts (locally: `publish.py publish --dry-run --no-credits`, [Publishing](/wiki/publishing/)): `measures` with `total_functions` and `matched_functions`, and units whose sections carry real names and `metadata.virtual_address`. The `code-sections` and `unit-prefix` the report needs go to both the report check and the publish step.
 - **Measuring tools.** Set `PINS` in `tools/measuring_tools.py` to the JSON files that pin the tools (`{"<name>": {"version": ...}}`).
 - **Tools.** Every tool the build runs is baked into the build image, as in the kit's Dockerfile; the target job downloads nothing.
 - **Tool tests.** The `Tool tests` job runs on the bare runner; a test that needs the toolchain skips there and runs in `Project checks` instead.
 
 ## What a pull request proves
 
-A green `Validate targets` on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, and objdiff produced a report. It does not mean the reconstruction is right; that is what the review tiers in [Contribution workflow](/wiki/contribution-workflow/) are for. Pull requests publish nothing, so a PR cannot change the site.
+A green `Validate targets` on a PR means: the tool tests pass, and for every target the change can affect, the complete executable built from the PR's source plus the original bytes for unlinked ranges is byte-identical to the original, objdiff produced a report, and that report converts into the site's contract. It does not mean the reconstruction is right; that is what the review tiers in [Contribution workflow](/wiki/contribution-workflow/) are for. Pull requests publish nothing, so a PR cannot change the site.
 
 
 ---
@@ -940,18 +941,18 @@ The action's script runs anywhere with Python 3 and Git. From the producer check
 git clone https://github.com/mitsevox/mitsevox.github.io site
 python3 site/.github/actions/publish/publish.py publish --target GAME01-rev0 \
   --report build/GAME01-rev0/report.json --repository owner/game \
-  --tools "$(python3 tools/measuring_tools.py)" --dry-run --output /tmp/tree
+  --tools "$(python3 tools/measuring_tools.py)" --dry-run --no-credits --output /tmp/tree
 python3 site/.github/actions/publish/publish.py check /tmp/tree
 ```
 
-`--dry-run` writes the files into `--output` (or a temporary directory) and pushes nothing; `check` validates a whole tree. `--repository` is required outside Actions because `GITHUB_REPOSITORY` is unset; `source.runUrl` is `null` locally. This is the fastest way to find out whether a report converts before the first `main` push, and the only way to inspect the generated files.
+`--dry-run` writes the files into `--output` (or a temporary directory) and pushes nothing; `--no-credits` leaves the credits out, which otherwise need the merged pull request on GitHub; `check` validates a whole tree. `--repository` is required outside Actions because `GITHUB_REPOSITORY` is unset; `source.runUrl` is `null` locally. This is the same conversion the `Check the report` step runs on every pull request ([CI](/wiki/ci/)), and the only way to inspect the generated files. Both write into an empty tree: whether the measurement merges with the published history (one row per revision, in order) is checked by the publish itself.
 
 ## Before the first push to main
 
 - The App is installed on the data repository with Contents read and write.
 - The producer has the variable and the `publish` environment with its branch policy and secret, and `validate.yml` names them.
 - `config/targets.json` and `config/site.json` validate (`python3 -m unittest discover -s tests -p 'test_*.py'` and a dry run).
-- A pull request has passed `Validate targets`.
+- A pull request has passed `Validate targets`, whose `Check the report` step converted this target's report.
 
 Then merge. The first publish creates `data/<slug>/` and adds the slug to `index.json`; no one edits the data repository for a new game except to add cover art ([The site](/wiki/site/)).
 
@@ -1243,7 +1244,7 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 
 ## Publish step
 
-Every message from `publish.py` is prefixed `publish:` and fails the step; nothing is pushed.
+Every message from `publish.py` is prefixed `publish:` and fails the step; nothing is pushed. The `Check the report` step of a pull request prints the same messages for the same causes, so a report problem is found before `main`.
 
 | Message | Cause and fix |
 | --- | --- |
@@ -1342,7 +1343,7 @@ Every project-specific value, and where it goes:
 | Class | Files | Checked |
 | --- | --- | --- |
 | Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
-| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
+| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish, report-check and scaffold-check actions, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
 The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
@@ -1354,7 +1355,7 @@ The repository is set up when each line is true and can be shown with a run, a c
 - The public repository has the layout in [Repository layout](/wiki/repository-layout/); `git status` after a local build shows no original or generated file.
 - `python3 -m unittest discover -s tests -p 'test_*.py'`, `python3 tools/targets.py check`, `python3 tools/versions.py check` and `python3 tools/evidence.py check` pass locally.
 - `ninja -f build/<id>/build.ninja` produces the byte-identical executable for every active target.
-- `ninja -f build/<id>/build.ninja progress build/<id>/report.json` writes a report that `publish.py publish --dry-run` converts and `publish.py check` accepts.
+- The measurement command of the README writes `build/<id>/report.json`, and `publish.py publish --dry-run --no-credits` converts it ([Publishing](/wiki/publishing/)).
 - The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
 - A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
 - The `main` ruleset requires a pull request and `Validate targets`, and the `merges` ruleset restricts merging to the Repository admin role; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.

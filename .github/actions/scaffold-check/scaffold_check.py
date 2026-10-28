@@ -191,7 +191,7 @@ class Check:
         for name in names:
             if name not in known:
                 self.warn(spec['path'], 'step or job %r is not in the skeleton; only %s may be added' % (name, ', '.join(spec['optionalSteps'])))
-        for key in ('publishAction', 'scaffoldAction'):
+        for key in ('publishAction', 'checkAction', 'scaffoldAction'):
             if 'uses: ' + spec[key] not in text:
                 self.warn(spec['path'], 'does not use %s' % spec[key])
         if 'name: ' + spec['environment'] not in text:

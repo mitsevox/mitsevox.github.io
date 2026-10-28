@@ -51,7 +51,7 @@ Every project-specific value, and where it goes:
 | Class | Files | Checked |
 | --- | --- | --- |
 | Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
-| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
+| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish, report-check and scaffold-check actions, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
 The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
@@ -63,7 +63,7 @@ The repository is set up when each line is true and can be shown with a run, a c
 - The public repository has the layout in [Repository layout](/wiki/repository-layout/); `git status` after a local build shows no original or generated file.
 - `python3 -m unittest discover -s tests -p 'test_*.py'`, `python3 tools/targets.py check`, `python3 tools/versions.py check` and `python3 tools/evidence.py check` pass locally.
 - `ninja -f build/<id>/build.ninja` produces the byte-identical executable for every active target.
-- `ninja -f build/<id>/build.ninja progress build/<id>/report.json` writes a report that `publish.py publish --dry-run` converts and `publish.py check` accepts.
+- The measurement command of the README writes `build/<id>/report.json`, and `publish.py publish --dry-run --no-credits` converts it ([Publishing](/wiki/publishing/)).
 - The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
 - A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
 - The `main` ruleset requires a pull request and `Validate targets`, and the `merges` ruleset restricts merging to the Repository admin role; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.

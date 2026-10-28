@@ -128,6 +128,14 @@ jobs:
         run: |
           ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"
           echo "measured-at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - name: Check the report
+        # Every event: the report converts into the site's contract and passes its checks with the
+        # code the publish step runs on main, into an empty tree, without credits or a credential.
+        # Pass code-sections and unit-prefix here exactly as the publish step does, if it does.
+        uses: mitsevox/mitsevox.github.io/.github/actions/check-report@main
+        with:
+          target: ${{ matrix.target }}
+          report: build/${{ matrix.target }}/report.json
       # OPTIONAL: the one step a repository may add, for its own checks that need the build or
       # the toolchain. Keep the name; supply the command. Delete the step if there is nothing to run.
       # - name: Project checks

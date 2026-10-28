@@ -69,7 +69,7 @@ The examples are for a GameCube target built with decomp-toolkit and dtk-templat
 - The `Tool tests` job's `Check the scaffold` step reports no warnings.
 - The `Validate <target id>` job ends with `Publish to the site`, and the data repository gains a commit titled `game GAME01-rev0: <sha>, <n>% code linked`.
 - The data repository's `Deploy` workflow runs, and `https://mitsevox.github.io/games/game/` shows the new measurement within a few minutes.
-- A pull request runs the same build without the publish step, and cannot merge until `Validate targets` passes and the owner merges it.
+- A pull request runs the same build, checks that the report converts and skips the publish step; it cannot merge until `Validate targets` passes and the owner merges it.
 - `python3 tools/repo_settings.py --repo owner/game --check` reports no drift.
 
 ## Glossary

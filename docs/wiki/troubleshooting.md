@@ -40,7 +40,7 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 
 ## Publish step
 
-Every message from `publish.py` is prefixed `publish:` and fails the step; nothing is pushed.
+Every message from `publish.py` is prefixed `publish:` and fails the step; nothing is pushed. The `Check the report` step of a pull request prints the same messages for the same causes, so a report problem is found before `main`.
 
 | Message | Cause and fix |
 | --- | --- |
