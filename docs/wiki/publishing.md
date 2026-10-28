@@ -36,6 +36,8 @@ The names are yours; `validate.yml` passes them to the action as `app-client-id:
 | `measured-at` | no | now | UTC time of the measurement, `%Y-%m-%dT%H:%M:%SZ` |
 | `code-sections` | no | `.init,.text` | Comma-separated code section names; every other section counts as data |
 | `unit-prefix` | no | `main/` | Prefix stripped from objdiff unit names for display |
+| `credits` | no | `config/<target>/credits.tsv` when it exists | Credit overrides; read only when contributors are on |
+| `github-token` | no | the workflow token | Reads the merged PR and the credited people when contributors are on; the target job grants `pull-requests: read` |
 | `data-repository` | no | `mitsevox/decomp-data` | `owner/name` of the data repository |
 | `app-client-id` | yes | | Client id of the GitHub App installed on the data repository |
 | `app-private-key` | yes | | Private key of that GitHub App |
@@ -56,6 +58,17 @@ The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-cli
 4. Prints `published <slug>/<target> <sha>`, or `<slug>/<target> <sha> already published` when nothing changed.
 
 Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and `latest.json` and `map.json` only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way. The exact file formats are in [Data contract](/wiki/data-contract/).
+
+## Credits
+
+Credits are optional per repository: `"contributors": true` in `config/site.json` switches them on, and nothing changes while it is `false` or absent. With them on, each `main` build also writes `contributors.json`:
+
+1. **Who.** The PR whose merge made the measured revision (`GET /repos/<repo>/commits/<sha>/pulls`). Its body's `Credits: @login, @login` line names the people; without the line its author is credited. A revision that no PR merged credits nobody and fails the publish.
+2. **What.** A function is credited to the people of the earliest measured `main` build in which it was exact. Newly exact functions take this build's people; functions already credited keep theirs; a function that is no longer exact moves to `retired` with its credit, and gets that credit back when it returns. An older commit whose run finishes late moves a credit earlier when it was exact first, and adds or retires nothing, because `latest.json` decides what is exact now.
+3. **Switching on.** The first build with credits on credits every function already exact to the repository owner.
+4. **Overrides.** `config/<target>/credits.tsv` (address, comma-separated logins, reason; `#` comments allowed) credits the listed functions to those people whatever the merges say: for batches that carry other people's work, imports and corrections. It is reviewed like any other record.
+
+The pull request side runs before merge: the plan job's `Check the credits` step (`tools/credits.py`) does nothing while credits are off, and otherwise checks the `Credits:` line and every `credits.tsv` and confirms that each login exists, so a bad credit fails the PR and never the publish on `main`.
 
 Everything written is checked before the push by the same code as `publish.py check`, so a bad conversion fails the job instead of landing in the data repository. The target must be `active` in `targets.json`; publishing a `planned` target stops with `Target <id> is not an active target of <slug>`.
 

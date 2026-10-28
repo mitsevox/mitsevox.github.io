@@ -59,6 +59,7 @@ shasum -a 1 /path/to/main.dol    # macOS
   "console": "GameCube",
   "year": "2002",
   "contributions": {"accepting": false},
+  "contributors": false,
   "artwork": {"cover": "cover.webp", "width": 1112, "height": 1600}
 }
 ```
@@ -72,6 +73,7 @@ shasum -a 1 /path/to/main.dol    # macOS
 | `console` | Display name of the console; the hub filters by it and it picks the console icon | Required, non-empty |
 | `year` | Release year, a string | Optional |
 | `contributions` | `{"accepting": true, "guideUrl": "<url>"}` shows a Contribute link to that URL; `accepting: false` hides it | Optional; defaults to `{"accepting": false}` |
+| `contributors` | `true` publishes who made each exact function exact and shows the rankings ([Publishing](/wiki/publishing/), "Credits") | Optional; defaults to `false` |
 | `artwork` | `cover` is a file name relative to `data/<slug>/` in the data repository, `width` and `height` its pixel size | Optional; add it only after committing the cover ([The site](/wiki/site/)) |
 
 The publish action copies this file into `game.json` on every publish, adding `repository` (from the CI run's `GITHUB_REPOSITORY`), `defaultTarget` and `targets`. Changing the presentation is therefore an edit to this file followed by a merge to `main`; the next publish of any active target rewrites `game.json`.

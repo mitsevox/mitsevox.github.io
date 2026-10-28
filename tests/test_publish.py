@@ -180,6 +180,95 @@ class HistoryTests(unittest.TestCase):
             publish.check_tree(self.tree)
 
 
+class CreditTests(unittest.TestCase):
+    """Credits follow the earliest measured build in which a function was exact."""
+    OWNER, ALICE, BOB = (1, 'owner'), (2, 'alice'), (3, 'bob')
+    T0, T1, T2, T3 = ('2026-01-0%dT00:00:00Z' % n for n in range(1, 5))
+
+    def ids(self, *addresses):
+        return {'GAME01-rev0:%s:16' % a: a for a in addresses}
+
+    def authors(self, document):
+        return {f['id'].split(':')[1]: f['authors'] for f in document['functions']}
+
+    def step(self, previous, exact, when, authors, overrides=None, newer=True):
+        document = publish.credit(previous, exact, when, authors, overrides or {}, newer)
+        publish.check_contributors(document, {'functions': {'exact': len(document['functions']) if newer else None}})
+        return document
+
+    def test_switching_on_credits_the_owner_then_merges_credit_their_authors(self):
+        first = self.step(None, self.ids('0x80000000', '0x80000010'), self.T0, [self.OWNER])
+        self.assertEqual(self.authors(first), {'0x80000000': [1], '0x80000010': [1]})
+        second = self.step(first, self.ids('0x80000000', '0x80000010', '0x80000020'), self.T1, [self.ALICE, self.BOB])
+        self.assertEqual(self.authors(second)['0x80000020'], [2, 3])
+        self.assertEqual(self.authors(second)['0x80000000'], [1])
+        self.assertEqual([(p['login'], p['functions']) for p in second['contributors']],
+                         [('owner', 2), ('alice', 1), ('bob', 1)])
+
+    def test_a_function_that_regresses_and_returns_keeps_its_first_credit(self):
+        first = self.step(None, self.ids('0x80000000'), self.T0, [self.OWNER])
+        second = self.step(first, self.ids('0x80000000', '0x80000010'), self.T1, [self.ALICE])
+        lost = self.step(second, self.ids('0x80000000'), self.T2, [self.BOB])
+        self.assertEqual([f['id'] for f in lost['retired']], ['GAME01-rev0:0x80000010:16'])
+        self.assertEqual([p['login'] for p in lost['contributors']], ['owner'])
+        back = self.step(lost, self.ids('0x80000000', '0x80000010'), self.T3, [self.BOB])
+        self.assertEqual(self.authors(back)['0x80000010'], [2])
+        self.assertEqual(back['retired'], [])
+
+    def test_an_older_build_finishing_late_moves_a_credit_earlier_and_nothing_else(self):
+        first = self.step(None, self.ids('0x80000000'), self.T0, [self.OWNER])
+        # T2 (bob) published before T1 (alice), although alice's merge made 0x80000010 exact first.
+        bob = self.step(first, self.ids('0x80000000', '0x80000010'), self.T2, [self.BOB])
+        alice = self.step(bob, self.ids('0x80000000', '0x80000010', '0x80000020'), self.T1, [self.ALICE], newer=False)
+        self.assertEqual(self.authors(alice), {'0x80000000': [1], '0x80000010': [2]})
+        self.assertEqual(alice['credited_functions'], 2)
+
+    def test_overrides_win(self):
+        first = self.step(None, self.ids('0x80000000', '0x80000010'), self.T0, [self.OWNER],
+                          overrides={'0x80000010': [self.ALICE, self.BOB]})
+        self.assertEqual(self.authors(first)['0x80000010'], [2, 3])
+
+    def test_check_rejects_a_ranking_that_disagrees(self):
+        document = self.step(None, self.ids('0x80000000'), self.T0, [self.OWNER])
+        document['contributors'][0]['functions'] = 2
+        with self.assertRaisesRegex(publish.ContractError, 'totals'):
+            publish.check_contributors(document, {})
+        document = self.step(None, self.ids('0x80000000'), self.T0, [self.OWNER])
+        document['retired'] = [dict(document['functions'][0])]
+        with self.assertRaisesRegex(publish.ContractError, 'both current and retired'):
+            publish.check_contributors(document, {})
+
+    def test_credits_line_and_overrides_file(self):
+        self.assertEqual(publish.credits_line('## Scope\n\nCredits: @alice, bob\n'), ['alice', 'bob'])
+        self.assertIsNone(publish.credits_line('no line here'))
+        for bad in ('Credits: ', 'Credits: @alice, @alice', 'Credits: not a login!'):
+            with self.subTest(bad=bad), self.assertRaises(publish.ContractError):
+                publish.credits_line(bad)
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'credits.tsv'
+            path.write_text('# address\tlogins\treason\n0x80000010\talice,bob\timported from #12\n')
+            self.assertEqual(publish.credits_tsv(path), {'0x80000010': ['alice', 'bob']})
+            for bad in ('0x8000001a\talice\tr\n', '0x80000010\talice\t\n', '0x80000010\talice\n'):
+                path.write_text(bad)
+                with self.subTest(bad=bad), self.assertRaises(publish.ContractError):
+                    publish.credits_tsv(path)
+
+    def test_write_target_publishes_and_checks_credits(self):
+        with tempfile.TemporaryDirectory() as temp:
+            tree = Path(temp)
+            game = publish.game_document(SITE, TARGETS['targets'], 'GAME01-rev0', 'owner/game')
+            credits = {'authors': [self.ALICE], 'owner': self.OWNER, 'overrides': {}}
+            publish.write_target(tree, game, latest(REV[0], self.T0, self.T0), publish.map_document(report(), SECTIONS), credits)
+            current = json.loads((tree / 'data/game/GAME01-rev0/latest.json').read_text())
+            self.assertEqual(current['modules']['contributors'], 'contributors.json')
+            document = json.loads((tree / 'data/game/GAME01-rev0/contributors.json').read_text())
+            self.assertEqual([p['login'] for p in document['contributors']], ['owner'])
+            self.assertEqual(publish.check_tree(tree), 1)
+            # Re-running the same revision changes nothing.
+            publish.write_target(tree, game, latest(REV[0], self.T0, self.T1), publish.map_document(report(), SECTIONS), credits)
+            self.assertEqual(json.loads((tree / 'data/game/GAME01-rev0/contributors.json').read_text()), document)
+
+
 class CommandTests(unittest.TestCase):
     def test_dry_run_from_a_git_checkout(self):
         with tempfile.TemporaryDirectory() as temp:

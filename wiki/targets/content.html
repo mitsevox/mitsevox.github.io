@@ -93,6 +93,7 @@ shasum -a 1 /path/to/main.dol    # macOS
   &quot;console&quot;: &quot;GameCube&quot;,
   &quot;year&quot;: &quot;2002&quot;,
   &quot;contributions&quot;: {&quot;accepting&quot;: false},
+  &quot;contributors&quot;: false,
   &quot;artwork&quot;: {&quot;cover&quot;: &quot;cover.webp&quot;, &quot;width&quot;: 1112, &quot;height&quot;: 1600}
 }
 </code></pre>
@@ -139,6 +140,11 @@ shasum -a 1 /path/to/main.dol    # macOS
 <td><code>contributions</code></td>
 <td><code>{"accepting": true, "guideUrl": "&lt;url&gt;"}</code> shows a Contribute link to that URL; <code>accepting: false</code> hides it</td>
 <td>Optional; defaults to <code>{"accepting": false}</code></td>
+</tr>
+<tr>
+<td><code>contributors</code></td>
+<td><code>true</code> publishes who made each exact function exact and shows the rankings (<a href="/wiki/publishing/">Publishing</a>, "Credits")</td>
+<td>Optional; defaults to <code>false</code></td>
 </tr>
 <tr>
 <td><code>artwork</code></td>

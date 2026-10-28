@@ -27,6 +27,14 @@ inputs:
   unit-prefix:
     description: Prefix stripped from objdiff unit names for display.
     default: main/
+  credits:
+    description: >-
+      Credit overrides for this target (default config/<target>/credits.tsv when it exists). Used
+      only when site.json sets "contributors": true.
+    default: ''
+  github-token:
+    description: Reads the merged pull request and its credited people when contributors are on.
+    default: ${{ github.token }}
   data-repository:
     description: owner/name of the data repository.
     default: mitsevox/decomp-data
@@ -69,7 +77,10 @@ runs:
         CODE_SECTIONS: ${{ inputs.code-sections }}
         UNIT_PREFIX: ${{ inputs.unit-prefix }}
         DATA_REPOSITORY: ${{ inputs.data-repository }}
+        CREDITS: ${{ inputs.credits }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
         python3 "$GITHUB_ACTION_PATH/publish.py" publish --target "$TARGET" --report "$REPORT" \
           --targets "$TARGETS" --site "$SITE" --tools "$TOOLS" --measured-at "$MEASURED_AT" \
-          --code-sections "$CODE_SECTIONS" --unit-prefix "$UNIT_PREFIX" --data-repository "$DATA_REPOSITORY"
+          --code-sections "$CODE_SECTIONS" --unit-prefix "$UNIT_PREFIX" --data-repository "$DATA_REPOSITORY" \
+          ${CREDITS:+--credits "$CREDITS"}

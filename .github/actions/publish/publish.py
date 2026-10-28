@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Publish one target's objdiff report to the site's data repository (contract schema 1).
 
-publish  objdiff report.json -> latest.json, map.json and one history row; clone the data
-         repository, write, check, commit and push, retrying when another run wins
+publish  objdiff report.json -> latest.json, map.json and one history row, plus contributors.json
+         when site.json switches contributors on; clone the data repository, write, check,
+         commit and push, retrying when another run wins
          (--dry-run writes into --output, or a temporary tree, and pushes nothing)
 check    validate a whole data tree against the contract (contract/README.md)
 
@@ -20,6 +21,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 SCHEMA = 1
@@ -30,6 +33,7 @@ SOURCE_PATH = re.compile(r'[A-Za-z0-9_.+-]+(?:/[A-Za-z0-9_.+-]+)*')
 # dtk names unnamed functions fn_<address>, splat names them func_<address>.
 UNNAMED = r'(?:fn|func)_[0-9A-Fa-f]+'
 TIME = '%Y-%m-%dT%H:%M:%SZ'
+LOGIN = re.compile(r'[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?')
 
 
 class ContractError(Exception):
@@ -396,23 +400,153 @@ def check_map(document, s):
 
 
 def check_contributors(document, s):
-    """Each credited function is listed once, every author is a listed contributor, and the
-    per-person totals and the credited count agree with the function list."""
+    """Each credited function is listed once with a known author, the per-person totals and the
+    credited count agree with the list, the ranking is in order, and a retired credit is never
+    also a current one."""
     require(document.get('schema') == SCHEMA, 'contributors.json: unsupported schema')
-    people = {p['id']: p for p in document['contributors']}
-    require(len(people) == len(document['contributors']), 'contributors: duplicate person')
+    people = {p['id']: p['login'] for p in document.get('people', document['contributors'])}
+    require(len(people) == len(document.get('people', document['contributors'])), 'contributors: duplicate person')
+    for pid, login in people.items():
+        require(type(pid) is int and pid > 0 and isinstance(login, str) and LOGIN.fullmatch(login),
+                'contributors: invalid person %r' % login)
     totals = dict.fromkeys(people, 0)
     seen = set()
     for item in document['functions']:
         require(item['id'] not in seen, 'contributors: duplicate function credit')
         seen.add(item['id'])
+        require(item['authors'] and len(set(item['authors'])) == len(item['authors']), 'contributors: %s needs distinct authors' % item['id'])
         for author in item['authors']:
             require(author in totals, 'contributors: unknown author %r' % author)
             totals[author] += 1
-    require(len(seen) == document['credited_functions'], 'contributors: credited count differs from the list')
-    require(all(totals[i] == p['functions'] for i, p in people.items()), 'contributors: person totals differ from the list')
+        if 'since' in item:
+            timestamp(item['since'])
+    for item in document.get('retired', []):
+        require(item['id'] not in seen, 'contributors: %s is both current and retired' % item['id'])
+        seen.add(item['id'])
+        require(item['authors'] and all(a in people for a in item['authors']), 'contributors: retired %s has an unknown author' % item['id'])
+        timestamp(item['since'])
+    require(len(document['functions']) == document['credited_functions'], 'contributors: credited count differs from the list')
+    ranking = document['contributors']
+    require([p['id'] for p in ranking] == [i for i in sorted(totals, key=lambda i: (-totals[i], people[i])) if totals[i]],
+            'contributors: the ranking is not every credited person, most functions first')
+    require(all(p['functions'] == totals[p['id']] and p['login'] == people[p['id']] for p in ranking),
+            'contributors: person totals differ from the list')
     if s.get('functions') and s['functions'].get('exact') is not None:
         require(document['credited_functions'] == s['functions']['exact'], 'contributors: credited count differs from exact functions')
+
+
+# Credits: who made each exact function exact.
+
+def exact_functions(map_doc, target):
+    """The exact functions of one measurement, as contract ids <target>:<address>:<size>."""
+    found = {}
+
+    def walk(node):
+        if node.get('type') == 'function':
+            if node['matched'] == node['size']:
+                found['%s:%s:%d' % (target, node['function_address'], node['size'])] = node['function_address']
+        for child in node.get('children', []):
+            walk(child)
+    for node in map_doc['files']:
+        walk(node)
+    return found
+
+
+def credit(previous, exact, committed_at, authors, overrides, newer):
+    """The credits after one main build. A function is credited to whoever made it exact in the
+    earliest measured build where it was exact, so a function that regresses and comes back keeps
+    its first credit, and runs that finish out of order converge on the same answer.
+
+    previous    the published contributors.json, or None when credits are switched on now
+    exact       {function id: address} of this build
+    committed_at  this build's commit time
+    authors     [(id, login)] credited for this build: the merged PR's Credits line, or, when
+                credits are switched on (previous is None), the repository owner for every
+                function already exact
+    overrides   {address: [(id, login)]} from config/<target>/credits.tsv; they win
+    newer       this build is the newest measured one (it moves latest forward)
+
+    Only the newest build retires credits; an older build can only move a credit earlier."""
+    people = {}
+    current, retired = {}, {}
+    if previous:
+        people = {p['id']: p['login'] for p in previous.get('people', previous['contributors'])}
+        current = {f['id']: dict(f) for f in previous['functions']}
+        retired = {f['id']: dict(f) for f in previous.get('retired', [])}
+    when = timestamp(committed_at)
+    for pid, login in authors:
+        people[pid] = login
+    for group in overrides.values():
+        for pid, login in group:
+            people[pid] = login
+    fresh = {'authors': [pid for pid, _ in authors], 'since': committed_at}
+    for fid in exact:
+        if newer:
+            known = current.get(fid) or retired.pop(fid, None)
+            if known is None:
+                known = {'id': fid, **fresh}
+            current[fid] = known
+        else:
+            # An older build adds and retires nothing: latest decides what is exact now.
+            known = current.get(fid) or retired.get(fid)
+            if known is None:
+                continue
+        if timestamp(known['since']) > when:
+            known.update(fresh)
+    if newer:
+        for fid in [f for f in current if f not in exact]:
+            retired[fid] = current.pop(fid)
+    for f in current.values():
+        address = f['id'].split(':')[-2]
+        if address in overrides:
+            f['authors'] = [pid for pid, _ in overrides[address]]
+    totals = {}
+    for f in current.values():
+        for pid in f['authors']:
+            totals[pid] = totals.get(pid, 0) + 1
+    document = {'schema': SCHEMA, 'credited_functions': len(current),
+                'contributors': [{'id': pid, 'login': people[pid], 'functions': n}
+                                 for pid, n in sorted(totals.items(), key=lambda pair: (-pair[1], people[pair[0]]))],
+                'functions': sorted(current.values(), key=lambda f: f['id']),
+                'retired': sorted(retired.values(), key=lambda f: f['id']),
+                'people': [{'id': pid, 'login': people[pid]}
+                           for pid in sorted({a for f in [*current.values(), *retired.values()] for a in f['authors']})]}
+    return document
+
+
+CREDITS_LINE = re.compile(r'^Credits:[ \t]*(.*)$', re.M)
+
+
+def credits_line(body):
+    """The logins a PR body's `Credits:` line names, or None when it has none. `@` is optional."""
+    match = CREDITS_LINE.search(body or '')
+    if not match:
+        return None
+    logins = [name.strip().lstrip('@') for name in match.group(1).split(',') if name.strip()]
+    require(logins, 'The Credits line names nobody')
+    require(all(LOGIN.fullmatch(login) for login in logins), 'The Credits line names an invalid login: %s' % match.group(1))
+    require(len(set(logins)) == len(logins), 'The Credits line names someone twice')
+    return logins
+
+
+def credits_tsv(path):
+    """config/<target>/credits.tsv: address, logins (comma-separated), reason. Returns
+    {address: [logins]}. Blank lines and # comments are allowed."""
+    result = {}
+    for number, line in enumerate(Path(path).read_text().splitlines(), 1):
+        if not line.strip() or line.startswith('#'):
+            continue
+        fields = line.split('\t')
+        require(len(fields) == 3, '%s:%d: expected address, logins and reason' % (path, number))
+        address, logins, reason = fields
+        require(re.fullmatch(r'0x[0-9A-F]{8}', address), '%s:%d: address must be 0x plus eight upper-case hex digits' % (path, number))
+        require(address not in result, '%s:%d: %s is listed twice' % (path, number, address))
+        names = [n.strip() for n in logins.split(',')]
+        require(names and all(LOGIN.fullmatch(n) for n in names) and len(set(names)) == len(names),
+                '%s:%d: invalid logins %r' % (path, number, logins))
+        require(reason.strip(), '%s:%d: a reason is required' % (path, number))
+        result[address] = names
+    return result
 
 
 def check_tree(tree):
@@ -455,10 +589,11 @@ def history_row(latest):
             'code': s['code'], 'data': s['data'], 'functions': s['functions']}
 
 
-def write_target(tree, game, latest, map_doc):
+def write_target(tree, game, latest, map_doc, credits=None):
     """Add one measurement. The first measurement of a revision wins, so re-running CI changes
     nothing; latest and map only move forward, so a slow run of an older commit never replaces a
-    newer one."""
+    newer one. credits, when the producer switches them on, is {'authors': [(id, login)] of the
+    merged PR, 'owner': (id, login), 'overrides': {address: [(id, login)]}}."""
     tree = Path(tree)
     slug, target = game['slug'], latest['target']
     require(any(t['id'] == target and t['status'] == 'active' for t in game['targets']),
@@ -474,8 +609,20 @@ def write_target(tree, game, latest, map_doc):
         rows.sort(key=lambda r: timestamp(r['measuredAt']))
     current_path = directory / 'latest.json'
     current = read_json(current_path) if current_path.exists() else None
-    if current is None or (current['source']['revision'] != latest['source']['revision'] and
-                           timestamp(current['source']['committedAt']) <= timestamp(latest['source']['committedAt'])):
+    newer = current is None or (current['source']['revision'] != latest['source']['revision'] and
+                                timestamp(current['source']['committedAt']) <= timestamp(latest['source']['committedAt']))
+    if credits is not None:
+        credits_path = directory / 'contributors.json'
+        previous = read_json(credits_path) if credits_path.exists() else None
+        if previous is not None or newer:
+            # Switching credits on credits every function already exact to the owner.
+            authors = credits['authors'] if previous is not None else [credits['owner']]
+            document = credit(previous, exact_functions(map_doc, latest['target']), latest['source']['committedAt'],
+                              authors, credits['overrides'], newer)
+            check_contributors(document, latest['summary'] if newer else current['summary'])
+            write_json(credits_path, document)
+            latest['modules']['contributors'] = 'contributors.json'
+    if newer:
         write_json(directory / 'map.json', map_doc, compact=True)
         write_json(current_path, latest)
     write_json(history_path, rows, rows=True)
@@ -484,6 +631,45 @@ def write_target(tree, game, latest, map_doc):
     index = read_json(index_path) if index_path.exists() else {'schema': SCHEMA, 'games': []}
     index['games'] = sorted(set(index['games']) | {slug})
     write_json(index_path, index)
+
+
+def github(path, token):
+    """GET one GitHub API path with the workflow's token."""
+    request = urllib.request.Request('https://api.github.com' + path, headers={
+        'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'})
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            return json.loads(response.read().decode())
+    except urllib.error.HTTPError as error:
+        raise ContractError('GitHub %s: HTTP %s' % (path, error.code))
+
+
+def person(login, token):
+    user = github('/users/' + login, token)
+    return user['id'], user['login']
+
+
+def build_credits(args, revision):
+    """Who this main build credits: the Credits line of the PR whose merge made the revision, or
+    its author; the owner, for switching credits on; and the target's credits.tsv overrides."""
+    token = os.environ.get('GITHUB_TOKEN')
+    require(token, 'GITHUB_TOKEN is required when site.json switches contributors on')
+    pulls = github('/repos/%s/commits/%s/pulls' % (args.repository, revision), token)
+    merged = [pr for pr in pulls if pr.get('merge_commit_sha') == revision] or pulls
+    require(merged, '%s was not merged from a pull request, so it credits nobody' % revision[:7])
+    pr = merged[0]
+    logins = credits_line(pr.get('body')) or [pr['user']['login']]
+    path = Path(args.credits or 'config/%s/credits.tsv' % args.target)
+    overrides = credits_tsv(path) if path.exists() else {}
+    cache = {}
+
+    def resolve(login):
+        if login not in cache:
+            cache[login] = person(login, token)
+        return cache[login]
+    return {'authors': [resolve(login) for login in logins],
+            'owner': resolve(args.repository.split('/')[0]),
+            'overrides': {address: [resolve(login) for login in names] for address, names in overrides.items()}}
 
 
 def git(*args, cwd=None, env=None):
@@ -528,9 +714,12 @@ def convert(args):
 
 def publish(args):
     game, latest, map_doc = convert(args)
+    credits = None
+    if read_json(args.site).get('contributors') is True:
+        credits = build_credits(args, latest['source']['revision'])
     if args.dry_run:
         tree = Path(args.output or tempfile.mkdtemp(prefix='decomp-data-'))
-        write_target(tree, game, latest, map_doc)
+        write_target(tree, game, latest, map_doc, credits)
         print('checked %d target(s) in %s' % (check_tree(tree), tree))
         return
     token = os.environ.get('DATA_TOKEN')
@@ -547,7 +736,7 @@ def publish(args):
             # simply re-applies this measurement on top of the winner's.
             git('fetch', '--quiet', '--depth', '1', 'origin', branch, cwd=work, env=env)
             git('reset', '--quiet', '--hard', 'origin/' + branch, cwd=work)
-            write_target(work, game, latest, map_doc)
+            write_target(work, game, latest, map_doc, credits)
             check_tree(work)
             git('add', '-A', cwd=work)
             if not git('status', '--porcelain', cwd=work):
@@ -588,6 +777,7 @@ def main(argv=None):
     p.add_argument('--unit-prefix', default='main/')
     p.add_argument('--output', help='data tree to write into with --dry-run')
     p.add_argument('--data-repository', default='mitsevox/decomp-data')
+    p.add_argument('--credits', help='credit overrides (default config/<target>/credits.tsv when it exists)')
     p.add_argument('--dry-run', action='store_true')
     check = commands.add_parser('check')
     check.add_argument('tree')

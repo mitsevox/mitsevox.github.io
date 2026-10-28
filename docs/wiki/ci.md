@@ -22,6 +22,8 @@ Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `pytho
 
 On a pull request the job's second step, `Check the declared tier`, runs `python3 tools/tier.py`: it reads the first `Tier A`, `Tier B` or `Tier C` in the PR body and fails when the diff needs more (`config/<id>/splits.txt` or `symbols.txt`, an `inferred` evidence row, or a `cflags`, `ldflags`, `asflags` or `mw_version` line in `configure.py` need A; other source or `configure.py` changes need B). Outside pull requests it passes. Editing the body does not re-run it; the next push does.
 
+The third step, `Check the credits`, runs `python3 tools/credits.py`. It does nothing unless `config/site.json` sets `"contributors": true`; then it checks the PR body's `Credits:` line and every target's `credits.tsv` and confirms each login exists on GitHub ([Publishing](/wiki/publishing/), "Credits").
+
 Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every `include/**` change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.
 
 ### Tool tests
