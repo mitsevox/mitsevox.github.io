@@ -186,7 +186,7 @@ class Versions:
 def main():
     parser=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('command',choices=['view','diff','check']);parser.add_argument('paths',nargs='*')
-    parser.add_argument('--target',action='append',default=[]);args=parser.parse_args()
+    parser.add_argument('--target',action='append',default=[]);args=parser.parse_intermixed_args()
     versions=Versions()
     if args.command=='check':
         errors=versions.check(args.paths)
