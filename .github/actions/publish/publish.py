@@ -222,11 +222,6 @@ def load_targets(path):
             'targets.json lists no targets')
     targets = []
     for entry in document['targets']:
-        if 'target' in entry:
-            # Transitional: the nested registry shape (gameId/discRevision) predating schema 1.
-            t = entry['target']
-            entry = {'id': t['id'], 'platform': t['platform'], 'label': t['gameId'], 'region': t.get('region'),
-                     'revision': str(t['discRevision']), 'sha1': t['sha1'], 'status': entry['status']}
         targets.append({k: entry.get(k) for k in ('id', 'platform', 'label', 'region', 'revision', 'sha1', 'status')})
     default = document.get('defaultTarget', targets[0]['id'])
     check_targets(targets, default)
@@ -400,6 +395,26 @@ def check_map(document, s):
             require(len(exact) == s['functions']['exact'], 'map: exact function count differs from the summary')
 
 
+def check_contributors(document, s):
+    """Each credited function is listed once, every author is a listed contributor, and the
+    per-person totals and the credited count agree with the function list."""
+    require(document.get('schema') == SCHEMA, 'contributors.json: unsupported schema')
+    people = {p['id']: p for p in document['contributors']}
+    require(len(people) == len(document['contributors']), 'contributors: duplicate person')
+    totals = dict.fromkeys(people, 0)
+    seen = set()
+    for item in document['functions']:
+        require(item['id'] not in seen, 'contributors: duplicate function credit')
+        seen.add(item['id'])
+        for author in item['authors']:
+            require(author in totals, 'contributors: unknown author %r' % author)
+            totals[author] += 1
+    require(len(seen) == document['credited_functions'], 'contributors: credited count differs from the list')
+    require(all(totals[i] == p['functions'] for i, p in people.items()), 'contributors: person totals differ from the list')
+    if s.get('functions') and s['functions'].get('exact') is not None:
+        require(document['credited_functions'] == s['functions']['exact'], 'contributors: credited count differs from exact functions')
+
+
 def check_tree(tree):
     """Validate every game the data tree indexes. Returns the number of targets checked."""
     tree = Path(tree)
@@ -426,6 +441,8 @@ def check_tree(tree):
                         '%s/%s: history differs from latest' % (slug, target['id']))
             if latest.get('modules', {}).get('map'):
                 check_map(read_json(directory / latest['modules']['map']), latest['summary'])
+            if latest.get('modules', {}).get('contributors'):
+                check_contributors(read_json(directory / latest['modules']['contributors']), latest['summary'])
             checked += 1
     return checked
 

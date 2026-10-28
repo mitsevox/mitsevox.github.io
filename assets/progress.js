@@ -1,6 +1,6 @@
 import {pageScope} from './lifecycle.js';
 import {fetchProgress, fetchSummary, fetchBoundaryGraph} from './reports.js';
-import {validMeasure, validateMap} from './report-map-validation.js';
+import {validMeasure} from './report-map-validation.js';
 import {mapLabel, showMapDetails} from './map-evidence.js';
 export function mountProgress(root, project, buildLink) {
 const scope = pageScope();
@@ -576,8 +576,8 @@ mapListen(window, 'scroll', () => {
 }, {passive: true});
 function renderCounts(functions, type, basis) {
   if (!root.querySelector('[data-stats="' + type + '"]')) return;
-  const available = functions && functions.basis !== 'unavailable' && functions.total > 0;
-  if (functions && functions.basis !== 'unavailable' && (typeof functions.basis !== 'string' || !functions.basis.length || !Number.isSafeInteger(functions.total) || functions.total < 0 ||
+  const available = functions && functions.total > 0;
+  if (functions && (!Number.isSafeInteger(functions.total) || functions.total < 0 ||
       !['exact', 'named'].every(field => Number.isSafeInteger(functions[field]) && functions[field] >= 0 && functions[field] <= functions.total))) {
     throw new Error('Invalid function progress');
   }
@@ -701,8 +701,6 @@ async function loadProgress() {
   try {
     const data = await fetchProgress(project, signal);
     if (signal.aborted) return;
-    // Legacy fixtures retain the same checks; standard maps were validated in the worker.
-    if (!project.report) validateMap(data, 'nfl-progress-v1', data.measures);
     sections=data.files||data.sections;
     await render();
   } catch {

@@ -1,28 +1,39 @@
-"""Target view-model migration without modifying original package identity."""
+"""Target selection: a view only ever carries its own target's measurements."""
 from pathlib import Path
-import json
 import subprocess
 import unittest
-import sys
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'tools'))
-from reporting.validation import ROOT
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class TargetUI(unittest.TestCase):
-    def test_explicit_selection_clears_default_state_and_v1_alias_keeps_original_manifest(self):
-        source='''
+    def test_selection_never_inherits_another_targets_report(self):
+        script = r'''
 import assert from 'node:assert/strict';
-import {selectTarget} from MODULE;
-import {fetchSummary} from REPORTS;
-const old={schemaVersion:1,target:{id:'OLD',sha1:'b'.repeat(40)},revision:'a'.repeat(40),publishedAt:'2026-10-25T00:00:00Z',summary:{code:{totalBytes:100,linkedBytes:20,matchedBytes:30,fuzzyEquivalentBytes:40},data:{totalBytes:10,linkedBytes:0,matchedBytes:0,fuzzyEquivalentBytes:null},functions:null,files:null}};
-const p={target:'ID-rev0',targetCatalog:{defaultTarget:'ID-rev0',targets:[{target:{id:'ID-rev0'}},{target:{id:'ID-rev1'},status:'archived'}]},targetReports:{'ID-rev0':{available:true,report:old,modules:{map:false},reportBase:'/immutable',latestCommit:{title:'new'}}},modules:{map:true,timeline:true},contributionsEnabled:true};
-const active=selectTarget(p,new URL('https://example.test/games/game/?target=ID-rev0'));
-assert.equal((await fetchSummary(active)).target,'ID-rev0');assert.equal(old.target.id,'OLD');
-assert.equal((await fetchSummary(active)).measures.code.linked,20);
+import {selectTarget, withTarget} from './assets/targets.js';
+import {fetchSummary} from './assets/reports.js';
+import {latest} from './tests/fixtures/project.mjs';
+const targets=[{id:'ID-rev0',label:'ID',revision:'0',region:'USA',sha1:'a'.repeat(40),status:'active'},
+  {id:'ID-rev1',label:'ID',revision:'1',region:'USA',sha1:'c'.repeat(40),status:'archived'}];
+const game={slug:'game',base:'/decomp-data/data/game/',defaultTarget:'ID-rev0',targets,reports:{'ID-rev0':latest,'ID-rev1':null},
+  contributions:{accepting:true}};
+const active=selectTarget(game,new URL('https://example.test/games/game/'));
+assert.equal(active.target,'ID-rev0');assert.equal(active.reportBase,'/decomp-data/data/game/ID-rev0/');
+assert.equal(active.targetCatalog,targets);assert.equal(active.contributionsEnabled,true);
+assert.deepEqual(active.modules,{map:true,timeline:true,contributors:true,functionCounts:false,fileCounts:false});
+const summary=await fetchSummary(active);
+assert.equal(summary.target,'ID-rev0');assert.equal(summary.target_sha1,'a'.repeat(40));assert.equal(summary.measures.code.linked,20);
 for(const id of ['ID-rev1','invalid']){
- const selected=selectTarget(p,new URL('https://example.test/games/game/?target='+id));
- assert.equal(selected.available,false);assert.equal(selected.report,null);assert.equal(selected.reportBase,null);assert.equal(selected.latestCommit,null);assert.equal(selected.contributionsEnabled,false);assert.ok(Object.values(selected.modules).every(v=>v===false));
+  const selected=selectTarget(game,new URL('https://example.test/games/game/?target='+id));
+  assert.equal(selected.available,false);assert.equal(selected.report,null);assert.equal(selected.reportBase,null);
+  assert.equal(selected.contributionsEnabled,false);assert.ok(Object.values(selected.modules).every(v=>v===false));
+  assert.equal(selected.unknownTarget,id==='invalid');assert.equal(selected.targetCatalog,id==='invalid'?null:targets);
 }
-const single={target:'OLD'};assert.equal(selectTarget(single,new URL('https://example.test/')),single);
-'''.replace('MODULE',json.dumps((ROOT/'assets/targets.js').as_uri())).replace('REPORTS',json.dumps((ROOT/'assets/reports.js').as_uri()))
-        subprocess.run(['node','--input-type=module','-e',source],check=True,capture_output=True,text=True)
+const single=withTarget({...game,targets:[targets[0]]},'ID-rev0');assert.equal(single.targetCatalog,null);
+'''
+        result = subprocess.run(['node', '--input-type=module'], input=script, text=True, cwd=ROOT, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

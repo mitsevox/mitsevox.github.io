@@ -113,13 +113,6 @@ class TargetTests(unittest.TestCase):
         self.assertEqual(default, 'GAME01-rev0')
         self.assertEqual(targets, TARGETS['targets'])
 
-    def test_transitional_nested_targets(self):
-        nested = {'defaultTarget': 'GAME01-rev0', 'targets': [
-            {'target': {'id': 'GAME01-rev0', 'platform': 'gamecube', 'gameId': 'GAME01', 'region': 'USA',
-                        'discRevision': 0, 'sha1': 'a' * 40}, 'status': 'active', 'support': {}}]}
-        targets, _ = self.load(nested)
-        self.assertEqual(targets, [TARGETS['targets'][0]])
-
     def test_rejects_bad_identity(self):
         for change in ({'platform': 'GameCube'}, {'sha1': 'A' * 40}, {'status': 'live'}, {'id': 'a/b'}):
             document = copy.deepcopy(TARGETS)

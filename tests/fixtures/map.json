@@ -1,0 +1,111 @@
+{
+ "files": [
+  {
+   "address": "0x00001000",
+   "boundary": "provisional",
+   "children": [
+    {
+     "address": "0x00001000",
+     "children": [
+      {
+       "address": "0x00001000",
+       "function_address": "0x00001000",
+       "fuzzy": 40,
+       "kind": "code",
+       "linked": 20,
+       "matched": 40,
+       "name": "Transform",
+       "original_size": 40,
+       "size": 40,
+       "source": "src/descriptive-file.c",
+       "type": "function"
+      },
+      {
+       "address": "0x00001028",
+       "comparison_source": "comparisons/descriptive-file.c",
+       "function_address": "0x00001028",
+       "fuzzy": 10,
+       "kind": "code",
+       "linked": 0,
+       "matched": 0,
+       "name": "Update",
+       "original_size": 20,
+       "size": 20,
+       "source": "src/descriptive-file.c",
+       "type": "function"
+      }
+     ],
+     "fuzzy": 50,
+     "kind": "code",
+     "linked": 20,
+     "matched": 40,
+     "name": "Math",
+     "size": 60,
+     "source": "src/descriptive-file.c",
+     "type": "group"
+    }
+   ],
+   "complete": false,
+   "fuzzy": 50,
+   "kind": "code",
+   "linked": 20,
+   "matched": 40,
+   "name": "src/descriptive-file.c",
+   "scope": "mapped-ranges",
+   "size": 60,
+   "source": "src/descriptive-file.c",
+   "type": "file"
+  },
+  {
+   "address": "0x0000103C",
+   "auto_generated": true,
+   "boundary": "open",
+   "complete": false,
+   "fuzzy": 0,
+   "kind": "code",
+   "linked": 0,
+   "matched": 0,
+   "name": "Unassigned code",
+   "scope": "candidate-ranges",
+   "size": 40,
+   "type": "file"
+  },
+  {
+   "address": "0x00002000",
+   "boundary": "exact",
+   "complete": true,
+   "fuzzy": 4,
+   "kind": "data",
+   "linked": 2,
+   "matched": 3,
+   "name": "Data group",
+   "scope": "mapped-ranges",
+   "size": 10,
+   "source": "src/data.c",
+   "type": "file"
+  }
+ ],
+ "schema": 1,
+ "sections": [
+  {
+   "address": "0x00001000",
+   "fuzzy": 50,
+   "kind": "code",
+   "linked": 20,
+   "matched": 40,
+   "name": "Code",
+   "size": 100,
+   "type": "section"
+  },
+  {
+   "address": "0x00002000",
+   "fuzzy": 4,
+   "kind": "data",
+   "linked": 2,
+   "matched": 3,
+   "name": "Data",
+   "size": 10,
+   "type": "section"
+  }
+ ]
+}

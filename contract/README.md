@@ -132,4 +132,13 @@ covered once and the function counts match the summary.
 
 ## contributors.json
 
-Optional; `modules.contributors` names it when present. Not yet produced under schema 1.
+Optional; `modules.contributors` names it when present.
+
+```json
+{"schema": 1, "credited_functions": 2,
+ "contributors": [{"id": 1, "login": "someone", "functions": 2}],
+ "functions": [{"id": "<target>:0x80003100:36", "authors": [1]}, ...]}
+```
+
+Every exact function is credited once; `credited_functions` equals the summary's exact function count,
+and each person's `functions` equals the number of credits naming them.

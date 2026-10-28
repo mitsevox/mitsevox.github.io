@@ -1,0 +1,34 @@
+{
+ "game": "game",
+ "measuredAt": "2000-01-02T00:00:00Z",
+ "modules": {
+  "contributors": "contributors.json",
+  "map": "map.json"
+ },
+ "schema": 1,
+ "source": {
+  "committedAt": "2000-01-01T00:00:00Z",
+  "revision": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "runUrl": null,
+  "title": "Measured commit",
+  "url": "https://github.com/owner/game/commit/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+ },
+ "summary": {
+  "code": {
+   "fuzzy": 50,
+   "linked": 20,
+   "matched": 40,
+   "total": 100
+  },
+  "data": {
+   "fuzzy": 4,
+   "linked": 2,
+   "matched": 3,
+   "total": 10
+  },
+  "files": null,
+  "functions": null
+ },
+ "target": "TEST",
+ "tools": []
+}

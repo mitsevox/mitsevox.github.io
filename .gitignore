@@ -5,5 +5,3 @@ build/
 .env
 .env.*
 *.pyc
-
-data/.report-refresh.lock

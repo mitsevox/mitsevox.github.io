@@ -46,7 +46,16 @@ function restorePosition(url,scrollY,{smooth=false}={}){
 }
 function templateFor(match){return match.wiki?(match.wiki==='start-here'?'/wiki/content.html':'/wiki/'+match.wiki+'/content.html'):match.project?'game':'hub';}
 async function navigate(url,{push=false,scrollY=0,focus=false}={}){
-  let match;try{match=route(url);}catch(error){console.error(error);return;}if(!match)return;
+  let match;try{match=route(url);}catch(error){console.error(error);return;}
+  if(!match){
+    // Pages serves the app as 404.html for every path it has no file for.
+    ++generation;controllers.forEach(controller=>controller.destroy());controllers=[];
+    const main=document.createElement('main');main.className='not-found';main.tabIndex=-1;
+    main.innerHTML='<h1>Page not found</h1><p><a href="/">Back to all projects →</a></p>';
+    content.replaceChildren(main);header.update(null,{wiki:false});footer.update(null);
+    delete document.body.dataset.project;document.title='Page not found · mitsevox';
+    displayedURL=location.href;return;
+  }
   const version=++generation;
   navigationLabel.textContent='Loading '+(match.wiki?'wiki':match.project?.title||'projects');navigationStatus.hidden=false;content.setAttribute('aria-busy','true');
   try{
