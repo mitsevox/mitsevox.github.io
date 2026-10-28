@@ -59,7 +59,7 @@
     "scaffoldAction": "mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main",
     "imageVariable": "BUILD_IMAGE",
     "imagePattern": "ghcr\\.io/[^@\\s]+@sha256:[0-9a-f]{64}",
-    "environment": "${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'publish' || 'validate' }}",
+    "environment": "${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && 'publish' || 'validate' }}",
     "workflowDirectory": ".github/workflows"
   },
   "forbidden": ["docs/dtk", "config/<id>/config.example.yml"],

@@ -11,7 +11,9 @@ where the kind has one), the deployment environments with their branch policies 
 features, then prints the hand steps it cannot do (secrets and variables, package access, the
 GitHub App). Both are
 idempotent. The token comes from GH_TOKEN or `gh auth token`; --check works with a fine-grained token
-limited to Administration: read and Metadata: read. Standard library only."""
+limited to read access for Administration (Actions permissions), Metadata (rulesets), Actions
+(environments and their branch policies), Environments (environment secrets), Secrets and Variables
+(the repository's own) on the repositories. Standard library only."""
 import argparse
 import json
 import os
@@ -253,9 +255,14 @@ def environments(api, repo, wanted):
         elif policy.get('custom_branch_policies'):
             status, policies = api('GET', '/repos/%s/environments/%s/deployment-branch-policies' % (repo, name))
             if status == 200:
-                branches = [p for p in policies.get('branch_policies', []) if p.get('type', 'branch') == 'branch']
-                found[key + 'branches'] = sorted(p['name'] for p in branches)
-                found[key + 'policy_ids'] = {p['name']: p['id'] for p in branches}
+                # A tag policy would let any contributor's tag push reach the key: it is recorded
+                # as tag:<pattern>, which no standard lists, so it drifts and apply deletes it.
+                ids = {}
+                for p in policies.get('branch_policies', []):
+                    label = p['name'] if p.get('type', 'branch') == 'branch' else 'tag:' + p['name']
+                    ids[label] = p['id']
+                found[key + 'branches'] = sorted(ids)
+                found[key + 'policy_ids'] = ids
         else:
             found[key + 'branches'] = 'protected'
         status, secrets = api('GET', '/repos/%s/environments/%s/secrets' % (repo, name))
@@ -408,14 +415,17 @@ def apply(api, repo, std, drift, found):
                 for branch in env['branches']:
                     if branch not in have:
                         api('POST', '/repos/%s/environments/%s/deployment-branch-policies' % (repo, name), {'name': branch, 'type': 'branch'})
-                for branch, policy_id in have.items():
-                    if branch not in env['branches']:
+                # Every other policy goes, tag policies (tag:<pattern>) included.
+                for label, policy_id in have.items():
+                    if label not in env['branches']:
                         api('DELETE', '/repos/%s/environments/%s/deployment-branch-policies/%s' % (repo, name, policy_id))
         if key + 'secrets' in keys or key + 'exists' in keys:
             hand.append('Environment %s: hold exactly the secrets %s (Settings, Environments, %s, Environment secrets).'
                         % (name, ', '.join(env['secrets']) or 'none', name))
     if 'actions.variables' in keys or 'actions.secrets' in keys:
-        hand.append('Set the repository variables %s and secrets %s, and delete every other one (Settings, Secrets and variables, Actions).'
+        hand.append('Repository variables: exactly %s; repository secrets: exactly %s (Settings, Secrets and variables, Actions). '
+                    'Delete a DATA_APP_PRIVATE_KEY repository secret only at its step of the move order in the Repository '
+                    'settings chapter: until it is gone, a job falls back to it and a published line proves nothing.'
                     % (', '.join(std['variables']) or 'none', ', '.join(std['secrets']) or 'none'))
     if 'security.dependabot_version_updates' in keys:
         hand.append('Remove .github/dependabot.yml; pinned actions are bumped by hand.')
