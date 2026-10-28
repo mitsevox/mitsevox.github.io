@@ -56,7 +56,7 @@
 </tr>
 <tr>
 <td><code>settings: repository.&lt;field&gt;: expected ..., found unreadable</code> in <code>Check the scaffold</code></td>
-<td>The job's token cannot read those repository settings, so the check cannot compare them; it is not drift. <code>python3 tools/repo_settings.py --repo owner/game --check</code> with an owner token checks them (<a href="/wiki/repository-settings/">Repository settings</a>).</td>
+<td>The job's default token cannot read that setting, so the scaffold check cannot compare it; the warning says nothing about the setting's value. The owner checks it with <code>python3 tools/repo_settings.py --repo owner/game --check</code> from a site repository checkout (<a href="/wiki/repository-settings/">Repository settings</a>), where unreadable does count as drift. Not a failed gate.</td>
 </tr>
 <tr>
 <td><code>::warning file=...::</code> lines in <code>Check the scaffold</code></td>
