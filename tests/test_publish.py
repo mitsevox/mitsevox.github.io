@@ -2,6 +2,7 @@
 import copy
 import functools
 import json
+import math
 import operator
 import os
 from pathlib import Path
@@ -148,11 +149,11 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaises(publish.ContractError):
             publish.check_map(m, s)
 
-    def test_sums_round_as_the_page_sums(self):
-        # The page adds children left to right; Python's sum() compensates float error since
-        # 3.12. A group holding the exact sum of children whose naive sum lands 1e-6 away is
-        # refused by the page, so the check must add as the page does and refuse it too: one
-        # 2^40-byte exact function and a hundred 1-byte functions at 10 percent.
+    def test_group_fuzzy_is_added_as_the_page_adds_it(self):
+        # The page re-adds a group's children left to right and compares with the group. One
+        # 2^40-byte exact function and a hundred 1-byte functions at 10 percent put the exact sum
+        # about 0.01 away from that. The publisher writes the page's sum, at the group and in the
+        # summary, so its own output passes both readers; a copy holding the exact sum fails both.
         r = report()
         unit, auto = r['units']
         big, base = 2 ** 40, 2147483648
@@ -168,9 +169,14 @@ class ConversionTests(unittest.TestCase):
         s = publish.summary(r, SECTIONS)
         m = publish.map_document(r, SECTIONS)
         group = m['files'][0]
-        self.assertEqual(group['fuzzy'], big + 10)  # the exact sum
-        naive = functools.reduce(operator.add, (c['fuzzy'] for c in group['children']), 0)
-        self.assertGreater(abs(naive - group['fuzzy']), 1e-6)
+        exact = math.fsum(c['fuzzy'] for c in group['children'])
+        self.assertEqual(exact, big + 10)
+        self.assertEqual(group['fuzzy'], functools.reduce(operator.add, (c['fuzzy'] for c in group['children']), 0))
+        self.assertGreater(abs(group['fuzzy'] - exact), 1e-6)
+        self.assertEqual(s['code']['fuzzy'], group['fuzzy'])  # the other code group adds nothing
+        publish.check_map(m, s)
+        self.assertFalse(self.page_rejects(m, s))
+        m['files'][0]['fuzzy'] = exact
         self.assertTrue(self.page_rejects(m, s))
         with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
             publish.check_map(m, s)

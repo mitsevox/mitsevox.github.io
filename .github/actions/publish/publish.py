@@ -95,6 +95,13 @@ def num(value):
     return int(value) if value is not None else 0
 
 
+def added(values):
+    """Values added left to right, as the page adds them (reduce((a, b) => a + b, 0)), so that
+    the page's own sums equal the sums written here, by construction. Not sum(), which compensates
+    float error since Python 3.12, and not math.fsum(), which is exact: the page is neither."""
+    return functools.reduce(operator.add, values, 0)
+
+
 def fuzzy_bytes(function):
     # Size-weighted similarity; the summary and the map use this same expression so they agree.
     return num(function.get('size')) * min(function.get('fuzzy_match_percent', 0), 100) / 100
@@ -145,7 +152,7 @@ def other_code(unit, code_sections):
     return result
 
 
-def summary(report, code_sections, unnamed=UNNAMED):
+def summary(report, code_sections, unnamed=UNNAMED, map_doc=None):
     m = report.get('measures', {})
     total_code, total_data = num(m.get('total_code')), num(m.get('total_data'))
     functions = [f for u in report.get('units', []) for f in u.get('functions', [])]
@@ -155,9 +162,11 @@ def summary(report, code_sections, unnamed=UNNAMED):
     require(exact == num(m.get('matched_functions')),
             'Report has %d exact functions, its measures say %s' % (exact, m.get('matched_functions')))
     named = sum(1 for f in functions if not re.fullmatch(unnamed, f['name']))
-    fuzzy = math.fsum(fuzzy_bytes(f) for f in functions) + \
-        sum(matched for u in report.get('units', []) for _, _, _, matched in other_code(u, code_sections))
-    data_fuzzy = math.fsum(data_fuzzy_bytes(u, code_sections) for u in report.get('units', []))
+    # The fuzzy totals are the map's roots added as the page adds them: the page re-adds the
+    # files view against the summary, and lands on exactly these values.
+    map_doc = map_doc if map_doc is not None else map_document(report, code_sections)
+    fuzzy = added(r['fuzzy'] for r in map_doc['files'] if r['kind'] == 'code')
+    data_fuzzy = added(r['fuzzy'] for r in map_doc['files'] if r['kind'] == 'data')
     units = report.get('units', [])
 
     def auto(u):
@@ -204,7 +213,9 @@ def group(name, kind, children):
             'size': sum(c['size'] for c in children),
             'linked': sum(c['linked'] for c in children),
             'matched': sum(c['matched'] for c in children),
-            'fuzzy': math.fsum(c['fuzzy'] for c in children)}
+            # Added as the page adds the children it is given, in this order: the page's own sum
+            # then equals this value exactly, whatever the magnitudes.
+            'fuzzy': added(c['fuzzy'] for c in children)}
     node['_ranges'] = [tuple(r) for r in merged(r for c in children for r in c['_ranges'])]
     node['mapped_extents'] = extents(node['_ranges'])
     node['children'] = children
@@ -411,11 +422,6 @@ def check_map(document, s):
         # The page compares sums with an absolute tolerance of 1e-6 and no relative one.
         return abs(a - b) <= 1e-6
 
-    def total(values):
-        # Added left to right, as the page adds them (reduce((a, b) => a + b, 0)), so that both
-        # see the same rounding. Not sum(): since Python 3.12 it compensates float error.
-        return functools.reduce(operator.add, values, 0)
-
     def node_extents(item):
         if 'mapped_extents' in item:
             rs = [(int(x['start'], 16), int(x['end'], 16)) for x in item['mapped_extents']]
@@ -448,7 +454,7 @@ def check_map(document, s):
             # The children are checked first, so that every count summed below is a number.
             rs = merged_ranges([r for c in children for r in walk(c, kind, inventory)])
             for key in ('size', 'linked', 'matched', *(['fuzzy'] if 'fuzzy' in item else [])):
-                require(all(key in c for c in children) and close(total(c[key] for c in children), item[key]),
+                require(all(key in c for c in children) and close(added(c[key] for c in children), item[key]),
                         'map: %r children do not add up (%s)' % (item.get('name'), key))
             if 'address' in item or 'mapped_extents' in item:
                 require(rs == merged_ranges(node_extents(item)), 'map: %r extents differ from its children' % item.get('name'))
@@ -472,7 +478,7 @@ def check_map(document, s):
             for key, k in (('total', 'size'), ('linked', 'linked'), ('matched', 'matched'), ('fuzzy', 'fuzzy')):
                 if m.get(key) is None:
                     continue
-                require(all(k in x for x in items) and close(total(x[k] for x in items), m[key]),
+                require(all(k in x for x in items) and close(added(x[k] for x in items), m[key]),
                         'map: %s %s %s differs from the summary' % (field, kind, key))
             require(reference is None or actual == reference, 'map: sections and files cover different %s bytes' % kind)
             reference = actual
@@ -857,15 +863,16 @@ def convert(args):
     server = os.environ.get('GITHUB_SERVER_URL', 'https://github.com')
     run_id = os.environ.get('GITHUB_RUN_ID')
     tools = [dict(zip(('name', 'version'), line.split('=', 1))) for line in args.tools.splitlines() if '=' in line]
+    map_doc = map_document(report, code_sections, args.unit_prefix)
     latest = {'schema': SCHEMA, 'game': game['slug'], 'target': args.target,
               'source': {'revision': revision, 'committedAt': committed, 'title': title,
                          'url': '%s/%s/commit/%s' % (server, args.repository, revision),
                          'runUrl': '%s/%s/actions/runs/%s' % (server, args.repository, run_id) if run_id else None},
               'measuredAt': args.measured_at or now(),
               'tools': tools,
-              'summary': summary(report, code_sections),
+              'summary': summary(report, code_sections, map_doc=map_doc),
               'modules': {'map': 'map.json', 'contributors': None}}
-    return game, latest, map_document(report, code_sections, args.unit_prefix)
+    return game, latest, map_doc
 
 
 def publish(args):
