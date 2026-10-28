@@ -319,6 +319,38 @@ class HistoryTests(unittest.TestCase):
             publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
         self.assertEqual(path.read_text(), '[{"revision": ')
 
+    def test_latest_names_its_files_by_digest_and_a_correction_needs_a_reseal(self):
+        publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
+        directory = self.tree / 'data/game/GAME01-rev0'
+        current = self.current()
+        self.assertEqual(set(current['digests']), {'map.json', 'history.json'})
+        self.assertEqual(current['digests']['map.json'], publish.digest(directory / 'map.json'))
+        # An older commit measured late appends a history row and leaves latest's measurement
+        # alone; the history digest in latest.json follows the file.
+        publish.write_target(self.tree, self.game, latest(REV[1], '2025-12-31T00:00:00Z', '2026-01-02T00:05:00Z'), self.map)
+        after = self.current()
+        self.assertEqual((after['source'], after['summary']), (current['source'], current['summary']))
+        self.assertNotEqual(after['digests']['history.json'], current['digests']['history.json'])
+        self.assertEqual(after['digests']['history.json'], publish.digest(directory / 'history.json'))
+        self.assertEqual(publish.check_tree(self.tree), 1)
+        # A hand correction of map.json is refused until resealed; then the digest moves.
+        path = directory / 'map.json'
+        document = json.loads(path.read_text())
+        document['files'][0]['name'] = 'game/unit.cpp'
+        publish.write_json(path, document, compact=True)
+        with self.assertRaisesRegex(publish.ContractError, 'game/GAME01-rev0: map.json: digest differs'):
+            publish.check_tree(self.tree)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: map.json'])
+        self.assertEqual(publish.reseal_tree(self.tree), [])
+        self.assertEqual(self.current()['digests']['map.json'], publish.digest(path))
+        # Data published before the digests existed is accepted as it is, and a reseal adds them.
+        legacy = self.current()
+        del legacy['digests']
+        publish.write_json(directory / 'latest.json', legacy)
+        self.assertEqual(publish.check_tree(self.tree), 1)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: history.json', 'game/GAME01-rev0: map.json'])
+        self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json'})
+
     def test_tree_check_catches_history_mismatch(self):
         publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
         rows = self.rows()
@@ -458,6 +490,15 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(checked.returncode, 0, checked.stderr)
             self.assertIn('checked 1 target(s)', checked.stdout)
             self.assertIsNone(json.loads((temp / 'check/data/game/GAME01-rev0/latest.json').read_text())['modules']['contributors'])
+            # The correction procedure: edit, reseal, check.
+            path = out / 'data/game/GAME01-rev0/map.json'
+            path.write_text(path.read_text().replace('"game/unit"', '"game/unit.cpp"', 1))
+            script = str(ROOT / '.github/actions/publish/publish.py')
+            refused = subprocess.run([sys.executable, script, 'check', str(out)], capture_output=True, text=True)
+            self.assertIn('map.json: digest differs from latest.json; run publish.py reseal', refused.stderr)
+            resealed = subprocess.run([sys.executable, script, 'reseal', str(out)], capture_output=True, text=True)
+            self.assertEqual(resealed.stdout.strip(), 'resealed game/GAME01-rev0: map.json', resealed.stderr)
+            self.assertEqual(subprocess.run([sys.executable, script, 'check', str(out)], capture_output=True, text=True).returncode, 0)
 
 
 if __name__ == '__main__':

@@ -171,6 +171,10 @@
 <td>The data repository's existing files are inconsistent; someone edited them by hand. Revert that commit in the data repository.</td>
 </tr>
 <tr>
+<td><code>map.json: digest differs from latest.json; run publish.py reseal</code></td>
+<td>A file was corrected by hand without the reseal step (<a href="/wiki/publishing/">Publishing</a>, "Correcting published data"). Reseal and check in a data-repository pull request.</td>
+</tr>
+<tr>
 <td><code>push failed (attempt N), retrying</code> then <code>push failed after 5 attempts</code></td>
 <td>Five consecutive lost races or a rejected push. Re-run the job; if it persists, check the App's permission and branch rules on the data repository.</td>
 </tr>
@@ -195,7 +199,11 @@
 </tr>
 <tr>
 <td>A target shows "unavailable"</td>
-<td>Its <code>latest.json</code> does not load or parse. A <code>map.json</code> or <code>history.json</code> that fails the page's checks hides only its own section ("Progress history unavailable"). Run <code>publish.py check</code> on a clone of the data repository to find the file.</td>
+<td>Its <code>latest.json</code> does not load or parse. A <code>map.json</code> or <code>history.json</code> that fails the page's checks hides only its own section ("Progress history unavailable"). Run <code>python3 tools/check_data_tree.py</code> from the site repository on a clone of the data repository to find the file with both readers.</td>
+</tr>
+<tr>
+<td>The page shows a map that was corrected in the data repository as it was before</td>
+<td>The correction was committed without <code>publish.py reseal</code>, so its URL did not change and browsers keep the cached copy. Reseal (<a href="/wiki/publishing/">Publishing</a>); the page refetches on its own only when the cached copy fails validation.</td>
 </tr>
 <tr>
 <td>The game is missing from the hub</td>
@@ -251,5 +259,5 @@
 </tbody>
 </table></div>
 <h2 id="recovery">Recovery</h2>
-<p>A bad publish is a <code>git revert</code> in the data repository; the next publish appends on top. A bad image digest is a revert of the <code>validate.yml</code> change. Never edit measurement files in the data repository by hand, and never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/site/"><small>Previous</small><span>The site</span></a><a href="/wiki/starter-kit/"><small>Next</small><span>Starter kit</span></a></nav></div>
+<p>A bad publish is a <code>git revert</code> in the data repository followed by <code>publish.py reseal</code>; the next publish appends on top. A wrong published file is corrected the same way, by a resealed data-repository pull request (<a href="/wiki/publishing/">Publishing</a>, "Correcting published data"), never by re-running the measurement, which keeps what was published first. A bad image digest is a revert of the <code>validate.yml</code> change. Never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/site/"><small>Previous</small><span>The site</span></a><a href="/wiki/starter-kit/"><small>Next</small><span>Starter kit</span></a></nav></div>
 <aside class="wiki-on-page"><nav aria-label="On this page"><a href="#plan-and-tool-tests">Plan and tool tests</a><a href="#image-and-original">Image and original</a><a href="#build-and-measurement">Build and measurement</a><a href="#publish-step">Publish step</a><a href="#deploy-and-page">Deploy and page</a><a href="#settings">Settings</a><a href="#recovery">Recovery</a></nav></aside></main>

@@ -78,7 +78,8 @@ game's presentation changes.
    "data": {"total": 870056, "linked": 131316, "matched": 157536, "fuzzy": 183267.63},
    "functions": {"total": 4746, "exact": 1253, "named": 2595},
    "files": {"total": 519, "exact": 119, "named": 374}},
- "modules": {"map": "map.json", "contributors": null}}
+ "modules": {"map": "map.json", "contributors": null},
+ "digests": {"map.json": "3f0c6a9e5b1d2c47", "history.json": "9a71e0c4d2b8f615"}}
 ```
 
 Measures, all in bytes of the original binary:
@@ -90,12 +91,21 @@ Measures, all in bytes of the original binary:
 | `matched` | bytes that match exactly, linked or not |
 | `fuzzy` | size-weighted similarity: each function or data section counts `size × match%`; may be `null` |
 
-`linked`, `matched` and `fuzzy` overlap; they are never added together. `matched ≤ fuzzy ≤ total`.
+`linked`, `matched` and `fuzzy` overlap; they are never added together. `matched ≤ fuzzy ≤ total`,
+exactly: no tolerance, or the page refuses the measure.
 `functions` and `files` may be `null` when a producer cannot count them. A function is `named` when
 its symbol is not a tool-generated address label (`fn_<hex>`, `func_<hex>`); a file is a source unit,
 `named` when it is not a tool-generated address range, `exact` when it is named and fully matched.
 
 `source.runUrl` is the provenance: the CI run that measured these numbers.
+
+`digests` names, for each of `map.json`, `history.json` and `contributors.json` that exists beside
+`latest.json`, the first 16 hex digits of the file's SHA-256. The page fetches `latest.json` with
+revalidation and the three files by digest (`?v=<digest>`), so their URLs are immutable and a
+corrected file is a new URL. The publisher writes the digests on every publish; a hand correction
+in the data repository is followed by `publish.py reseal <tree>`, and `publish.py check` refuses a
+digest that differs from its file. Data published before the digests existed has none; readers
+then key the files by the revision.
 
 ## history.json
 

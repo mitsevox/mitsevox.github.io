@@ -4,7 +4,8 @@ import fs from 'node:fs';
 const read = name => JSON.parse(fs.readFileSync(new URL(name, import.meta.url)));
 export const map = read('map.json');
 export const latest = read('latest.json');
-export const version = '?v=' + latest.source.revision.slice(0, 12);
+// The page keys each file's URL by the digest latest.json gives it.
+export const version = '?v=' + latest.digests['map.json'];
 
 export function project(reportBase = '/one/', report = latest) {
   return {target:'TEST', targetSha1:'a'.repeat(40), reportBase, report,

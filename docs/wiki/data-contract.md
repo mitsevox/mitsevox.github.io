@@ -37,12 +37,14 @@ A `(game, target)` pair is the unit of everything; a game with one target has on
    "data": {"total": 870056, "linked": 131316, "matched": 157536, "fuzzy": 183267.63},
    "functions": {"total": 4746, "exact": 1253, "named": 2595},
    "files": {"total": 519, "exact": 119, "named": 374}},
- "modules": {"map": "map.json", "contributors": null}}
+ "modules": {"map": "map.json", "contributors": null},
+ "digests": {"map.json": "3f0c6a9e5b1d2c47", "history.json": "9a71e0c4d2b8f615"}}
 ```
 
 | Field | Meaning |
 | --- | --- |
 | `source` | The measured commit: its SHA, commit time, subject, URL and the CI run that measured it (`runUrl` is the provenance) |
+| `digests` | For each of `map.json`, `history.json` and `contributors.json` beside this file: the first 16 hex digits of its SHA-256. The page fetches those files by digest (`?v=<digest>`), so a corrected file is a new URL ([Publishing](/wiki/publishing/), "Correcting published data"). Absent in data published before the digests existed; the page then keys by the revision |
 | `measuredAt` | The `measured-at` input, UTC |
 | `tools` | The `tools` input, one object per line |
 | `summary.code`, `summary.data` | Bytes of the original: `total`, `linked` (units that link into the byte-identical executable), `matched` (bytes matching exactly, linked or not), `fuzzy` (size-weighted similarity; may be `null`) |
@@ -50,7 +52,7 @@ A `(game, target)` pair is the unit of everything; a game with one target has on
 | `summary.files` | Units: `total`, `named` (not tool-generated) and `exact` (named and fully matched); may be `null` |
 | `modules` | `map` names the map file; `contributors` names the optional contributors file or is `null` |
 
-`linked`, `matched` and `fuzzy` overlap and are never added together. `matched <= fuzzy <= total`.
+`linked`, `matched` and `fuzzy` overlap and are never added together. `matched <= fuzzy <= total`, exactly: there is no tolerance, in the checker or on the page, so a fuzzy value a rounding step below `matched` is refused, which is why the action holds a data section's fuzzy within those bounds when it converts a percentage back into bytes.
 
 ## history.json
 
@@ -85,6 +87,7 @@ Optional; `modules.contributors` names it when present. The publish action write
 | Every function inside a code section of its unit; data sections sum to the unit's `total_data` | The report against `code-sections` |
 | Timestamps UTC ISO 8601 | `measured-at` |
 | One history row per revision, in `measuredAt` order | Only the action writes it |
+| Every digest in `latest.json` equals its file's | A hand correction without `publish.py reseal` |
 
 ## Versioning
 

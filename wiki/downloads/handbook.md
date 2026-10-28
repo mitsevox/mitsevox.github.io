@@ -877,7 +877,7 @@ The private key is an environment secret and never a repository secret, because 
 4. Leave required reviewers and the wait timer off.
 5. New environment, name `validate`, Configure environment, change nothing: every branch, no secrets.
 
-Both environments are created by hand (or by `python3 tools/repo_settings.py --apply`), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but not for a job with `deployment: false`. The settings standard checks both ([Repository settings](/wiki/repository-settings/)).
+Both environments are created by hand (or by `python3 tools/repo_settings.py --apply`), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but does not say whether this happens for a job with `deployment: false`. The settings standard checks both ([Repository settings](/wiki/repository-settings/)).
 
 A repository secret and an environment secret may share a name. A job that references an environment reads the environment's secret when the environment has one of that name, and otherwise falls back to the repository secret. So the key must not exist as a repository secret at all once the environment holds it, and the move from one to the other follows the order in [Repository settings](/wiki/repository-settings/), which deletes the repository secret before trusting a `published` line and then proves the branch policy with two refused runs.
 
@@ -914,7 +914,19 @@ The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-cli
 3. Up to five times: resets to the newest tip of the default branch, writes the target's files, runs the full tree check, commits as `<slug> <target>: <7-char sha>, <n>% code linked` with the run URL as the body, and pushes. A lost race (another target or game pushed in between) is retried from the new tip; the write is idempotent, so a retry re-applies the same measurement.
 4. Prints `published <slug>/<target> <sha>`, or `<slug>/<target> <sha> already published` when nothing changed.
 
-Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and `latest.json` and `map.json` only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way. The exact file formats are in [Data contract](/wiki/data-contract/).
+Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and `latest.json` and `map.json` only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way, and `latest.json`'s `digests` follow the files on every write. The exact file formats are in [Data contract](/wiki/data-contract/).
+
+Because the action runs at `@main` in every producer, a change to it is live for every producer's next `main` run the moment it merges. A change that spans the site, the data repository and a producer merges in that order: the site first (the action and the checker), then the data repository (a correction or a migration of the data), then the producer; the site's CI checks the live data with the new checker before the site change merges ([Data contract](/wiki/data-contract/)).
+
+## Correcting published data
+
+A publish never rewrites a published revision: re-running the workflow for the same commit keeps what was published, and a new commit publishes a new measurement beside it. A published file that is wrong is corrected in the data repository, by hand, and nowhere else:
+
+1. Clone the data repository and make the smallest edit that makes the file right (the two data-fuzzy values of one unit in `map.json`, say). Never change a measurement in `history.json` unless that row itself was wrong, and never remove a row.
+2. From the site repository's checkout, `python3 .github/actions/publish/publish.py reseal <clone>`: it rewrites `digests` in each `latest.json` whose files changed and prints them, then runs the whole tree check. Without the reseal, `publish.py check` and the site's live-data check refuse the tree (`map.json: digest differs from latest.json`).
+3. Open a pull request against the data repository that states the reason, merge it; the `Deploy` workflow publishes it.
+
+The page fetches `map.json`, `history.json` and `contributors.json` by their digest, so the corrected file has a new URL and no browser shows the old copy; `latest.json` itself is always revalidated. The measurement's revision and time stay what they were: a correction changes a file, not the measurement's identity. (The page also refetches a cached map once past the cache when it fails validation, but a correction must not depend on that.)
 
 ## Credits
 
@@ -934,7 +946,7 @@ Everything written is checked before the push by the same code as `publish.py ch
 1. In the `Validate <target id>` job log, the `Publish to the site` step prints `published game/GAME01-rev0 <sha>`.
 2. The data repository has a new commit by `game publisher`; its `Deploy` workflow runs (about a minute).
 3. `https://mitsevox.github.io/decomp-data/data/game/GAME01-rev0/latest.json` shows the new `source.revision`.
-4. `https://mitsevox.github.io/games/game/` shows the new numbers. The page fetches the data with `cache: no-cache`, so a reload is enough.
+4. `https://mitsevox.github.io/games/game/` shows the new numbers. The page revalidates `latest.json` on every view and fetches the other files by digest, so a reload is enough.
 
 ## Running the conversion locally
 
@@ -1041,7 +1053,7 @@ A repository that still holds the key as a repository secret moves it in this or
 2. Merge the `validate.yml` change that references the environments (the kit sync).
 3. Delete the repository secret `DATA_APP_PRIVATE_KEY` (Settings, Secrets and variables, Actions, Secrets).
 4. Run the workflow on `main` by hand (Actions, Validate, Run workflow, branch `main`) and require `Publish to the site` to print `published ...`. A failure at `Mint a data-repository token` means the environment secret is wrong: fix it and run again; nothing was published in between, and the next run publishes.
-5. Prove the branch policy, with both probes; they are the only evidence that the policy applies with `deployment: false`, which GitHub documents for secrets but not for environments created on the fly. On a throwaway branch change the environment line to `name: publish`, then (a) open a draft pull request: every `Validate <target id>` job must be refused before its first step with an environment protection message; (b) run the workflow by hand on that branch (Actions, Validate, Run workflow, choose the branch): refused the same way. Close the pull request and delete the branch. A probe that runs instead of being refused means the key is reachable from branches: delete the environment secret at once and report it.
+5. Prove the branch policy, with both probes; they are the only evidence that it applies with `deployment: false`: GitHub's text on `deployment: false` says that wait timers and required reviewers still apply and does not mention deployment branch policies. On a throwaway branch change the environment line to `name: publish`, then (a) open a draft pull request: every `Validate <target id>` job must be refused before its first step with an environment protection message; (b) run the workflow by hand on that branch (Actions, Validate, Run workflow, choose the branch): refused the same way. Close the pull request and delete the branch. A probe that runs instead of being refused means the key is reachable from branches: delete the environment secret at once and report it.
 6. `python3 tools/repo_settings.py --repo owner/game --check` reports no drift.
 
 ## Assumptions to confirm
@@ -1092,12 +1104,14 @@ A `(game, target)` pair is the unit of everything; a game with one target has on
    "data": {"total": 870056, "linked": 131316, "matched": 157536, "fuzzy": 183267.63},
    "functions": {"total": 4746, "exact": 1253, "named": 2595},
    "files": {"total": 519, "exact": 119, "named": 374}},
- "modules": {"map": "map.json", "contributors": null}}
+ "modules": {"map": "map.json", "contributors": null},
+ "digests": {"map.json": "3f0c6a9e5b1d2c47", "history.json": "9a71e0c4d2b8f615"}}
 ```
 
 | Field | Meaning |
 | --- | --- |
 | `source` | The measured commit: its SHA, commit time, subject, URL and the CI run that measured it (`runUrl` is the provenance) |
+| `digests` | For each of `map.json`, `history.json` and `contributors.json` beside this file: the first 16 hex digits of its SHA-256. The page fetches those files by digest (`?v=<digest>`), so a corrected file is a new URL ([Publishing](/wiki/publishing/), "Correcting published data"). Absent in data published before the digests existed; the page then keys by the revision |
 | `measuredAt` | The `measured-at` input, UTC |
 | `tools` | The `tools` input, one object per line |
 | `summary.code`, `summary.data` | Bytes of the original: `total`, `linked` (units that link into the byte-identical executable), `matched` (bytes matching exactly, linked or not), `fuzzy` (size-weighted similarity; may be `null`) |
@@ -1105,7 +1119,7 @@ A `(game, target)` pair is the unit of everything; a game with one target has on
 | `summary.files` | Units: `total`, `named` (not tool-generated) and `exact` (named and fully matched); may be `null` |
 | `modules` | `map` names the map file; `contributors` names the optional contributors file or is `null` |
 
-`linked`, `matched` and `fuzzy` overlap and are never added together. `matched <= fuzzy <= total`.
+`linked`, `matched` and `fuzzy` overlap and are never added together. `matched <= fuzzy <= total`, exactly: there is no tolerance, in the checker or on the page, so a fuzzy value a rounding step below `matched` is refused, which is why the action holds a data section's fuzzy within those bounds when it converts a percentage back into bytes.
 
 ## history.json
 
@@ -1140,6 +1154,7 @@ Optional; `modules.contributors` names it when present. The publish action write
 | Every function inside a code section of its unit; data sections sum to the unit's `total_data` | The report against `code-sections` |
 | Timestamps UTC ISO 8601 | `measured-at` |
 | One history row per revision, in `measuredAt` order | Only the action writes it |
+| Every digest in `latest.json` equals its file's | A hand correction without `publish.py reseal` |
 
 ## Versioning
 
@@ -1173,7 +1188,7 @@ For `/games/game/?target=GAME01-rev0` the page reads:
 5. `data/game/GAME01-rev0/history.json`: the progress chart.
 6. `data/game/GAME01-rev0/contributors.json` when `modules.contributors` names it: rankings.
 
-Without `?target=`, the page shows `defaultTarget`. A target that is not `active` is listed without a measurement. A target whose `latest.json` fails to load shows "unavailable" and leaves the rest of the game alone; a map or history file that fails the page's checks hides only its own section. The hub at `/` lists every game in `index.json` with its default target's code and data bars, the cover, the console icon chosen from `console`, and the latest commit.
+`latest.json` is revalidated on every view; `map.json`, `history.json` and `contributors.json` are fetched by the digest `latest.json` gives them (`?v=<digest>`) and cached as immutable, so a corrected file reaches every browser at once ([Publishing](/wiki/publishing/), "Correcting published data"). Without `?target=`, the page shows `defaultTarget`. A target that is not `active` is listed without a measurement. A target whose `latest.json` fails to load shows "unavailable" and leaves the rest of the game alone; a map or history file that fails the page's checks hides only its own section. The hub at `/` lists every game in `index.json` with its default target's code and data bars, the cover, the console icon chosen from `console`, and the latest commit.
 
 ## Cover art
 
@@ -1265,6 +1280,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | `<unit>: <function> lies outside the code sections .init, .text` | The platform's code sections are named differently; pass `code-sections` to the action. |
 | `<unit>: data sections do not add up to total_data` | A unit's `total_data` disagrees with its section sizes; usually the same objdiff version problem. |
 | `history: duplicate revision`, `history: rows out of order`, `<slug>/<id>: history lacks the latest revision` | The data repository's existing files are inconsistent; someone edited them by hand. Revert that commit in the data repository. |
+| `map.json: digest differs from latest.json; run publish.py reseal` | A file was corrected by hand without the reseal step ([Publishing](/wiki/publishing/), "Correcting published data"). Reseal and check in a data-repository pull request. |
 | `push failed (attempt N), retrying` then `push failed after 5 attempts` | Five consecutive lost races or a rejected push. Re-run the job; if it persists, check the App's permission and branch rules on the data repository. |
 | `<slug>/<id> <sha> already published` | Not an error: the revision was published before (a re-run). The first measurement of a revision wins. |
 
@@ -1273,7 +1289,8 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | Symptom | Cause and fix |
 | --- | --- |
 | The data repository has the commit but the page is old | The data repository's `Deploy` workflow takes about a minute and queues bursts; wait, then reload. If `Deploy` did not run, the Pages source is not set to GitHub Actions. |
-| A target shows "unavailable" | Its `latest.json` does not load or parse. A `map.json` or `history.json` that fails the page's checks hides only its own section ("Progress history unavailable"). Run `publish.py check` on a clone of the data repository to find the file. |
+| A target shows "unavailable" | Its `latest.json` does not load or parse. A `map.json` or `history.json` that fails the page's checks hides only its own section ("Progress history unavailable"). Run `python3 tools/check_data_tree.py` from the site repository on a clone of the data repository to find the file with both readers. |
+| The page shows a map that was corrected in the data repository as it was before | The correction was committed without `publish.py reseal`, so its URL did not change and browsers keep the cached copy. Reseal ([Publishing](/wiki/publishing/)); the page refetches on its own only when the cached copy fails validation. |
 | The game is missing from the hub | Its slug is not in `index.json`; the first publish adds it. Check that the publish step ran on `main` (the condition is `github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')`). |
 | `/games/<slug>/` returns 404 with the application shell | Normal for a game added since the last site deploy; the page still renders. The next site deploy stages a real file. |
 | No cover | Both halves are needed: `data/<slug>/cover.webp` in the data repository and `artwork` in `config/site.json` followed by a publish. |
@@ -1292,7 +1309,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 
 ## Recovery
 
-A bad publish is a `git revert` in the data repository; the next publish appends on top. A bad image digest is a revert of the `validate.yml` change. Never edit measurement files in the data repository by hand, and never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.
+A bad publish is a `git revert` in the data repository followed by `publish.py reseal`; the next publish appends on top. A wrong published file is corrected the same way, by a resealed data-repository pull request ([Publishing](/wiki/publishing/), "Correcting published data"), never by re-running the measurement, which keeps what was published first. A bad image digest is a revert of the `validate.yml` change. Never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.
 
 
 ---

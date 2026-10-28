@@ -32,7 +32,7 @@ The private key is an environment secret and never a repository secret, because 
 4. Leave required reviewers and the wait timer off.
 5. New environment, name `validate`, Configure environment, change nothing: every branch, no secrets.
 
-Both environments are created by hand (or by `python3 tools/repo_settings.py --apply`), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but not for a job with `deployment: false`. The settings standard checks both ([Repository settings](/wiki/repository-settings/)).
+Both environments are created by hand (or by `python3 tools/repo_settings.py --apply`), never left to appear on their own: GitHub documents that a referenced environment is created on the fly, but does not say whether this happens for a job with `deployment: false`. The settings standard checks both ([Repository settings](/wiki/repository-settings/)).
 
 A repository secret and an environment secret may share a name. A job that references an environment reads the environment's secret when the environment has one of that name, and otherwise falls back to the repository secret. So the key must not exist as a repository secret at all once the environment holds it, and the move from one to the other follows the order in [Repository settings](/wiki/repository-settings/), which deletes the repository secret before trusting a `published` line and then proves the branch policy with two refused runs.
 
@@ -69,7 +69,19 @@ The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-cli
 3. Up to five times: resets to the newest tip of the default branch, writes the target's files, runs the full tree check, commits as `<slug> <target>: <7-char sha>, <n>% code linked` with the run URL as the body, and pushes. A lost race (another target or game pushed in between) is retried from the new tip; the write is idempotent, so a retry re-applies the same measurement.
 4. Prints `published <slug>/<target> <sha>`, or `<slug>/<target> <sha> already published` when nothing changed.
 
-Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and `latest.json` and `map.json` only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way. The exact file formats are in [Data contract](/wiki/data-contract/).
+Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and `latest.json` and `map.json` only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way, and `latest.json`'s `digests` follow the files on every write. The exact file formats are in [Data contract](/wiki/data-contract/).
+
+Because the action runs at `@main` in every producer, a change to it is live for every producer's next `main` run the moment it merges. A change that spans the site, the data repository and a producer merges in that order: the site first (the action and the checker), then the data repository (a correction or a migration of the data), then the producer; the site's CI checks the live data with the new checker before the site change merges ([Data contract](/wiki/data-contract/)).
+
+## Correcting published data
+
+A publish never rewrites a published revision: re-running the workflow for the same commit keeps what was published, and a new commit publishes a new measurement beside it. A published file that is wrong is corrected in the data repository, by hand, and nowhere else:
+
+1. Clone the data repository and make the smallest edit that makes the file right (the two data-fuzzy values of one unit in `map.json`, say). Never change a measurement in `history.json` unless that row itself was wrong, and never remove a row.
+2. From the site repository's checkout, `python3 .github/actions/publish/publish.py reseal <clone>`: it rewrites `digests` in each `latest.json` whose files changed and prints them, then runs the whole tree check. Without the reseal, `publish.py check` and the site's live-data check refuse the tree (`map.json: digest differs from latest.json`).
+3. Open a pull request against the data repository that states the reason, merge it; the `Deploy` workflow publishes it.
+
+The page fetches `map.json`, `history.json` and `contributors.json` by their digest, so the corrected file has a new URL and no browser shows the old copy; `latest.json` itself is always revalidated. The measurement's revision and time stay what they were: a correction changes a file, not the measurement's identity. (The page also refetches a cached map once past the cache when it fails validation, but a correction must not depend on that.)
 
 ## Credits
 
@@ -89,7 +101,7 @@ Everything written is checked before the push by the same code as `publish.py ch
 1. In the `Validate <target id>` job log, the `Publish to the site` step prints `published game/GAME01-rev0 <sha>`.
 2. The data repository has a new commit by `game publisher`; its `Deploy` workflow runs (about a minute).
 3. `https://mitsevox.github.io/decomp-data/data/game/GAME01-rev0/latest.json` shows the new `source.revision`.
-4. `https://mitsevox.github.io/games/game/` shows the new numbers. The page fetches the data with `cache: no-cache`, so a reload is enough.
+4. `https://mitsevox.github.io/games/game/` shows the new numbers. The page revalidates `latest.json` on every view and fetches the other files by digest, so a reload is enough.
 
 ## Running the conversion locally
 

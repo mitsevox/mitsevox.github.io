@@ -11,8 +11,11 @@ function summaryView(project){
     target_sha1:project.targetSha1,revision:report.source.revision,built_at:report.measuredAt,
     measures,functions:s.functions,file_counts:s.files};
 }
-// A target's files change with each measurement; keying them by revision makes each URL immutable.
-function asset(project,path){return project.reportBase+path+'?v='+project.report.source.revision.slice(0,12);}
+// A target's files change with each measurement, and a published file may be corrected in place.
+// latest.json, which is always revalidated, names each file by its content digest, and that keys
+// the URL, so every URL is immutable and a correction is a new URL. Data published before the
+// digests existed falls back to the revision.
+function asset(project,path){const key=project.report.digests?.[path]||project.report.source.revision.slice(0,12);return project.reportBase+path+'?v='+key;}
 // Revisioned asset URLs are immutable; retain a bounded set of parsed payloads across routes.
 const payloads = new Map(), maps = new Map();
 function cached(cache, key, load, limit = 8) {
