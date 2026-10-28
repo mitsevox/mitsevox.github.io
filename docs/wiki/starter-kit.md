@@ -34,7 +34,7 @@ Every project-specific value, and where it goes:
 | Target ids | `GAME01-rev0`, `GAME01-rev1` | `config/targets.json`, `.github/pull_request_template.md`, `README.md.template`, `build-image/*` |
 | Target display strings | `label`, `region`, `revision` | `config/targets.json` |
 | Original SHA-1 | 40 lower-case hex digits | `config/targets.json`, `build-image/Dockerfile` |
-| Presentation | `title`, `shortTitle`, `console`, `year`, `contributions`, `artwork` | `config/site.json` |
+| Presentation | `title`, `shortTitle`, `console`, `year`, `contributions`, `contributors`, `artwork` | `config/site.json` |
 | Build image | `owner/game-build` and its digest | `validate.yml.template` PARAMETER 1 (`BUILD_IMAGE`), `build-image/README.md` |
 | Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `build-image/*`, `config/<id>/config.yml` |
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |

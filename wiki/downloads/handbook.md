@@ -279,6 +279,7 @@ shasum -a 1 /path/to/main.dol    # macOS
   "console": "GameCube",
   "year": "2002",
   "contributions": {"accepting": false},
+  "contributors": false,
   "artwork": {"cover": "cover.webp", "width": 1112, "height": 1600}
 }
 ```
@@ -292,6 +293,7 @@ shasum -a 1 /path/to/main.dol    # macOS
 | `console` | Display name of the console; the hub filters by it and it picks the console icon | Required, non-empty |
 | `year` | Release year, a string | Optional |
 | `contributions` | `{"accepting": true, "guideUrl": "<url>"}` shows a Contribute link to that URL; `accepting: false` hides it | Optional; defaults to `{"accepting": false}` |
+| `contributors` | `true` publishes who made each exact function exact and shows the rankings ([Publishing](/wiki/publishing/), "Credits") | Optional; defaults to `false` |
 | `artwork` | `cover` is a file name relative to `data/<slug>/` in the data repository, `width` and `height` its pixel size | Optional; add it only after committing the cover ([The site](/wiki/site/)) |
 
 The publish action copies this file into `game.json` on every publish, adding `repository` (from the CI run's `GITHUB_REPOSITORY`), `defaultTarget` and `targets`. Changing the presentation is therefore an edit to this file followed by a merge to `main`; the next publish of any active target rewrites `game.json`.
@@ -733,6 +735,8 @@ Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `pytho
 
 On a pull request the job's second step, `Check the declared tier`, runs `python3 tools/tier.py`: it reads the first `Tier A`, `Tier B` or `Tier C` in the PR body and fails when the diff needs more (`config/<id>/splits.txt` or `symbols.txt`, an `inferred` evidence row, or a `cflags`, `ldflags`, `asflags` or `mw_version` line in `configure.py` need A; other source or `configure.py` changes need B). Outside pull requests it passes. Editing the body does not re-run it; the next push does.
 
+The third step, `Check the credits`, runs `python3 tools/credits.py`. It does nothing unless `config/site.json` sets `"contributors": true`; then it checks the PR body's `Credits:` line and every target's `credits.tsv` and confirms each login exists on GitHub ([Publishing](/wiki/publishing/), "Credits").
+
 Nothing finer than selection is attempted. A build-graph planner cannot cover headers without compiler depfiles, so every `include/**` change selects everything anyway; a target job is about a minute and local builds are incremental through ninja.
 
 ### Tool tests
@@ -859,6 +863,8 @@ The names are yours; `validate.yml` passes them to the action as `app-client-id:
 | `measured-at` | no | now | UTC time of the measurement, `%Y-%m-%dT%H:%M:%SZ` |
 | `code-sections` | no | `.init,.text` | Comma-separated code section names; every other section counts as data |
 | `unit-prefix` | no | `main/` | Prefix stripped from objdiff unit names for display |
+| `credits` | no | `config/<target>/credits.tsv` when it exists | Credit overrides; read only when contributors are on |
+| `github-token` | no | the workflow token | Reads the merged PR and the credited people when contributors are on; the target job grants `pull-requests: read` |
 | `data-repository` | no | `mitsevox/decomp-data` | `owner/name` of the data repository |
 | `app-client-id` | yes | | Client id of the GitHub App installed on the data repository |
 | `app-private-key` | yes | | Private key of that GitHub App |
@@ -879,6 +885,17 @@ The starter workflow passes `target`, `report`, `tools`, `measured-at`, `app-cli
 4. Prints `published <slug>/<target> <sha>`, or `<slug>/<target> <sha> already published` when nothing changed.
 
 Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and `latest.json` and `map.json` only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way. The exact file formats are in [Data contract](/wiki/data-contract/).
+
+## Credits
+
+Credits are optional per repository: `"contributors": true` in `config/site.json` switches them on, and nothing changes while it is `false` or absent. With them on, each `main` build also writes `contributors.json`:
+
+1. **Who.** The PR whose merge made the measured revision (`GET /repos/<repo>/commits/<sha>/pulls`). Its body's `Credits: @login, @login` line names the people; without the line its author is credited. A revision that no PR merged credits nobody and fails the publish.
+2. **What.** A function is credited to the people of the earliest measured `main` build in which it was exact. Newly exact functions take this build's people; functions already credited keep theirs; a function that is no longer exact moves to `retired` with its credit, and gets that credit back when it returns. An older commit whose run finishes late moves a credit earlier when it was exact first, and adds or retires nothing, because `latest.json` decides what is exact now.
+3. **Switching on.** The first build with credits on credits every function already exact to the repository owner.
+4. **Overrides.** `config/<target>/credits.tsv` (address, comma-separated logins, reason; `#` comments allowed) credits the listed functions to those people whatever the merges say: for batches that carry other people's work, imports and corrections. It is reviewed like any other record.
+
+The pull request side runs before merge: the plan job's `Check the credits` step (`tools/credits.py`) does nothing while credits are off, and otherwise checks the `Credits:` line and every `credits.tsv` and confirms that each login exists, so a bad credit fails the PR and never the publish on `main`.
 
 Everything written is checked before the push by the same code as `publish.py check`, so a bad conversion fails the job instead of landing in the data repository. The target must be `active` in `targets.json`; publishing a `planned` target stops with `Target <id> is not an active target of <slug>`.
 
@@ -1068,7 +1085,7 @@ The checker enforces that a parent's measures are its children's sums, that exte
 
 ## contributors.json
 
-Optional; `modules.contributors` names it when present. Nothing in this guide produces it: the action writes `"contributors": null`. The shape, for a producer that adds its own step later, is `{"schema": 1, "credited_functions": N, "contributors": [{"id", "login", "functions"}], "functions": [{"id": "<target>:<address>:<size>", "authors": [id]}]}`, where every exact function is credited once and the totals agree with the summary. The page shows contributor rankings only when the file exists.
+Optional; `modules.contributors` names it when present. The publish action writes it when the producer's `config/site.json` sets `"contributors": true` ([Publishing](/wiki/publishing/), "Credits"); otherwise it writes `"contributors": null`. The shape is `{"schema": 1, "credited_functions": N, "contributors": [{"id", "login", "functions"}], "functions": [{"id": "<target>:<address>:<size>", "authors": [id], "since"}], "retired": [...], "people": [{"id", "login"}]}`. Every exact function is credited once and the totals agree with the summary; `contributors` is the ranking (everyone with a credit, most functions first, then by login); `since` is the commit time of the earliest measured build in which the function was exact; `retired` keeps the credits of functions no longer exact, never overlapping the current ones; `people` names everyone a credit refers to. The page shows contributor rankings only when the file exists.
 
 ## Validation rules the producer meets
 
@@ -1268,7 +1285,7 @@ Every project-specific value, and where it goes:
 | Target ids | `GAME01-rev0`, `GAME01-rev1` | `config/targets.json`, `.github/pull_request_template.md`, `README.md.template`, `build-image/*` |
 | Target display strings | `label`, `region`, `revision` | `config/targets.json` |
 | Original SHA-1 | 40 lower-case hex digits | `config/targets.json`, `build-image/Dockerfile` |
-| Presentation | `title`, `shortTitle`, `console`, `year`, `contributions`, `artwork` | `config/site.json` |
+| Presentation | `title`, `shortTitle`, `console`, `year`, `contributions`, `contributors`, `artwork` | `config/site.json` |
 | Build image | `owner/game-build` and its digest | `validate.yml.template` PARAMETER 1 (`BUILD_IMAGE`), `build-image/README.md` |
 | Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `build-image/*`, `config/<id>/config.yml` |
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |

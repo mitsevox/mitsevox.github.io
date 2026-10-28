@@ -99,6 +99,18 @@
 <td>Prefix stripped from objdiff unit names for display</td>
 </tr>
 <tr>
+<td><code>credits</code></td>
+<td>no</td>
+<td><code>config/&lt;target&gt;/credits.tsv</code> when it exists</td>
+<td>Credit overrides; read only when contributors are on</td>
+</tr>
+<tr>
+<td><code>github-token</code></td>
+<td>no</td>
+<td>the workflow token</td>
+<td>Reads the merged PR and the credited people when contributors are on; the target job grants <code>pull-requests: read</code></td>
+</tr>
+<tr>
 <td><code>data-repository</code></td>
 <td>no</td>
 <td><code>mitsevox/decomp-data</code></td>
@@ -133,6 +145,15 @@
 <li>Prints <code>published &lt;slug&gt;/&lt;target&gt; &lt;sha&gt;</code>, or <code>&lt;slug&gt;/&lt;target&gt; &lt;sha&gt; already published</code> when nothing changed.</li>
 </ol>
 <p>Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and <code>latest.json</code> and <code>map.json</code> only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way. The exact file formats are in <a href="/wiki/data-contract/">Data contract</a>.</p>
+<h2 id="credits">Credits</h2>
+<p>Credits are optional per repository: <code>"contributors": true</code> in <code>config/site.json</code> switches them on, and nothing changes while it is <code>false</code> or absent. With them on, each <code>main</code> build also writes <code>contributors.json</code>:</p>
+<ol>
+<li><strong>Who.</strong> The PR whose merge made the measured revision (<code>GET /repos/&lt;repo&gt;/commits/&lt;sha&gt;/pulls</code>). Its body's <code>Credits: @login, @login</code> line names the people; without the line its author is credited. A revision that no PR merged credits nobody and fails the publish.</li>
+<li><strong>What.</strong> A function is credited to the people of the earliest measured <code>main</code> build in which it was exact. Newly exact functions take this build's people; functions already credited keep theirs; a function that is no longer exact moves to <code>retired</code> with its credit, and gets that credit back when it returns. An older commit whose run finishes late moves a credit earlier when it was exact first, and adds or retires nothing, because <code>latest.json</code> decides what is exact now.</li>
+<li><strong>Switching on.</strong> The first build with credits on credits every function already exact to the repository owner.</li>
+<li><strong>Overrides.</strong> <code>config/&lt;target&gt;/credits.tsv</code> (address, comma-separated logins, reason; <code>#</code> comments allowed) credits the listed functions to those people whatever the merges say: for batches that carry other people's work, imports and corrections. It is reviewed like any other record.</li>
+</ol>
+<p>The pull request side runs before merge: the plan job's <code>Check the credits</code> step (<code>tools/credits.py</code>) does nothing while credits are off, and otherwise checks the <code>Credits:</code> line and every <code>credits.tsv</code> and confirms that each login exists, so a bad credit fails the PR and never the publish on <code>main</code>.</p>
 <p>Everything written is checked before the push by the same code as <code>publish.py check</code>, so a bad conversion fails the job instead of landing in the data repository. The target must be <code>active</code> in <code>targets.json</code>; publishing a <code>planned</code> target stops with <code>Target &lt;id&gt; is not an active target of &lt;slug&gt;</code>.</p>
 <h2 id="verifying-a-publish">Verifying a publish</h2>
 <ol>
@@ -158,4 +179,4 @@ python3 site/.github/actions/publish/publish.py check /tmp/tree
 <li>A pull request has passed <code>Validate targets</code>.</li>
 </ul>
 <p>Then merge. The first publish creates <code>data/&lt;slug&gt;/</code> and adds the slug to <code>index.json</code>; no one edits the data repository for a new game except to add cover art (<a href="/wiki/site/">The site</a>).</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/ci/"><small>Previous</small><span>CI</span></a><a href="/wiki/repository-settings/"><small>Next</small><span>Repository settings</span></a></nav></div>
-<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-credential">The credential</a><a href="#the-actions-inputs">The action&#x27;s inputs</a><a href="#what-the-action-does">What the action does</a><a href="#verifying-a-publish">Verifying a publish</a><a href="#running-the-conversion-locally">Running the conversion locally</a><a href="#before-the-first-push-to-main">Before the first push to main</a></nav></aside></main>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-credential">The credential</a><a href="#the-actions-inputs">The action&#x27;s inputs</a><a href="#what-the-action-does">What the action does</a><a href="#credits">Credits</a><a href="#verifying-a-publish">Verifying a publish</a><a href="#running-the-conversion-locally">Running the conversion locally</a><a href="#before-the-first-push-to-main">Before the first push to main</a></nav></aside></main>

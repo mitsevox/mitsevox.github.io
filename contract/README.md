@@ -133,13 +133,20 @@ covered once and the function counts match the summary.
 
 ## contributors.json
 
-Optional; `modules.contributors` names it when present.
+Optional; `modules.contributors` names it when present. The publish action writes it when the
+producer's `site.json` sets `"contributors": true`.
 
 ```json
 {"schema": 1, "credited_functions": 2,
  "contributors": [{"id": 1, "login": "someone", "functions": 2}],
- "functions": [{"id": "<target>:0x80003100:36", "authors": [1]}, ...]}
+ "functions": [{"id": "<target>:0x80003100:36", "authors": [1], "since": "2026-01-01T00:00:00Z"}, ...],
+ "retired": [{"id": "<target>:0x80003200:16", "authors": [1], "since": "2026-01-01T00:00:00Z"}],
+ "people": [{"id": 1, "login": "someone"}]}
 ```
 
 Every exact function is credited once; `credited_functions` equals the summary's exact function count,
-and each person's `functions` equals the number of credits naming them.
+and each person's `functions` equals the number of credits naming them. `contributors` is the ranking:
+every person with at least one credit, most functions first, then by login. `since` is the commit time
+of the earliest measured build in which the function was exact. `retired` keeps the credits of
+functions that are no longer exact, so a function that returns gets its first credit back; a retired id
+is never also current. `people` names every person any credit refers to.
