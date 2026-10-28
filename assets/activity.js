@@ -1,10 +1,13 @@
+import {createRange} from './components/ui/range.js';
 import {pageScope} from './lifecycle.js';
 import {fetchActivity} from './reports.js';
 export function mountActivity(root, project) {
   const scope=pageScope();
   const {signal,listen}=scope;
 
-  const chart=root.querySelector('.history-chart'),scrub=root.querySelector('#history-scrub');
+  const chart=root.querySelector('.history-chart');
+  const scrub=chart?createRange({id:'history-scrub',label:'Explore linked progress snapshots'}):null;
+  root.querySelector('[data-ui="history-scrub"]')?.replaceWith(scrub);
   const list=root.querySelector('.contributor-rankings');
   const timeline = !!chart, contributors = !!list;
   if (!timeline && !contributors) return {ready:Promise.resolve(), destroy:scope.destroy};

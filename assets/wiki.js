@@ -1,3 +1,5 @@
+import {createSearchField} from './components/ui/search-field.js';
+import {mountCodeBlock} from './components/ui/code-block.js';
 import {pageScope} from './lifecycle.js';
 let searchIndex;
 function loadIndex(){
@@ -23,22 +25,15 @@ function mountWikiArticle(main){
   }
   scope.listen(window,'scroll',()=>{if(positionFrame===null)positionFrame=scope.frame(markSection);},{passive:true});
   markSection();
-  for(const pre of main.querySelectorAll('pre')){
-    const code=pre.querySelector('code');code.textContent=code.textContent.replace(/^\n+|\n+$/g,'');
-    const block=document.createElement('div');block.className='wiki-code';
-    const actions=document.createElement('div');actions.className='wiki-code-actions';
-    const button=document.createElement('button');button.type='button';button.className='wiki-copy';button.textContent='Copy';button.setAttribute('aria-label','Copy code example');
-    pre.before(block);block.append(pre,actions);actions.append(button);
-    scope.listen(button,'click',async()=>{
-      try{await navigator.clipboard.writeText(pre.querySelector('code').textContent);if(scope.signal.aborted)return;button.textContent='Copied';button.setAttribute('aria-label','Code copied');}
-      catch{if(!scope.signal.aborted){button.textContent='Select to copy';button.setAttribute('aria-label','Clipboard unavailable; select the code to copy');}}
-    });
-  }
+  for(const pre of main.querySelectorAll('pre'))mountCodeBlock({pre,scope});
   return {destroy:scope.destroy};
 }
 
 export function mountWiki(main){
-  const scope=pageScope(),sidebar=main.querySelector('.wiki-sidebar'),input=sidebar.querySelector('.wiki-search input'),results=sidebar.querySelector('.wiki-results'),status=sidebar.querySelector('.wiki-search-status'),chapters=sidebar.querySelector('.wiki-chapters');
+  const scope=pageScope(),sidebar=main.querySelector('.wiki-sidebar');
+  const searchField=createSearchField({label:'Search the wiki',placeholder:'Search the wiki',variant:'wiki'});
+  sidebar.querySelector('[data-ui="wiki-search"]').replaceWith(searchField.node);
+  const input=searchField.input,results=sidebar.querySelector('.wiki-results'),status=sidebar.querySelector('.wiki-search-status'),chapters=sidebar.querySelector('.wiki-chapters');
   const nav=sidebar.querySelector('.wiki-nav'),links=[...nav.querySelectorAll('a')];
   const selector=document.createElement('span');selector.className='wiki-nav-selector';selector.setAttribute('aria-hidden','true');nav.prepend(selector);
   let queryVersion=0,article=mountWikiArticle(main),positionFrame=null;

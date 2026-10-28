@@ -1,3 +1,5 @@
+import {createContributionLink} from './components/ui/contribution-link.js';
+import {createAction} from './components/ui/action.js';
 import {selectTarget} from './targets.js';
 import {projects} from './projects.js';
 import {createHeader,createFooter} from './shell.js?v=3';
@@ -74,7 +76,7 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
       document.body.dataset.project=project.slug;
       main.querySelector('h1').textContent=project.title+' decompilation progress';
       main.querySelector('.lower h3').textContent=project.contributionHeading||'Want to join the effort?';
-      main.querySelector('.lower a').href=project.contributeUrl;
+      main.querySelector('[data-ui="contribution-link"]').replaceWith(createContributionLink({href:project.contributeUrl,variant:'callout'}));
       if(!project.contributionsEnabled)main.querySelector('.lower').remove();
       const optional = {functionCounts:'[data-stats="function"]',fileCounts:'[data-stats="file"]',timeline:'.history-section',contributors:'.people-section'};
       for(const [key,selector] of Object.entries(optional))if(project.modules?.[key]===false)main.querySelector(selector)?.remove();
@@ -102,7 +104,7 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
     restoring=false;navigationStatus.hidden=true;content.removeAttribute('aria-busy');
     const message=document.createElement('p');message.className='route-error';
     message.textContent='This page could not load. ';
-    const retry=document.createElement('a');retry.href=url.href;retry.textContent='Try again';message.append(retry);
+    const retry=createAction({href:url.href,label:'Try again'});message.append(retry);
     content.querySelector('.route-error')?.remove();content.append(message);
     console.error(error);
   }

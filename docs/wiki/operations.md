@@ -43,3 +43,11 @@ When a command, report format or owner workflow changes, update its project docu
 A new agent should finish each handoff with changed files, evidence, checked revision/results, unresolved findings and review/publication state. “Implemented,” “reviewed,” “CI passed,” “owner cleared,” “merged” and “live” are different states.
 
 The handbook stores reusable contracts and decisions, not game-specific run IDs, workflow blobs, timing claims or migration diaries. Record those facts in the adopting project's PR/configuration. When changing CI, review both the producer and the site's approved policy/lane requirements; keep old policies readable for retained reports. Verify an explicit audit and a normal/reused publication before declaring a workflow transition complete.
+
+## Shared site UI
+
+When maintaining the shared site's interface, use its [UI components and contracts](/docs/ui/components.md)
+for progress bars, searches, dropdowns, commit rows and other reusable controls. Page modules
+supply content and callbacks; components own control markup, accessibility, motion and cleanup.
+Preserve the accepted page/compact variants when refactoring. These presentation components
+do not replace producer reporting, CI validation or per-target data contracts.
