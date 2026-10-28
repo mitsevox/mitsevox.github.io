@@ -19,7 +19,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     DEFAULT_VERSION = VERSIONS.index(TARGET_REGISTRY['defaultTarget'])
     ```
 
-    add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`, point `config.config_path` and `config.check_sha_path` at `config/<version>/config.yml` and `config/<version>/build.sha1`, and pass `f"-D{define(config.version)}"` in `cflags_base` next to the template's `-DBUILD_VERSION=`. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
+    add `Path("config/targets.json")` and `Path("tools/targets.py")` to `config.reconfig_deps`, point `config.config_path` and `config.check_sha_path` at `config/<version>/config.yml` and `config/<version>/build.sha1`, and pass `f"-D{define(config.version)}"` in `cflags_base` next to the template's `-DBUILD_VERSION=`. Remove `type=str.upper` from the `--version` argument: dtk-template upper-cases it, which no target id with a lower-case revision (`GAME01-rev0`) can pass. dtk-template already builds each version into `build/<version>/`, which is what makes `build/<target id>/` the generated directory.
 3. Keep `config.dtk_tag` and `config.objdiff_tag` in `configure.py` as the single place tool versions are pinned; `tools/measuring_tools.py` reads them, and the Dockerfile builds the same dtk tag.
 4. Place your own copy of the original at `orig/<target id>/sys/main.dol`, the path `config.yml` names (`orig/*/*` is ignored by Git). The toolkit refuses an original whose hash differs from `config.yml`, and `python3 tools/targets.py check` confirms that `config.yml`, `build.sha1` and `targets.json` agree.
 5. Configure and build:
