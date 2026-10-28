@@ -94,6 +94,7 @@ export function createDropdownController(trigger,menu,{scope=pageScope(),isSelec
  * @property {string=} description
  * @property {string=} href Navigation options keep normal link behavior.
  * @property {string=} image Site-owned artwork URL.
+ * @property {string=} imageFallback Used if image fails to load.
  * @property {string=} console Console icon name, rendered by the UI icon registry.
  * @property {string=} region Region flag; accessible text belongs in ariaLabel.
  * @property {string=} ariaLabel
@@ -124,7 +125,8 @@ const triggerIcons={
 };
 const flags={USA:'🇺🇸',US:'🇺🇸',Japan:'🇯🇵',JPN:'🇯🇵',JP:'🇯🇵',Europe:'🇪🇺',EUR:'🇪🇺',EU:'🇪🇺',Australia:'🇦🇺',AUS:'🇦🇺',AU:'🇦🇺',Korea:'🇰🇷',KOR:'🇰🇷',KR:'🇰🇷'};
 function leading(parent,option){
-  if(option.image){const image=document.createElement('img');image.src=option.image;image.alt='';parent.append(image);}
+  if(option.image){const image=document.createElement('img');image.src=option.image;image.alt='';image.loading='lazy';
+    if(option.imageFallback)image.addEventListener('error',()=>{image.src=option.imageFallback;},{once:true});parent.append(image);}
   else if(option.console)parent.insertAdjacentHTML('beforeend',consoleIcon(option.console));
   else if(flags[option.region]){const flag=document.createElement('span');flag.className='region-flag';flag.setAttribute('aria-hidden','true');flag.textContent=flags[option.region];parent.append(flag);}
 }

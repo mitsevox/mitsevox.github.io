@@ -11,6 +11,7 @@ checker ever disagree, the checker is right and this page is the bug.
 index.json                      {"schema": 1, "games": ["<game>", ...]}
 data/<game>/game.json           presentation and the target list
 data/<game>/cover.webp          optional, committed by hand
+data/<game>/cover-thumb.webp    generated on deploy: 360px wide, what the site displays
 data/<game>/<target>/latest.json    the newest measurement
 data/<game>/<target>/history.json   every measurement, append-only
 data/<game>/<target>/map.json       the newest measurement's tile map

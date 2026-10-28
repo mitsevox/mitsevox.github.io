@@ -60,7 +60,7 @@ listen(reset,'click',()=>{search.value='';filterValue='all';syncControls();updat
 function hideTooltip(){tooltip.hide();}
 for(const project of projects){
   const card=createAction({href:project.href,className:'project-card',ariaLabel:'Explore '+project.title});
-  const cover=document.createElement('img');cover.className='project-cover';cover.src=project.cover;cover.alt='';cover.width=project.coverWidth;cover.height=project.coverHeight;
+  const cover=document.createElement('img');cover.className='project-cover';cover.src=project.thumb;cover.addEventListener('error',()=>{cover.src=project.cover;},{once:true});cover.alt='';cover.width=project.coverWidth;cover.height=project.coverHeight;
   if(entries.length===0)cover.setAttribute('fetchpriority','high');else cover.loading='lazy';
   const details=document.createElement('div');details.className='entry-details';
   const title=document.createElement('h2');title.className='entry-title';title.insertAdjacentHTML('afterbegin',consoleIcon(project.console));const name=document.createElement('span');name.textContent=project.title;title.append(name);

@@ -10,7 +10,7 @@ export function createHeader() {
   node.prepend(skip);
   const contribute=createContributionLink({hidden:true});node.querySelector('.main-nav').append(contribute);
   const dropdown=createDropdown({id:'project-picker',label:'Switch game',className:'project-switcher',triggerClass:'project-trigger',labelClass:'game-title',menuClass:'project-menu',value:null,triggerLabel:'Projects',
-    options:projects.map(project=>({value:project.slug,label:project.title,description:project.console,image:project.cover,href:project.href}))});
+    options:projects.map(project=>({value:project.slug,label:project.title,description:project.console,image:project.thumb,imageFallback:project.cover,href:project.href}))});
   const switcher=dropdown.node,trigger=dropdown.trigger,menu=dropdown.menu;
   node.querySelector('.header-location').append(switcher);
   const wikiLabel=document.createElement('span');
