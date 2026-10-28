@@ -54,7 +54,7 @@
 </tr>
 <tr>
 <td><code>configure.py:&lt;line&gt;: &lt;unit&gt; is declared Matching for every target; &lt;ids&gt; are active</code></td>
-<td><code>tools/matching_scope.py check</code>, from the second active target on: a plain <code>Matching</code> claims every active target, one activated later included. Name the targets the unit links on, <code>MatchingFor("&lt;id&gt;")</code>, until it links on all of them (<a href="/wiki/multi-target/">Multiple targets</a>). The same check fails an <code>Object</code> call it cannot classify and a use of <code>Matching</code> outside <code>Object(Matching, ...)</code>.</td>
+<td><code>tools/matching_scope.py check</code>, from the second active target on: a plain <code>Matching</code> claims every active target, one activated later included. Name the targets the unit links on, <code>MatchingFor("&lt;id&gt;")</code>, all of them when it links on every active target; plain <code>Matching</code> is the form of a repository with one active target only (<a href="/wiki/multi-target/">Multiple targets</a>). The same check fails an <code>Object</code> call it cannot classify and a use of <code>Matching</code> outside <code>Object(Matching, ...)</code>.</td>
 </tr>
 <tr>
 <td><code>evidence.tsv:&lt;line&gt;: ...</code></td>
