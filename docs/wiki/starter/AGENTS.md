@@ -2,7 +2,7 @@
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) before working: it defines the review tiers, the task loop, matching integrity, the evidence records and the hostile-review checklist. The [README](README.md) names the targets, the owner and the build commands.
 
-- Keep original executables, disc images, assets and trial output out of public Git. Use the pinned, owner-approved build environment and do not alter supporting dependencies or their access controls; report dependency problems in an issue for the owner's decision.
+- Keep original executables, disc images, assets, official SDK files (headers, libraries, documentation) and trial output out of public Git, and never discuss leaked material in public. Use the pinned, owner-approved build environment and do not alter supporting dependencies or their access controls; report dependency problems in an issue for the owner's decision.
 - Work on a dedicated branch in your own checkout or worktree. Open a draft PR early with the unit names and target ids in its title; check open PRs before starting. Preserve unrelated changes and coordinate live overlaps on shared files.
 - Keep recovered facts, hypotheses, function-level matches, combined-build results and review verdicts distinct. Report what was actually checked, on which revision and for which targets.
 - Preserve useful partial reconstruction in normal source files as `NonMatching` objects so CI measures it. Original bytes stay in the verified linked build until promotion. Matching incompleteness alone is not a review failure.
@@ -11,6 +11,10 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) before working: it defines the review ti
 - **Only the project owner authorizes and performs merges into `main`.** No agent enables auto-merge, pushes to `main`, force-pushes `main` or another contributor's branch, or changes branch rules, repository settings, the build image or its digest. Push a work branch or open a PR only when authorized for the task, then leave it for the owner's decision.
 - Address review feedback without weakening checks, hiding mismatches or changing project rules to accommodate a patch. Propose workflow improvements through a separate PR.
 - Keep handoffs concise: changes, evidence, validation per target, unresolved findings and review state. Do not add running status diaries to the repository.
+- A function becomes exact only with its name, its evidence and its comment in the same PR; there is no later naming pass.
+- Never delete a file you have not checked first: make the delete depend on the check. Edit C, C++ and headers with an editor or a saved script whose diff you read, never with sed, heredocs, echo or `python -c` (they mangle backslashes).
+- Ask the owner before downloads, purchases, posts or messages anywhere. Tokens and secrets are the owner's to create and store; never ask for their values.
+- Working with the owner: plain, short English that says what each code area does in the game; the concept first, then the owner's green light, then small steps; numbers exactly as measured, never estimated by feel. At every change of project phase, re-read these rules and ask the owner about any rule written for the previous phase.
 
 Before calling a shared change safe for every target, an agent has done four things, per active target:
 
@@ -21,4 +25,4 @@ Before calling a shared change safe for every target, an agent has done four thi
 
 ## Project
 
-PARAMETER: the repository's own rules go here, after the fixed header above: the toolchain and its quirks, the reference material and how to read it, project tools under `tools/`, naming conventions beyond the guide, and anything a fresh agent must know before its first task. Keep the header unchanged; the scaffold check compares it with the kit.
+PARAMETER: facts about this repository go here, after the fixed header above: the toolchain and its quirks, the reference material and how to read it, project tools under `tools/`, the game's style guide, and anything a fresh agent must know before its first task. Process rules do not go here: the process is the same in every repository and lives in the header and CONTRIBUTING.md. Keep the header unchanged; the scaffold check compares it with the kit.
