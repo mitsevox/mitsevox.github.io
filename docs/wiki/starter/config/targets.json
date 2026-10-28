@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "defaultTarget": "GAME01-rev0",
+  "targets": [
+    {"id": "GAME01-rev0", "platform": "gamecube", "label": "GAME01", "region": "USA", "revision": "0",
+     "sha1": "0000000000000000000000000000000000000000", "status": "active"},
+    {"id": "GAME01-rev1", "platform": "gamecube", "label": "GAME01", "region": "USA", "revision": "1",
+     "sha1": "1111111111111111111111111111111111111111", "status": "planned"}
+  ]
+}

@@ -24,6 +24,12 @@ and the publish step); nothing here changes.
 - `assets/reports.js`: summary, map and history readers, cached per revision; maps parse in
   `assets/report-worker.js`.
 - `assets/progress.js`, `assets/activity.js`, `assets/identity.js`, `assets/hub.js`: rendering.
+- `assets/pages/game.js`: the game page, composed from `assets/features/` (identity, summary, map,
+  history, contributors). A feature is `mount(root, ctx) -> {ready, destroy}`; adding one is a module,
+  a section in `assets/game.html` and one entry in the page's feature list.
+- `assets/components/ui/`: shared controls (progress bars, search, dropdowns, commit rows, tooltips).
+  Pages supply content and callbacks; components own markup, accessibility, motion and cleanup. See
+  [the component contracts](docs/ui/components.md).
 - `docs/wiki/`: wiki source; `uv run tools/build_wiki.py` renders it into `wiki/`.
 - `redirects/`: aliases for retired URLs, copied to the site root on deploy.
 

@@ -3,7 +3,8 @@
 .wordmark { flex-shrink:0;font-size:19px;font-weight:600;letter-spacing:-.5px; }
 .wordmark-slash { color:#626b78;font-weight:400; }
 header { gap:20px; }
-.main-nav { flex-shrink:0; }
+.main-nav { flex-shrink:0;gap:4px; }
+.main-nav > a { padding-inline:8px; }
 .project-grid { display:grid;grid-template-columns:1fr;gap:42px;padding:4px 0 56px; }
 .project-card { display:grid;grid-template-columns:196px minmax(0,1fr);align-items:start;gap:20px 40px;min-width:0;color:inherit; }
 .project-card:focus-visible { outline-offset:10px;border-radius:3px; }
@@ -67,7 +68,7 @@ html { scrollbar-gutter: stable; }
 .hub-search { flex:1;max-width:420px; }
 .hub-options { display:flex;align-items:center;gap:8px; }
 .hub-control { position:relative; }
-.hub-icon-button { position:relative;display:grid;place-items:center;width:42px;height:42px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:#adb6c2;cursor:pointer;transition:background .16s,border-color .16s,color .16s; }
+.hub-icon-button { position:relative;display:grid;place-items:center;width:var(--control-height);height:var(--control-height);padding:0;border:1px solid var(--line);border-radius:var(--control-radius);background:var(--surface);color:#adb6c2;cursor:pointer;transition:background .16s,border-color .16s,color .16s; }
 .hub-icon-button > svg { width:20px;height:20px; }
 .hub-icon-button:hover,.hub-icon-button[aria-expanded="true"] { background:#262c34;border-color:#5a6574;color:var(--ink); }
 .control-dot { display:none;position:absolute;right:6px;top:6px;width:4px;height:4px;border-radius:50%;background:var(--code-color); }
@@ -104,7 +105,7 @@ html { scrollbar-gutter: stable; }
 .project-card { grid-template-columns:176px minmax(0,1fr);grid-template-rows:1fr auto;gap:12px 32px; }
 .project-cover { grid-row:1 / 3; }
 .entry-details { align-self:center; }
-.entry-title { margin-bottom:18px;font-size:23px; }
+.entry-title { margin-bottom:18px;font-size:var(--text-title); }
 .card-progress { gap:16px; }
 .card-measure-label { margin-bottom:7px; }
 .entry-commit { grid-column:2;display:flex;align-items:center;gap:16px;min-width:0;padding-top:10px;border-top:1px solid #ffffff0b;color:var(--muted); }

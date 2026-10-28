@@ -1,129 +1,137 @@
-# Reference orchestration. Implement CI.md's adapter, replace project facts and
-# adopt the owner's policies before renaming this file to validate.yml.
-# Stage names are part of the reviewed producer policy; change them together.
+# Validation workflow. Copy to .github/workflows/validate.yml.
+#
+# PARAMETERS (each marked "PARAMETER" below):
+#   1. the private build image, referenced by digest;
+#   2. the original's path inside the image and the checkout (tools/verify_target.py ORIGINAL);
+#   3. the configure and build commands of the project's toolchain;
+#   4. the names of the repository variable and secret that hold the GitHub App credential.
+# Everything else is fixed: the job and step names, the planner, the tests and the publish step.
 name: Validate
+
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
-    inputs:
-      audit_build_cache:
-        description: Force fresh main validation and permit an enabled build-cache save
-        type: boolean
-        default: false
+
 permissions:
   contents: read
+
 concurrency:
   group: validate-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
-  validate:
-    name: Build and measure
+  plan:
+    name: Plan affected targets
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: read
-      actions: read
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+      has_targets: ${{ steps.plan.outputs.has_targets }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff
-        with:
-          version: '0.12.9'
-      - name: Validate configuration and evidence
-        id: configuration
-        run: python3 tools/project_ci.py configure
-      - name: Restore inventory candidate
-        id: inventory
-        if: steps.configuration.outputs.inventory_cache == 'true'
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: build/inventory
-          key: ${{ steps.configuration.outputs.inventory_key }}
-          restore-keys: ${{ steps.configuration.outputs.inventory_prefix }}
-      - name: Select complete source proof
-        id: proof
-        if: github.ref == 'refs/heads/main' && steps.configuration.outputs.proof_reuse == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.audit_build_cache == true)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/project_ci.py select-proof
-      - name: Decide validation lanes
+      - name: Select affected target inputs
         id: plan
-        env:
-          PROOF_REUSED: ${{ steps.proof.outputs.reused || 'false' }}
-          INVENTORY_HIT: ${{ steps.inventory.outputs.cache-hit || 'false' }}
-          AUDIT_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.audit_build_cache == true }}
-        run: python3 tools/project_ci.py plan
-      - name: Verify ledger provenance
-        if: steps.plan.outputs.full == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/project_ci.py ledger
-      - name: Verify baseline and prepare tools
-        if: steps.plan.outputs.full == 'true'
-        run: python3 tools/project_ci.py baseline
-      - name: Restore build cache candidate
-        if: steps.plan.outputs.full == 'true' && steps.configuration.outputs.build_cache == 'true'
-        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830
+        run: python3 tools/ci_targets.py
+
+  tests:
+    name: Tool tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          path: build/cache
-          key: ${{ steps.configuration.outputs.build_prefix }}${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: ${{ steps.configuration.outputs.build_prefix }}
-      - name: Build complete target
-        if: steps.plan.outputs.full == 'true'
-        run: python3 tools/project_ci.py build
-      - name: Verify inventory
-        if: steps.plan.outputs.inventory == 'true'
-        run: python3 tools/project_ci.py inventory
-      - name: Verify tools and contracts
-        if: steps.plan.outputs.full == 'true'
-        run: python3 tools/project_ci.py test
-      - name: Measure source
+          persist-credentials: false
+      - name: Verify review clearance logic
+        run: node --test tests/review_gate.mjs
+      - name: Run Python tool tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+  target:
+    name: Validate ${{ matrix.target }}
+    needs: [plan, tests]
+    if: needs.plan.outputs.has_targets == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: read
+    container:
+      # PARAMETER 1: the private build image, always by digest (never by tag). The digest is
+      # printed in the image workflow's run summary. tools/measuring_tools.py reads this line.
+      image: ghcr.io/owner/game-build@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    env:
+      TARGET_ID: ${{ matrix.target }}
+    steps:
+      - name: Require a repository contribution branch
+        env:
+          SOURCE_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+        run: test "$SOURCE_REPOSITORY" = "$GITHUB_REPOSITORY"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Provide and verify target original
+        # PARAMETER 2: the original's path. The image holds /orig/<target id>/sys/main.dol and the
+        # checkout expects orig/<target id>/sys/main.dol (ORIGINAL in tools/verify_target.py).
+        run: |
+          mkdir -p "orig/$TARGET_ID/sys"
+          cp "/orig/$TARGET_ID/sys/main.dol" "orig/$TARGET_ID/sys/main.dol"
+          python3 tools/verify_target.py --target "$TARGET_ID"
+      - name: Configure target
+        # PARAMETER 3: the configure command. The paths are where the build image installs the tools.
+        run: python3 configure.py --version "$TARGET_ID" --dtk /usr/local/bin/dtk --binutils /binutils --compilers /compilers
+      - name: Build, verify complete executable and measure progress
         id: measure
-        if: steps.plan.outputs.full == 'true'
-        run: python3 tools/project_ci.py compare
-      - name: Export measured report
-        if: steps.plan.outputs.full == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/project_ci.py export
-      - name: Verify host receipts
-        if: steps.plan.outputs.full == 'true'
-        env:
-          LIVE_RECEIPTS: ${{ github.event_name != 'pull_request' || steps.measure.outputs.cache_reused == '0' }}
-        run: python3 tools/project_ci.py host-check
-      - name: Authenticate complete source proof
-        if: steps.plan.outputs.reused == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: python3 tools/project_ci.py promote-proof
-      - name: Package public report
-        if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && steps.measure.outputs.cache_reused == '0')
-        run: python3 tools/project_ci.py package
-      - name: Validate public report
-        if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && steps.measure.outputs.cache_reused == '0')
-        run: python3 tools/project_ci.py validate-package
-      - name: Upload public report
-        if: github.ref == 'refs/heads/main' || (github.event_name == 'pull_request' && steps.measure.outputs.cache_reused == '0')
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        # PARAMETER 3: the build command. It must fail unless the complete executable matches the
+        # original, and it must write objdiff's report for this target to build/<target id>/report.json.
+        run: |
+          ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"
+          echo "measured-at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+      - name: List measuring tools
+        id: tools
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          delimiter="tools-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
+          {
+            echo "lines<<$delimiter"
+            python3 tools/measuring_tools.py
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+      - name: Publish to the site
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: mitsevox/mitsevox.github.io/.github/actions/publish@main
         with:
-          name: public-report
-          path: build/public-report/*.json
-          if-no-files-found: error
-          retention-days: 30
-      - name: Save verified inventory
-        if: github.ref == 'refs/heads/main' && steps.configuration.outputs.inventory_cache == 'true' && steps.inventory.outputs.cache-hit != 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.audit_build_cache == true))
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: build/inventory
-          key: ${{ steps.configuration.outputs.inventory_key }}
-      - name: Save audited build cache
-        if: github.ref == 'refs/heads/main' && steps.plan.outputs.full == 'true' && steps.configuration.outputs.build_cache == 'true' && (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.audit_build_cache == true))
-        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: build/cache
-          key: ${{ steps.configuration.outputs.build_prefix }}${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          target: ${{ matrix.target }}
+          report: build/${{ matrix.target }}/report.json
+          tools: ${{ steps.tools.outputs.lines }}
+          measured-at: ${{ steps.measure.outputs.measured-at }}
+          # PARAMETER 4: the variable and secret that hold the App credential (Publishing chapter).
+          app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}
+          app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}
+
+  complete:
+    name: Validate targets
+    needs: [plan, tests, target]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PLAN: ${{ needs.plan.result }}
+      TESTS: ${{ needs.tests.result }}
+      HAS_TARGETS: ${{ needs.plan.outputs.has_targets }}
+      TARGETS: ${{ needs.target.result }}
+    steps:
+      - name: Require all selected target validations
+        run: |
+          test "$PLAN" = success && test "$TESTS" = success
+          if [ "$HAS_TARGETS" = true ]; then test "$TARGETS" = success; else test "$TARGETS" = skipped; fi

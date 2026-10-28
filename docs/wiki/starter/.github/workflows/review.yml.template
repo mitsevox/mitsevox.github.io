@@ -1,5 +1,8 @@
-# Optional default-policy verifier; adopt only when this review model is selected.
-# Set REVIEW_OWNER to the adopted owner login in repository variables.
+# Owner review clearance. Copy to .github/workflows/review.yml.
+#
+# PARAMETER: REVIEW_OWNER, the GitHub login whose clearance comments count. Set the repository
+# variable REVIEW_OWNER, or replace `${{ vars.REVIEW_OWNER }}` with the literal login.
+# The comment triggers only work once this file is on the default branch.
 name: Review clearance
 
 on:

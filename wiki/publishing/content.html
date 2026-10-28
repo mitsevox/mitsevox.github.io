@@ -1,0 +1,161 @@
+<main class="wiki-layout" data-chapter="publishing">
+<aside class="wiki-sidebar">
+<div data-ui="wiki-search"></div>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/" aria-current="page"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Pipeline <span aria-hidden="true">/</span> 10</span><a href="/docs/wiki/publishing.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="publishing">Publishing</h1>
+<p>The GitHub App credential, the publish action's inputs and what happens on a push to <code>main</code>.</p>
+<p>Publishing is one step at the end of each <code>Validate &lt;target id&gt;</code> job on <code>main</code>. The step is the composite action <a href="https://github.com/mitsevox/mitsevox.github.io/tree/main/.github/actions/publish"><code>mitsevox/mitsevox.github.io/.github/actions/publish</code></a>, referenced at <code>@main</code>. It converts the objdiff report into the contract files, validates them, and pushes them to the data repository with a short-lived token minted from a GitHub App. The producer holds the App's client id and private key; the site holds nothing.</p>
+<h2 id="the-credential">The credential</h2>
+<p>The credential is a GitHub App installed on the data repository only, with <strong>Contents: read and write</strong> as its only repository permission (plus the mandatory <strong>Metadata: read</strong>). It is not installed on the producer. The action mints a one-hour installation token scoped to the data repository at the start of the step; the token is revoked when the job ends.</p>
+<p>For the owner's site the App already exists and is installed on <code>mitsevox/decomp-data</code>; a new game needs its client id and private key as a variable and a secret in the producer repository. For a new data repository, create the App once:</p>
+<ol>
+<li>GitHub Settings, Developer settings, GitHub Apps, New GitHub App (<a href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/registering-a-github-app">documentation</a>). Any name; no webhook; <strong>Where can this GitHub App be installed?</strong> Only on this account.</li>
+<li>Repository permissions: <strong>Contents: Read and write</strong>. Leave every other permission at no access. Never add Actions or Workflows.</li>
+<li>After creating it, note the <strong>Client ID</strong> on the App's page and generate a <strong>private key</strong> (a <code>.pem</code> file downloads).</li>
+<li>Install the App on the account, choosing <strong>Only select repositories</strong> and selecting the data repository alone.</li>
+</ol>
+<p>Then, in the producer repository (Settings, Secrets and variables, Actions):</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Name used in this guide</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variable</td>
+<td><code>DATA_APP_CLIENT_ID</code></td>
+<td>The App's client id</td>
+</tr>
+<tr>
+<td>Secret</td>
+<td><code>DATA_APP_PRIVATE_KEY</code></td>
+<td>The full contents of the <code>.pem</code> file</td>
+</tr>
+</tbody>
+</table></div>
+<p>The names are yours; <code>validate.yml</code> passes them to the action as <code>app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}</code> and <code>app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}</code> (PARAMETER 4). The reference repository uses the names <code>PORTFOLIO_APP_CLIENT_ID</code> and <code>PORTFOLIO_APP_PRIVATE_KEY</code>.</p>
+<h2 id="the-actions-inputs">The action's inputs</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Required</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>target</code></td>
+<td>yes</td>
+<td></td>
+<td>Target id, as listed in <code>targets.json</code></td>
+</tr>
+<tr>
+<td><code>report</code></td>
+<td>yes</td>
+<td></td>
+<td>Path of objdiff's <code>report.json</code> for this target</td>
+</tr>
+<tr>
+<td><code>targets</code></td>
+<td>no</td>
+<td><code>config/targets.json</code></td>
+<td>The producer's targets file</td>
+</tr>
+<tr>
+<td><code>site</code></td>
+<td>no</td>
+<td><code>config/site.json</code></td>
+<td>The producer's presentation file</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>no</td>
+<td>empty</td>
+<td>Measured-with tools, one <code>name=version</code> per line; shown on the page as provenance</td>
+</tr>
+<tr>
+<td><code>measured-at</code></td>
+<td>no</td>
+<td>now</td>
+<td>UTC time of the measurement, <code>%Y-%m-%dT%H:%M:%SZ</code></td>
+</tr>
+<tr>
+<td><code>code-sections</code></td>
+<td>no</td>
+<td><code>.init,.text</code></td>
+<td>Comma-separated code section names; every other section counts as data</td>
+</tr>
+<tr>
+<td><code>unit-prefix</code></td>
+<td>no</td>
+<td><code>main/</code></td>
+<td>Prefix stripped from objdiff unit names for display</td>
+</tr>
+<tr>
+<td><code>data-repository</code></td>
+<td>no</td>
+<td><code>mitsevox/decomp-data</code></td>
+<td><code>owner/name</code> of the data repository</td>
+</tr>
+<tr>
+<td><code>app-client-id</code></td>
+<td>yes</td>
+<td></td>
+<td>Client id of the GitHub App installed on the data repository</td>
+</tr>
+<tr>
+<td><code>app-private-key</code></td>
+<td>yes</td>
+<td></td>
+<td>Private key of that GitHub App</td>
+</tr>
+</tbody>
+</table></div>
+<p>The starter workflow passes <code>target</code>, <code>report</code>, <code>tools</code>, <code>measured-at</code>, <code>app-client-id</code> and <code>app-private-key</code> and leaves the rest at their defaults. The <code>tools</code> lines come from <code>tools/measuring_tools.py</code>: <code>build-environment=&lt;image digest&gt;</code>, then one line per tag it reads from <code>configure.py</code> (<code>dtk=v1.8.3</code>, <code>objdiff=v3.6.1</code> in the starter).</p>
+<h2 id="what-the-action-does">What the action does</h2>
+<ol>
+<li>Splits <code>data-repository</code> into owner and name.</li>
+<li>Mints the token with <code>actions/create-github-app-token</code> (pinned to its v3.3.0 commit), with <code>owner</code>, <code>repositories: &lt;name&gt;</code> and <code>permission-contents: write</code>.</li>
+<li>Runs <code>python3 "$GITHUB_ACTION_PATH/publish.py" publish --target ... --report ... --targets ... --site ... --tools ... --measured-at ... --code-sections ... --unit-prefix ... --data-repository ...</code> with the token in the environment variable <code>DATA_TOKEN</code>. <code>publish.py</code> is standard-library Python and runs inside the build image, which is why the image needs <code>python3</code> and <code>git</code>.</li>
+</ol>
+<p><code>publish.py publish</code> then:</p>
+<ol>
+<li>Reads the report, <code>targets.json</code> and <code>site.json</code>, and builds <code>game.json</code>, <code>latest.json</code> and <code>map.json</code> in memory. <code>repository</code> comes from <code>GITHUB_REPOSITORY</code>; the measured revision, its commit time and subject come from <code>git log -1</code> on the checkout; <code>source.url</code> and <code>source.runUrl</code> are built from <code>GITHUB_SERVER_URL</code>, <code>GITHUB_REPOSITORY</code> and <code>GITHUB_RUN_ID</code>.</li>
+<li>Clones the data repository at depth 1 using the token (sent as an HTTP header through the environment, never on a command line) and configures the committer as <code>&lt;slug&gt; publisher &lt;publisher@users.noreply.github.com&gt;</code>.</li>
+<li>Up to five times: resets to the newest tip of the default branch, writes the target's files, runs the full tree check, commits as <code>&lt;slug&gt; &lt;target&gt;: &lt;7-char sha&gt;, &lt;n&gt;% code linked</code> with the run URL as the body, and pushes. A lost race (another target or game pushed in between) is retried from the new tip; the write is idempotent, so a retry re-applies the same measurement.</li>
+<li>Prints <code>published &lt;slug&gt;/&lt;target&gt; &lt;sha&gt;</code>, or <code>&lt;slug&gt;/&lt;target&gt; &lt;sha&gt; already published</code> when nothing changed.</li>
+</ol>
+<p>Writing the target's files follows two rules that make re-runs and out-of-order runs safe: the first measurement of a revision wins (re-running the workflow for the same commit changes nothing), and <code>latest.json</code> and <code>map.json</code> only move forward by commit time (a slow run of an older commit never replaces a newer one). The history row for the revision is appended either way. The exact file formats are in <a href="/wiki/data-contract/">Data contract</a>.</p>
+<p>Everything written is checked before the push by the same code as <code>publish.py check</code>, so a bad conversion fails the job instead of landing in the data repository. The target must be <code>active</code> in <code>targets.json</code>; publishing a <code>planned</code> target stops with <code>Target &lt;id&gt; is not an active target of &lt;slug&gt;</code>.</p>
+<h2 id="verifying-a-publish">Verifying a publish</h2>
+<ol>
+<li>In the <code>Validate &lt;target id&gt;</code> job log, the <code>Publish to the site</code> step prints <code>published game/GAME01-rev0 &lt;sha&gt;</code>.</li>
+<li>The data repository has a new commit by <code>game publisher</code>; its <code>Deploy</code> workflow runs (about a minute).</li>
+<li><code>https://mitsevox.github.io/decomp-data/data/game/GAME01-rev0/latest.json</code> shows the new <code>source.revision</code>.</li>
+<li><code>https://mitsevox.github.io/games/game/</code> shows the new numbers. The page fetches the data with <code>cache: no-cache</code>, so a reload is enough.</li>
+</ol>
+<h2 id="running-the-conversion-locally">Running the conversion locally</h2>
+<p>The action's script runs anywhere with Python 3 and Git. From the producer checkout, after a local build:</p>
+<pre><code class="language-sh">git clone https://github.com/mitsevox/mitsevox.github.io site
+python3 site/.github/actions/publish/publish.py publish --target GAME01-rev0 \
+  --report build/GAME01-rev0/report.json --repository owner/game \
+  --tools &quot;$(python3 tools/measuring_tools.py)&quot; --dry-run --output /tmp/tree
+python3 site/.github/actions/publish/publish.py check /tmp/tree
+</code></pre>
+<p><code>--dry-run</code> writes the files into <code>--output</code> (or a temporary directory) and pushes nothing; <code>check</code> validates a whole tree. <code>--repository</code> is required outside Actions because <code>GITHUB_REPOSITORY</code> is unset; <code>source.runUrl</code> is <code>null</code> locally. This is the fastest way to find out whether a report converts before the first <code>main</code> push, and the only way to inspect the generated files.</p>
+<h2 id="before-the-first-push-to-main">Before the first push to main</h2>
+<ul>
+<li>The App is installed on the data repository with Contents read and write.</li>
+<li>The producer has the variable and the secret, and <code>validate.yml</code> names them.</li>
+<li><code>config/targets.json</code> and <code>config/site.json</code> validate (<code>python3 -m unittest discover -s tests -p 'test_*.py'</code> and a dry run).</li>
+<li>A pull request has passed <code>Validate targets</code>.</li>
+</ul>
+<p>Then merge. The first publish creates <code>data/&lt;slug&gt;/</code> and adds the slug to <code>index.json</code>; no one edits the data repository for a new game except to add cover art (<a href="/wiki/site/">The site</a>).</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/ci/"><small>Previous</small><span>CI</span></a><a href="/wiki/data-contract/"><small>Next</small><span>Data contract</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-credential">The credential</a><a href="#the-actions-inputs">The action&#x27;s inputs</a><a href="#what-the-action-does">What the action does</a><a href="#verifying-a-publish">Verifying a publish</a><a href="#running-the-conversion-locally">Running the conversion locally</a><a href="#before-the-first-push-to-main">Before the first push to main</a></nav></aside></main>

@@ -1,0 +1,52 @@
+# Builds the private build environment and publishes it to GitHub Container Registry.
+# Copy to .github/workflows/image.yml in the private build repository.
+#
+# PARAMETER: the "Verify toolchain inside image" checks (the original's path and the toolchain
+# files to probe). Every push to main publishes ghcr.io/<owner>/<repository>:main and :<commit>;
+# the run summary prints the digest that validate.yml must reference.
+name: Build environment image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Build image
+        run: docker build --tag "$IMAGE:candidate" .
+      - name: Verify toolchain inside image
+        # PARAMETER: one sha1sum line per active target, plus the tool files your build needs.
+        run: |
+          docker run --rm "$IMAGE:candidate" sh -c '
+            sha1sum /orig/GAME01-rev0/sys/main.dol &&
+            dtk --version &&
+            test -f /compilers/GC/1.3.2/mwldeppc.exe &&
+            test -x /binutils/powerpc-eabi-as'
+      - name: Publish image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker tag "$IMAGE:candidate" "$IMAGE:main"
+          docker tag "$IMAGE:candidate" "$IMAGE:${GITHUB_SHA}"
+          docker push "$IMAGE:main"
+          docker push "$IMAGE:${GITHUB_SHA}"
+          docker inspect --format '{{index .RepoDigests 0}}' "$IMAGE:main" | tee -a "$GITHUB_STEP_SUMMARY"

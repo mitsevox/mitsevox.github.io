@@ -1,0 +1,104 @@
+<main class="wiki-layout" data-chapter="evidence">
+<aside class="wiki-sidebar">
+<div data-ui="wiki-search"></div>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/" aria-current="page"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Reconstruction <span aria-hidden="true">/</span> 06</span><a href="/docs/wiki/evidence.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="evidence">Evidence</h1>
+<p>Recover what the target supports, record it, and never manufacture a match.</p>
+<p>A byte match proves that the compiler produced the same code from the submitted source; it proves nothing about names, types, intent or where the original source file boundaries were. The project's value is the evidence behind those claims, so the evidence is recorded in the repository next to the configuration it supports and is reviewed with it.</p>
+<h2 id="inventory-before-interpretation">Inventory before interpretation</h2>
+<p>Inventory what the target and its references actually contain: the parsed filesystem, executables, symbols, debug information, linker maps, diagnostic strings, SDK references and related builds. Record hashes or revisions and which files were parsed. A claim that an artifact does not exist must say how thoroughly it was searched; a file-name search or a few strings is not enough.</p>
+<p>Related builds (another platform, another revision, another game on the same engine) suggest names and behavior. They do not prove the target's offsets, field widths, original names or source boundaries. Keep target evidence, reference evidence and inferred meaning separate.</p>
+<h2 id="bounded-tasks">Bounded tasks</h2>
+<p>Identify the functions, address ranges, candidate source unit, shared headers and dependencies before editing. Confirm accepted declarations on current <code>main</code>. Establish each function's full extent and the limits of any provisional unit; unresolved boundaries stay visible.</p>
+<p>For a field or signature, cite the actual loads and stores and the relevant caller or callee behavior. A nearby subsystem's access is not proof of the same layout. Preserve unknown offsets instead of inventing a convenient struct.</p>
+<h2 id="the-reconstruction-loop">The reconstruction loop</h2>
+<ol>
+<li>Describe the behavior and the evidence-backed types before optimizing for a score.</li>
+<li>Write plausible source in the codebase's style.</li>
+<li>Compile with the documented unit or library profile.</li>
+<li>Compare the full function bytes, referenced data and relocations with objdiff.</li>
+<li>Investigate the remaining uncertainty, record the result and retain useful partial source.</li>
+</ol>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Uncertainty</th>
+<th>Useful investigation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Behavior, references or ownership</td>
+<td>Target disassembly and bounded static analysis</td>
+</tr>
+<tr>
+<td>Different instruction selection or scheduling</td>
+<td>Controlled compiler experiments and the compiler's intermediate output</td>
+</tr>
+<tr>
+<td>Competing behavioral interpretations</td>
+<td>A bounded debugger or emulator trace with known inputs and conditions</td>
+</tr>
+<tr>
+<td>Candidate SDK or library reuse</td>
+<td>Fingerprints followed by calls, globals, types and boundary checks</td>
+</tr>
+</tbody>
+</table></div>
+<p>Record the tested revision, tool version and settings, inputs, conclusion and remaining uncertainty. Check decompiler output against instructions. Runtime observations establish what happened under those conditions, not the original source text. Keep bulk experiments private; retain concise reproducible evidence publicly.</p>
+<h2 id="the-evidence-record">The evidence record</h2>
+<p>Each target keeps <code>config/&lt;target id&gt;/evidence.tsv</code>, one claim per row, tab separated:</p>
+<pre><code class="language-text">kind  start  end  subject  origin  start_boundary  end_boundary  evidence
+</code></pre>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>kind</code></td>
+<td><code>name</code>, <code>function</code>, <code>data</code>, <code>unit-anchor</code>, <code>unit</code>, <code>type</code>, <code>field</code>, <code>external</code>, <code>compiler</code>, <code>assembly</code>, <code>source-form</code>, <code>linker</code></td>
+</tr>
+<tr>
+<td><code>start</code>, <code>end</code></td>
+<td>Hexadecimal virtual addresses, end exclusive; <code>-</code> when unknown or inapplicable</td>
+</tr>
+<tr>
+<td><code>subject</code></td>
+<td>The symbol, source path, type or field concerned</td>
+</tr>
+<tr>
+<td><code>origin</code></td>
+<td><code>target</code> (present in the target's bytes, symbols or debug information), <code>signature</code> (a named tool signature), <code>related</code> (another identified build), <code>inferred</code> (interpretation of the code)</td>
+</tr>
+<tr>
+<td><code>start_boundary</code>, <code>end_boundary</code></td>
+<td><code>exact</code>, <code>provisional</code>, <code>open</code> or <code>-</code>, claimed independently of each other</td>
+</tr>
+<tr>
+<td><code>evidence</code></td>
+<td>A reproducible locator and what it establishes and leaves unknown</td>
+</tr>
+</tbody>
+</table></div>
+<p>Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A <code>name</code> row with origin <code>target</code> needs explicit name evidence in the target; a name supported only by behavior is <code>inferred</code>. Compiler profiles are <code>compiler</code> rows at the unit or library level. The starter <code>config/README.md</code> is the full definition and goes into the repository as is.</p>
+<h2 id="matching-integrity">Matching integrity</h2>
+<p>Do not force a match through:</p>
+<ul>
+<li>per-function flags, optimization pragmas or compiler attributes introduced to force code generation;</li>
+<li>inline assembly, embedded instruction bytes or patched compiler output in place of compiled source;</li>
+<li>invented helpers, casts, volatile qualifiers, padding or control flow whose only justification is the bytes;</li>
+<li>altered symbol boundaries, excluded comparisons or progress categories that hide mismatches;</li>
+<li>behavioral changes made to satisfy the compiler.</li>
+</ul>
+<p>Compiler versions and flags need evidence at the compilation-unit or library level. A function-specific exception needs evidence that the original used it and the owner's explicit approval. Originally handwritten assembly needs provenance. Labeling a workaround a fake match does not make it acceptable; it stays a local experiment outside accepted source.</p>
+<p>When evidence runs out, keep the useful partial reconstruction as a <code>NonMatching</code> unit, keep the original bytes linked and record the gap. Partial similarity is progress; unsupported certainty is not.</p>
+<h2 id="imported-and-sdk-code">Imported and SDK code</h2>
+<p>Retain the origin, source revision, license and local modifications of anything imported. A fingerprint match is a candidate, especially for a short function; inspect target-specific calls, data ownership and compilation boundaries before importing. Imported code gets the same accuracy and hostile reviews as new reconstruction.</p>
+<p>Comments in source explain intent, invariants and non-obvious relationships. Matching scores, compiler experiments, agent notes and review history belong in <code>evidence.tsv</code> or the PR, never in source comments.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/build-verify-measure/"><small>Previous</small><span>Build, verify, measure</span></a><a href="/wiki/contribution-workflow/"><small>Next</small><span>Contribution workflow</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#inventory-before-interpretation">Inventory before interpretation</a><a href="#bounded-tasks">Bounded tasks</a><a href="#the-reconstruction-loop">The reconstruction loop</a><a href="#the-evidence-record">The evidence record</a><a href="#matching-integrity">Matching integrity</a><a href="#imported-and-sdk-code">Imported and SDK code</a></nav></aside></main>

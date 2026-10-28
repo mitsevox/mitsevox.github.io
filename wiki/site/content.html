@@ -1,0 +1,68 @@
+<main class="wiki-layout" data-chapter="site">
+<aside class="wiki-sidebar">
+<div data-ui="wiki-search"></div>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/" aria-current="page"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Pipeline <span aria-hidden="true">/</span> 12</span><a href="/docs/wiki/site.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="the-site">The site</h1>
+<p>How the data repository is served and read, cover art, URLs and local preview.</p>
+<p>The site is static. It builds nothing and imports nothing: <code>mitsevox/mitsevox.github.io</code> deploys its own HTML, scripts and this wiki to GitHub Pages, and at view time the page fetches <code>/decomp-data/</code> from the same origin, which is the data repository's Pages deployment. A producer therefore never needs a pull request against the site. The one thing committed to the data repository by hand is cover art.</p>
+<h2 id="the-data-repositorys-deploy">The data repository's deploy</h2>
+<p><a href="https://github.com/mitsevox/decomp-data"><code>mitsevox/decomp-data</code></a> holds <code>index.json</code>, <code>.nojekyll</code>, <code>data/</code> and one workflow, <a href="https://github.com/mitsevox/decomp-data/blob/main/.github/workflows/deploy.yml"><code>deploy.yml</code></a>. Every publish is a push to <code>main</code>, and a push made with a GitHub App token starts the workflow, which checks out <code>main</code> and deploys the whole repository to Pages with <code>actions/upload-pages-artifact</code> and <code>actions/deploy-pages</code>. Its concurrency group is <code>pages</code> with <code>cancel-in-progress: false</code>: one deploy runs, one waits, and a burst of publishes collapses into a couple of deploys that each publish the branch tip. Pages serves it at <code>https://mitsevox.github.io/decomp-data/</code>.</p>
+<p>For a new data repository of your own: create it public, add <code>index.json</code> with <code>{"schema": 1, "games": []}</code>, an empty <code>.nojekyll</code> and the same <code>deploy.yml</code>, and set the repository's Pages source to <strong>GitHub Actions</strong> (<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">documentation</a>). The site repository's frontend reads <code>/decomp-data/</code> on its own origin, so a separate site would be a fork of the site repository with that path changed; that is outside this guide.</p>
+<h2 id="how-a-page-is-composed">How a page is composed</h2>
+<p>For <code>/games/game/?target=GAME01-rev0</code> the page reads:</p>
+<ol>
+<li><code>index.json</code>, to know the games.</li>
+<li><code>data/game/game.json</code>: title, console, year, repository link, <code>contributions</code>, <code>artwork</code>, <code>defaultTarget</code> and the target list. The target picker appears when there is more than one target and groups them by <code>label</code>, then <code>revision</code>.</li>
+<li><code>data/game/GAME01-rev0/latest.json</code> for each <code>active</code> target: the summary bars (linked, matched and fuzzy for code and data), the function and file counts when they are not <code>null</code>, the measured commit and run links, and the tools list.</li>
+<li><code>data/game/GAME01-rev0/map.json</code> when the summary's <code>modules.map</code> names it: the tile map.</li>
+<li><code>data/game/GAME01-rev0/history.json</code>: the progress chart.</li>
+<li><code>data/game/GAME01-rev0/contributors.json</code> when <code>modules.contributors</code> names it: rankings.</li>
+</ol>
+<p>Without <code>?target=</code>, the page shows <code>defaultTarget</code>. A target that is not <code>active</code> is listed without a measurement. A target whose <code>latest.json</code> fails to load shows "unavailable" and leaves the rest of the game alone; a map or history file that fails the page's checks hides only its own section. The hub at <code>/</code> lists every game in <code>index.json</code> with its default target's code and data bars, the cover, the console icon chosen from <code>console</code>, and the latest commit.</p>
+<h2 id="cover-art">Cover art</h2>
+<p>Covers are committed by hand to the data repository, not published by CI, so that rights-sensitive images never pass through the producer or the automation:</p>
+<ol>
+<li>Prepare <code>cover.webp</code> at the original aspect ratio (the reference covers are 1112 by 1600 pixels).</li>
+<li>Commit it as <code>data/&lt;slug&gt;/cover.webp</code> in the data repository. The directory exists after the first publish; committing the cover earlier is fine too, since the publish only writes its own files.</li>
+<li>Add <code>"artwork": {"cover": "cover.webp", "width": 1112, "height": 1600}</code> to the producer's <code>config/site.json</code> and merge. The next publish carries it into <code>game.json</code>.</li>
+</ol>
+<p>Until both halves are in place the page shows no cover; an <code>artwork</code> entry without the file is a broken image.</p>
+<h2 id="urls">URLs</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>URL</th>
+<th>Serves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>https://mitsevox.github.io/</code></td>
+<td>The hub</td>
+</tr>
+<tr>
+<td><code>https://mitsevox.github.io/games/&lt;slug&gt;/</code></td>
+<td>The game at its default target</td>
+</tr>
+<tr>
+<td><code>https://mitsevox.github.io/games/&lt;slug&gt;/?target=&lt;id&gt;</code></td>
+<td>The game at one target</td>
+</tr>
+<tr>
+<td><code>https://mitsevox.github.io/decomp-data/data/&lt;slug&gt;/&lt;id&gt;/latest.json</code></td>
+<td>The raw data, same for every file in the data repository</td>
+</tr>
+<tr>
+<td><code>https://mitsevox.github.io/wiki/</code></td>
+<td>This guide</td>
+</tr>
+</tbody>
+</table></div>
+<p>The site repository's deploy stages one <code>games/&lt;slug&gt;/index.html</code> for every slug in the live <code>index.json</code>, so an established game's page answers with status 200. A game added since the last site deploy renders through the <code>404.html</code> shell, which is the same application; it becomes a real file at the next site deploy, which the owner can trigger with <code>workflow_dispatch</code> on the site's <code>Site</code> workflow.</p>
+<h2 id="previewing-locally">Previewing locally</h2>
+<p>Clone the site repository and the data repository, then serve the site at <code>/</code> and the data checkout at <code>/decomp-data/</code> with <code>404.html</code> as the fallback for unknown paths. The dry-run tree from <a href="/wiki/publishing/">Publishing</a> can stand in for the data checkout to preview a game before its first real publish. The site repository's README has the same instructions and the test command (<code>python3 -m unittest discover -s tests</code>).</p>
+<h2 id="what-never-needs-a-site-change">What never needs a site change</h2>
+<p>Adding a game, adding a target, renaming a title, changing the cover, accepting contributions: all of these are edits to <code>config/site.json</code>, <code>config/targets.json</code> or the data repository. The site changes only when the contract changes or the presentation does.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/data-contract/"><small>Previous</small><span>Data contract</span></a><a href="/wiki/troubleshooting/"><small>Next</small><span>Troubleshooting</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-data-repositorys-deploy">The data repository&#x27;s deploy</a><a href="#how-a-page-is-composed">How a page is composed</a><a href="#cover-art">Cover art</a><a href="#urls">URLs</a><a href="#previewing-locally">Previewing locally</a><a href="#what-never-needs-a-site-change">What never needs a site change</a></nav></aside></main>

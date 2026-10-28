@@ -1,4 +1,6 @@
 import {pageScope} from '../../lifecycle.js';
+import {createAction} from './action.js';
+import {componentScope} from './scope.js';
 
 const checkmark='<svg class="dropdown-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 8 3 3 7-7"/></svg>';
 
@@ -22,10 +24,14 @@ export function createDropdownController(trigger,menu,{scope=pageScope(),isSelec
     if(!tabStop&&items.length)items[0].tabIndex=0;
   }
   function position(){
-    menu.style.translate='0px 0px';
+    menu.style.translate='0px 0px';menu.style.maxHeight='';
     const rect=menu.getBoundingClientRect();
     const shift=Math.min(0,window.innerWidth-16-rect.right)+Math.max(0,16-rect.left);
     menu.style.translate=shift+'px 0px';
+    // Keep the menu inside a short viewport; it scrolls internally instead.
+    const room=window.innerHeight-16-rect.top;
+    if(rect.height>room){menu.style.maxHeight=Math.max(120,room)+'px';menu.style.overflowY='auto';}
+    else menu.style.overflowY='';
   }
   function cancel(){animation?.cancel();animation=null;}
   function close(restoreFocus=false){
@@ -88,6 +94,7 @@ export function createDropdownController(trigger,menu,{scope=pageScope(),isSelec
  * @property {string=} description
  * @property {string=} href Navigation options keep normal link behavior.
  * @property {string=} image Site-owned artwork URL.
+ * @property {string=} imageFallback Used if image fails to load.
  * @property {string=} console Console icon name, rendered by the UI icon registry.
  * @property {string=} region Region flag; accessible text belongs in ariaLabel.
  * @property {string=} ariaLabel
@@ -118,16 +125,17 @@ const triggerIcons={
 };
 const flags={USA:'🇺🇸',US:'🇺🇸',Japan:'🇯🇵',JPN:'🇯🇵',JP:'🇯🇵',Europe:'🇪🇺',EUR:'🇪🇺',EU:'🇪🇺',Australia:'🇦🇺',AUS:'🇦🇺',AU:'🇦🇺',Korea:'🇰🇷',KOR:'🇰🇷',KR:'🇰🇷'};
 function leading(parent,option){
-  if(option.image){const image=document.createElement('img');image.src=option.image;image.alt='';parent.append(image);}
+  if(option.image){const image=document.createElement('img');image.src=option.image;image.alt='';image.loading='lazy';
+    if(option.imageFallback)image.addEventListener('error',()=>{image.src=option.imageFallback;},{once:true});parent.append(image);}
   else if(option.console)parent.insertAdjacentHTML('beforeend',consoleIcon(option.console));
   else if(flags[option.region]){const flag=document.createElement('span');flag.className='region-flag';flag.setAttribute('aria-hidden','true');flag.textContent=flags[option.region];parent.append(flag);}
 }
 
 /** Build the complete primitive before attaching it to a page. @param {DropdownProps} props */
 export function createDropdown(props){
-  const componentScope=pageScope();
+  const scope=componentScope(props.scope);
   const node=document.createElement('div');node.className='ui-dropdown '+(props.className||'');
-  const trigger=document.createElement('button');trigger.type='button';trigger.id=props.id;trigger.className='dropdown-trigger '+(props.triggerClass||'');
+  const trigger=createAction({id:props.id,className:'dropdown-trigger '+(props.triggerClass||'')});
   const menu=document.createElement('div');menu.id=props.id+'-menu';menu.className='hub-popover '+(props.menuClass||'');menu.hidden=true;menu.setAttribute('aria-label',props.label);
   trigger.setAttribute('aria-controls',menu.id);
   let value=props.value,label=props.triggerLabel,ariaLabel=props.ariaLabel;
@@ -135,8 +143,7 @@ export function createDropdown(props){
   for(const option of props.options){
     if(choices.has(option.value))throw Error('Duplicate dropdown value: '+option.value);
     choices.set(option.value,option);
-    const item=document.createElement(option.href?'a':'button');item.className='popover-option';item.dataset.value=option.value;
-    if(option.href)item.href=option.href;else item.type='button';
+    const item=createAction({href:option.href,className:'popover-option'});item.dataset.value=option.value;
     if(option.ariaLabel)item.setAttribute('aria-label',option.ariaLabel);
     leading(item,option);
     const text=document.createElement('span');text.className='dropdown-option-text';text.textContent=option.label;
@@ -144,7 +151,7 @@ export function createDropdown(props){
     item.append(text);menu.append(item);
   }
   node.append(trigger,menu);
-  const control=createDropdownController(trigger,menu,{scope:componentScope,
+  const control=createDropdownController(trigger,menu,{scope,
     isSelected:item=>item.dataset.value===value,
     onSelect:item=>{const option=choices.get(item.dataset.value);if(!option.href)setValue(option.value);props.onSelect?.(option);}});
   function renderTrigger(){
@@ -162,8 +169,7 @@ export function createDropdown(props){
     value=next;if(triggerLabel!==undefined)label=triggerLabel;if(nextAria!==undefined)ariaLabel=nextAria;
     control.sync();renderTrigger();
   }
-  function destroy(){props.scope?.signal.removeEventListener('abort',destroy);componentScope.destroy();node.remove();}
-  if(props.scope?.signal.aborted)destroy();else props.scope?.signal.addEventListener('abort',destroy,{once:true});
+  function destroy(){scope.destroy();node.remove();}
   renderTrigger();
   return {node,trigger,menu,setValue,destroy,open:control.open,close:control.close,get isOpen(){return control.isOpen;}};
 }

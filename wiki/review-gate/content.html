@@ -1,0 +1,102 @@
+<main class="wiki-layout" data-chapter="review-gate">
+<aside class="wiki-sidebar">
+<div data-ui="wiki-search"></div>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/" aria-current="page"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Contribution <span aria-hidden="true">/</span> 08</span><a href="/docs/wiki/review-gate.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="review-gate">Review gate</h1>
+<p>Review records, the owner clearance comment and the status check that verifies them.</p>
+<p>The gate is one workflow, <code>.github/workflows/review.yml</code>, that publishes a commit status named <code>Owner review clearance</code> on the PR head. It is <code>success</code> only when the owner has posted a clearance comment that names the current head and links two passing review records on that PR. It runs trusted default-branch code, checks out nothing and holds no build credential; it reads PR comments and writes one status. The starter ships it as <code>review.yml.template</code> together with <code>tests/review_gate.mjs</code>, which exercises the script without GitHub.</p>
+<h2 id="review-records">Review records</h2>
+<p>Each review pass is one PR discussion comment. The first line is the revision, the second the verdict; each header occurs exactly once in the comment, outside quotes and code fences.</p>
+<pre><code class="language-text">Revision: FULL_COMMIT_SHA
+Accuracy: PASS
+
+Reviewer: identity and prior involvement
+Scope: functions, files and configuration checked
+Evidence: references and validation artifacts used
+Findings: results, uncertainties and resolutions
+</code></pre>
+<pre><code class="language-text">Revision: FULL_COMMIT_SHA
+Hostile: SHIP
+
+Reviewer: identity and prior involvement
+Checklist: PASS / FAIL / BLOCKED / justified N/A per category
+Findings: location, evidence and required correction
+Coverage: earlier records carried forward and delta checked
+</code></pre>
+<p>Accepted values: <code>Accuracy: PASS</code> or <code>Accuracy: N/A - &lt;reason&gt;</code> (the reason is required; a documentation-only change is the usual case), and <code>Hostile: SHIP</code>. <code>FIX</code>, <code>REDO</code> and <code>BLOCKED</code> are valid hostile verdicts but do not clear. The gate parses the headers only; the rest of the comment is for people.</p>
+<h2 id="owner-clearance">Owner clearance</h2>
+<p>After checking reviewer independence, coverage and the resolution of findings, the owner (or the merge gate, acting under the owner's login) posts:</p>
+<pre><code class="language-text">&lt;!-- owner-review-clearance --&gt;
+Revision: FULL_COMMIT_SHA
+Accuracy: https://github.com/owner/game/pull/NUMBER#issuecomment-ID
+Hostile: https://github.com/owner/game/pull/NUMBER#issuecomment-ID
+</code></pre>
+<p>The marker is the literal first line. The two links point at two different comments on the same PR. To withdraw clearance, edit the latest clearance comment and remove its revision or links; the gate re-evaluates on every comment edit.</p>
+<h2 id="what-the-check-verifies">What the check verifies</h2>
+<p>On <code>pull_request_target</code> (opened, reopened, synchronize, ready for review, converted to draft), on every PR comment created, edited or deleted, and on manual dispatch with a PR number, the job:</p>
+<ol>
+<li>Fetches the PR. If it is not open, or its head repository differs from the base repository, it stops without setting a status: fork PRs are never cleared.</li>
+<li>Sets <code>Owner review clearance</code> to <code>pending</code> on the head SHA.</li>
+<li>Collects the comments by <code>REVIEW_OWNER</code> that start with the marker, takes the most recently updated one, and parses <code>Revision</code>, <code>Accuracy</code> and <code>Hostile</code> from its first three lines.</li>
+<li>Requires: <code>Revision</code> equals the head SHA; both links are <code>https://github.com/&lt;owner&gt;/&lt;repo&gt;/pull/&lt;number&gt;#issuecomment-&lt;id&gt;</code> on this PR; the two links differ.</li>
+<li>Fetches each linked comment and requires: it belongs to this PR; its first line is <code>Revision: &lt;head SHA&gt;</code>; its second line is <code>Accuracy: PASS</code>, <code>Accuracy: N/A - &lt;non-empty reason&gt;</code> or <code>Hostile: SHIP</code> for the respective lane. A linked comment that no longer exists makes the clearance invalid.</li>
+<li>Requires the PR not to be a draft.</li>
+<li>Sets the status to <code>success</code> with the clearance comment as its link, or leaves it <code>pending</code>.</li>
+</ol>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Current head, owner clearance, two distinct passing records on this PR, PR not a draft</td>
+<td>success</td>
+</tr>
+<tr>
+<td>No clearance, or clearance by another login</td>
+<td>pending</td>
+</tr>
+<tr>
+<td>New commits after the clearance</td>
+<td>pending until new records and a new clearance name the new head</td>
+</tr>
+<tr>
+<td>Same link twice, a link to another PR, malformed headers, a second <code>Revision:</code> line, a failing or stale verdict</td>
+<td>pending</td>
+</tr>
+<tr>
+<td>Draft PR</td>
+<td>pending</td>
+</tr>
+<tr>
+<td>Clearance edited to remove its revision or links, or a later clearance comment without them</td>
+<td>pending</td>
+</tr>
+<tr>
+<td>A linked review comment edited to another revision or deleted</td>
+<td>pending</td>
+</tr>
+<tr>
+<td>PR from a fork</td>
+<td>no status is set</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>tests/review_gate.mjs</code> covers each row; <code>node --test tests/review_gate.mjs</code> runs it and the <code>Tool tests</code> CI job runs it on every push.</p>
+<h2 id="installing-the-gate">Installing the gate</h2>
+<ol>
+<li>Copy <code>review.yml.template</code> to <code>.github/workflows/review.yml</code>. The only parameter is <code>REVIEW_OWNER</code>: set the repository variable <code>REVIEW_OWNER</code> to the owner's login (Settings, Secrets and variables, Actions, Variables), or replace <code>${{ vars.REVIEW_OWNER }}</code> with the literal login. The script throws if the value is empty.</li>
+<li>Copy <code>tests/review_gate.mjs</code> and set its <code>owner</code> and <code>repository</code> constants; run it.</li>
+<li>Merge the workflow to <code>main</code> first. <code>pull_request_target</code> and <code>issue_comment</code> run the workflow file from the default branch, so the gate does nothing for any PR until it is on <code>main</code>.</li>
+<li>Open a test PR, post records and a clearance, and watch the status change; post a new commit and watch it go back to pending.</li>
+<li>Only then, in branch protection for <code>main</code>, require the status checks <code>Owner review clearance</code> and <code>Validate targets</code>, require pull requests, and restrict pushes, force pushes and deletion. Verify who can bypass the rules; a documented policy enforces nothing by itself. GitHub's <a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">branch protection documentation</a> describes the options.</li>
+</ol>
+<p>The workflow's permissions are <code>contents: read</code>, <code>pull-requests: read</code>, <code>issues: read</code> and <code>statuses: write</code>; it pins <code>actions/github-script</code> by commit SHA. Keep it that way: it is the one workflow that runs on comment events from anyone who can comment.</p>
+<h2 id="what-the-gate-cannot-do">What the gate cannot do</h2>
+<p>It authenticates the owner's clearance and the record references. It cannot prove that a reviewer was independent or that the review was any good; those judgments stay with the owner, directly or through the merge gate. Agents other than the merge gate must not post clearance on the owner's behalf, and clearance never authorizes anyone but the owner to merge.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/contribution-workflow/"><small>Previous</small><span>Contribution workflow</span></a><a href="/wiki/ci/"><small>Next</small><span>CI</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#review-records">Review records</a><a href="#owner-clearance">Owner clearance</a><a href="#what-the-check-verifies">What the check verifies</a><a href="#installing-the-gate">Installing the gate</a><a href="#what-the-gate-cannot-do">What the gate cannot do</a></nav></aside></main>
