@@ -391,10 +391,16 @@ def check_map(document, s):
     require(document.get('schema') == SCHEMA, 'map.json: unsupported schema')
     for field in ('sections', 'files'):
         require(isinstance(document.get(field), list) and document[field], 'map: %s is empty' % field)
+        for item in document[field]:
+            require(item.get('kind') in ('code', 'data'), 'map: %s node %r has kind %r' % (field, item.get('name'), item.get('kind')))
 
     def close(a, b):
         # The page compares sums with an absolute tolerance of 1e-6 and no relative one.
         return abs(a - b) <= 1e-6
+
+    def total(values):
+        # Summed left to right, as the page sums them, so that both see the same rounding.
+        return sum(values)
 
     def node_extents(item):
         if 'mapped_extents' in item:
@@ -421,12 +427,14 @@ def check_map(document, s):
                         'map: invalid repository path %r' % item[key])
         check_measure({'total': item['size'], 'linked': item['linked'], 'matched': item['matched'],
                        'fuzzy': item.get('fuzzy')}, 'map %r' % item.get('name'))
-        if item.get('children'):
+        if 'children' in item:
             children = item['children']
+            # The page reads an empty list as a group with nothing in it and refuses it.
+            require(isinstance(children, list) and children, 'map: %r has no children in its list' % item.get('name'))
             # The children are checked first, so that every count summed below is a number.
             rs = merged_ranges([r for c in children for r in walk(c, kind, inventory)])
             for key in ('size', 'linked', 'matched', *(['fuzzy'] if 'fuzzy' in item else [])):
-                require(all(key in c for c in children) and close(math.fsum(c[key] for c in children), item[key]),
+                require(all(key in c for c in children) and close(total(c[key] for c in children), item[key]),
                         'map: %r children do not add up (%s)' % (item.get('name'), key))
             if 'address' in item or 'mapped_extents' in item:
                 require(rs == merged_ranges(node_extents(item)), 'map: %r extents differ from its children' % item.get('name'))
@@ -450,7 +458,7 @@ def check_map(document, s):
             for key, k in (('total', 'size'), ('linked', 'linked'), ('matched', 'matched'), ('fuzzy', 'fuzzy')):
                 if m.get(key) is None:
                     continue
-                require(all(k in x for x in items) and close(math.fsum(x[k] for x in items), m[key]),
+                require(all(k in x for x in items) and close(total(x[k] for x in items), m[key]),
                         'map: %s %s %s differs from the summary' % (field, kind, key))
             require(reference is None or actual == reference, 'map: sections and files cover different %s bytes' % kind)
             reference = actual
