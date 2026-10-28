@@ -10,7 +10,10 @@ passes this output to the publish action's `tools` input.
                                                 require the pinned version in its output
 
 The versions come from the pins, not from the image; --verify is what ties the two together, so a
-tool the image carries at another version than the repository pins never publishes as the pin."""
+tool the image carries at another version than the repository pins never publishes as the pin.
+Only the version word is verified, as a whole token: a pin `v1.8.3` needs `1.8.3` in the output,
+not `1.8.30` and not a `1.8` pin against it. Anything after the version in a pin (a local patch
+named by its hash) is not verified, since a patched tool prints its stock version."""
 import argparse
 import json
 import os
@@ -27,9 +30,11 @@ TAGS = {'dtk': 'dtk_tag', 'objdiff': 'objdiff_tag'}
 # {"<name>": {"version": "<version>", ...}, ...}; every entry is reported. Empty for dtk-template.
 PINS = []
 # PARAMETER: for --verify, how each reported tool prints its version inside the build image. The
-# reported version's first word, without a leading `v`, must appear in the output. dtk-template
-# downloads objdiff at the pinned tag during the build, so only dtk, which the image builds, is
-# listed; a build without configure.py lists every tool the image installs.
+# reported version's first word, without a leading `v`, must appear in the output as a whole token
+# and the command must exit 0. List every tool whose --version prints the pinned version that way;
+# a tool whose pin is not what it prints (binutils pinned as 2.42-2 prints 2.42) cannot be listed.
+# dtk-template downloads objdiff at the pinned tag during the build, so only dtk, which the image
+# builds, is listed; a build without configure.py lists every tool the image installs.
 VERIFY = {'dtk': ['dtk', '--version']}
 
 
@@ -69,9 +74,10 @@ def verify(result, commands=None):
         except (OSError, subprocess.TimeoutExpired) as error:
             raise SystemExit('measuring_tools: cannot run %s to verify %s: %s' % (' '.join(command), name, error))
         text = (run.stdout + run.stderr).strip()
-        if version not in text:
-            raise SystemExit('measuring_tools: %s reports %r; the repository pins %s'
-                             % (name, text.splitlines()[0] if text else '', reported[name]))
+        # A whole token: `1.8.3` is not found in `1.8.30`, and `1.8` is not found in `1.8.3`.
+        if run.returncode != 0 or not re.search(r'(?<![\w.])v?%s(?![\w.])' % re.escape(version), text):
+            raise SystemExit('measuring_tools: %s reports %r (exit %d); the repository pins %s'
+                             % (name, text.splitlines()[0] if text else '', run.returncode, reported[name]))
     return result
 
 
