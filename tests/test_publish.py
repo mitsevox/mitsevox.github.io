@@ -178,7 +178,7 @@ class ConversionTests(unittest.TestCase):
         self.assertFalse(self.page_rejects(m, s))
         m['files'][0]['fuzzy'] = exact
         self.assertTrue(self.page_rejects(m, s))
-        with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
+        with self.assertRaisesRegex(publish.ContractError, 'fuzzy'):  # off its children and off the summary
             publish.check_map(m, s)
 
     def page_rejects(self, map_doc, s):
