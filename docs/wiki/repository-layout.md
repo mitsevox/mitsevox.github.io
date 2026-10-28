@@ -36,7 +36,9 @@ game/
     versions.py                  view, diff and check version differences       (starter)
     evidence.py                  checks evidence.tsv                            (starter)
     new_target.py                scaffolds config/<id>/                         (starter)
-    measuring_tools.py           lists tool versions for provenance             (starter)
+    measuring_tools.py           lists tool versions for provenance, verifies them (starter)
+    tier.py                      the review tier a diff needs, checked in CI    (starter)
+    credits.py                   the credits a merge will publish, checked in CI (starter)
     project.py, ninja_syntax.py, download_tool.py, ...   dtk-template
   tests/
     test_targets.py                                                             (starter)

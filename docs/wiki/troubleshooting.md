@@ -34,9 +34,11 @@ Find the layer that failed before changing anything: the plan, the tool tests, t
 | `configure.py` rejects `--version` | The id is not an active target in `config/targets.json`, or `configure.py` was not wired to `tools/targets.py` ([Build, verify, measure](/wiki/build-verify-measure/)). |
 | The link succeeds but the hash check against `config/<id>/build.sha1` fails | A `Matching` object no longer matches, or `build.sha1` is wrong. Mark the object `NonMatching` until it matches; `build.sha1` must equal the original's `sha1`. |
 | `ninja: error: ... report.json` or no report written | The `progress`/`report.json` targets need objdiff; check `config.objdiff_tag` and network access from the image, or pass `--objdiff` to a local binary. |
-| Numbers look wrong on the page but the build is green | Compare with `ninja ... progress` locally at the same commit. `linked` only counts `Matching` units; `matched` counts exact functions anywhere; `fuzzy` is size-weighted. A new split or a renamed unit changes `files` counts without changing bytes. |
+| Numbers look wrong on the page but the build is green | Compare with a local measurement at the same commit (`ninja ... progress` with dtk-template). `linked` only counts `Matching` units; `matched` counts exact functions anywhere; `fuzzy` is size-weighted. A new split or a renamed unit changes `files` counts without changing bytes. |
 | `measuring_tools: BUILD_IMAGE is not a digest-pinned image reference` | The `BUILD_IMAGE` variable in `validate.yml` is not of the form `ghcr.io/<name>@sha256:<64 hex>`, or the tool was run outside the workflow without it in the environment. |
 | `measuring_tools: configure.py has no objdiff_tag` | The `config.<tag> = "<version>"` line is missing or formatted differently; edit `TAGS` in `tools/measuring_tools.py` or the line. |
+| `measuring_tools: dtk reports 'dtk 1.8.4'; the repository pins v1.8.3` | The image's tool and the repository's pin disagree: an image digest bumped without the pin, or the pin without the image. Change the one that is wrong, deliberately ([Build environment](/wiki/build-environment/)); never publish a provenance the image does not match. |
+| `measuring_tools: cannot run dtk --version to verify dtk` | `VERIFY` in `tools/measuring_tools.py` names a command the image does not have at that path; fix the command or the image. |
 
 ## Publish step
 

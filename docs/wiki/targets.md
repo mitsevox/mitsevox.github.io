@@ -99,9 +99,9 @@ The publish action copies this file into `game.json` on every publish, adding `r
 | a `nonBuild` pattern only | nothing |
 | no pattern at all | every active target (unknown paths never skip validation) |
 
-The per-target patterns are not written down: every target owns `config/<id>/**` and `orig/<id>/**`, and the planner derives them from `targets.json`, so adding a target never touches this file. Patterns are `fnmatch` globs matched against the repository-relative path; `*` and `**` both match across `/`. Rules: `schemaVersion` is `1`; the keys are exactly `schemaVersion`, `shared` and `nonBuild` (a `targets` key is a scaffold-check warning); no pattern may start with `/` or contain `..`. A manual run (`workflow_dispatch`), a push with no known base (first push, force push) and a changed path that cannot be diffed all select every active target.
+The per-target patterns are not written down: every target owns `config/<id>/**` and `orig/<id>/**`, and the planner derives them from `targets.json`, so adding a target never touches this file. Patterns are `fnmatch` globs matched against the repository-relative path; `*` and `**` both match across `/`. Rules: `schemaVersion` is `1`; the keys are exactly `schemaVersion`, `shared` and `nonBuild` (a `targets` key is a scaffold-check warning); no pattern may start with `/` or contain `..`. A manual run (`workflow_dispatch`) and a push with no known base (first push, force push) select every active target, and so does a changed path that matches no pattern.
 
-A change that selects no target still runs the `Tool tests` job and passes the `Validate targets` check.
+A change that selects no target still runs the `Tool tests` job and passes the `Validate targets` check. `tests/**` is `nonBuild` in the kit because every test runs in `Tool tests` on the bare runner; a repository whose tests need the toolchain and run in the target job's `Project checks` lists `tests/**` under `shared` instead, so that a test change rebuilds every target ([CI](/wiki/ci/), builds without `configure.py`).
 
 ## Adding a target
 

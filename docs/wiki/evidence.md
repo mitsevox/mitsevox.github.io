@@ -49,7 +49,7 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 | `start`, `end` | Virtual addresses as `0x` plus eight upper-case hex digits, end exclusive; `-` when unknown or inapplicable |
 | `subject` | The symbol, source path, type or field concerned |
 | `origin` | `target` (present in the target's bytes, symbols or debug information), `signature` (a named tool signature), `related` (another identified build), `inferred` (interpretation of the code) |
-| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data` and `unit` rows |
+| `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data`, `unit`, `assembly` and `linker` rows |
 | `evidence` | A reproducible locator and what it establishes and leaves unknown |
 
 Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.

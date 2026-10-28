@@ -4,12 +4,13 @@ import copy
 import json
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 import unittest
 from tools.targets import registry,select,build_targets,define,check as check_targets
 from tools.ci_targets import affected,target_patterns
 from tools.evidence import check_text,COLUMNS
-from tools.measuring_tools import tools as measuring_tools
+from tools.measuring_tools import tools as measuring_tools,verify
 from tools.new_target import scaffold
 from tools.versions import Versions
 from tools.tier import declared,floor
@@ -156,6 +157,20 @@ class Targets(unittest.TestCase):
         pins=[{'dtk':{'version':'v1.8.4','linux-x86_64':{}}},{'objdiff':{'version':'v3.8.2'}}]
         self.assertEqual(measuring_tools(DIGEST,pins=pins)[1:],[('dtk','v1.8.4'),('objdiff','v3.8.2')])
         with self.assertRaises(SystemExit):measuring_tools(DIGEST,pins=[{'dtk':{}}])
+
+    def test_verify_requires_the_pinned_version_from_the_image(self):
+        # The reported version's first word (a patched dtk adds words) without its `v` must appear
+        # in what the tool prints; a tool that prints another version, or cannot run, stops the step.
+        found=[('build-environment',DIGEST),('dtk','v1.8.3 + a local patch sha256:0912')]
+        say=lambda text,code=0:[sys.executable,'-c','print(%r);raise SystemExit(%d)'%(text,code)]
+        self.assertEqual(verify(found,{'dtk':say('dtk 1.8.3')}),found)
+        self.assertEqual(verify(found,{'dtk':say('dtk v1.8.3 (release)')}),found)
+        for output in ('dtk 1.8.4','dtk 1.8.30','dtk 1.8','dtk 11.8.3',''):
+            with self.subTest(output=output),self.assertRaises(SystemExit):verify(found,{'dtk':say(output)})
+        with self.assertRaises(SystemExit):verify([('dtk','v1.8')],{'dtk':say('dtk 1.8.3')})  # a short pin is not a match
+        with self.assertRaises(SystemExit):verify(found,{'dtk':say('dtk 1.8.3',code=1)})  # the command must succeed
+        with self.assertRaises(SystemExit):verify(found,{'dtk':['/no/such/tool','--version']})
+        with self.assertRaises(SystemExit):verify(found,{'objdiff':say('objdiff 3.6.1')})
 
 
 if __name__=='__main__':unittest.main()
