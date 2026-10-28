@@ -149,9 +149,10 @@ class Targets(unittest.TestCase):
 
     def test_measuring_tools_reads_the_image_from_the_environment(self):
         configure='config.dtk_tag = "v1.8.3"\nconfig.objdiff_tag = "v3.6.1"\n'
-        self.assertEqual(measuring_tools(DIGEST,configure)[0],('build-environment',DIGEST))
-        with self.assertRaises(SystemExit):measuring_tools('ghcr.io/owner/game-build:main',configure)
-        with self.assertRaises(SystemExit):measuring_tools(DIGEST,'')
+        # pins=[]: these cases read configure.py whatever this repository's PINS names.
+        self.assertEqual(measuring_tools(DIGEST,configure,pins=[])[0],('build-environment',DIGEST))
+        with self.assertRaises(SystemExit):measuring_tools('ghcr.io/owner/game-build:main',configure,pins=[])
+        with self.assertRaises(SystemExit):measuring_tools(DIGEST,'',pins=[])
         pins=[{'dtk':{'version':'v1.8.4','linux-x86_64':{}}},{'objdiff':{'version':'v3.8.2'}}]
         self.assertEqual(measuring_tools(DIGEST,pins=pins)[1:],[('dtk','v1.8.4'),('objdiff','v3.8.2')])
         with self.assertRaises(SystemExit):measuring_tools(DIGEST,pins=[{'dtk':{}}])
