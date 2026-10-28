@@ -176,9 +176,13 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(s['code']['fuzzy'], group['fuzzy'])  # the other code group adds nothing
         publish.check_map(m, s)
         self.assertFalse(self.page_rejects(m, s))
+        # The exact sum put back, with the summary and the sections view kept consistent with it,
+        # so that only the group-against-children comparison can refuse it.
         m['files'][0]['fuzzy'] = exact
+        m['sections'][0]['fuzzy'] = exact
+        s['code']['fuzzy'] = exact
         self.assertTrue(self.page_rejects(m, s))
-        with self.assertRaisesRegex(publish.ContractError, 'fuzzy'):  # off its children and off the summary
+        with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
             publish.check_map(m, s)
 
     def page_rejects(self, map_doc, s):
