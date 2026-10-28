@@ -1,0 +1,126 @@
+<main class="wiki-layout" data-chapter="data-contract">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/" aria-current="page"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Pipeline <span aria-hidden="true">/</span> 11</span><a href="/docs/wiki/data-contract.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="data-contract">Data contract</h1>
+<p>The schema-1 files the publish action writes and the checker that enforces them.</p>
+<p>The authoritative text is <a href="https://github.com/mitsevox/mitsevox.github.io/blob/main/contract/README.md"><code>contract/README.md</code></a> in the site repository, and its executable form is <code>publish.py check &lt;tree&gt;</code>: if the two ever disagree, the checker is right. A copy of the contract is in the starter archive. This chapter restates it for the producer's point of view.</p>
+<h2 id="layout">Layout</h2>
+<pre><code class="language-text">index.json                          {&quot;schema&quot;: 1, &quot;games&quot;: [&quot;game&quot;, ...]}
+data/game/game.json                 presentation and the target list
+data/game/cover.webp                optional, committed by hand
+data/game/GAME01-rev0/latest.json   the newest measurement
+data/game/GAME01-rev0/history.json  every measurement, append-only
+data/game/GAME01-rev0/map.json      the newest measurement's tile map
+data/game/GAME01-rev0/contributors.json   optional
+</code></pre>
+<p>A <code>(game, target)</code> pair is the unit of everything; a game with one target has one entry. Only <code>active</code> targets have a directory. The producer owns <code>config/targets.json</code> and <code>config/site.json</code> (<a href="/wiki/targets/">Targets</a>); the action derives everything else from them and from the objdiff report.</p>
+<h2 id="gamejson">game.json</h2>
+<p><code>site.json</code> plus <code>repository</code> (<code>owner/game</code>), <code>defaultTarget</code> and <code>targets</code> from <code>targets.json</code>, with <code>schema: 1</code>. Rewritten by every publish of any active target.</p>
+<h2 id="latestjson">latest.json</h2>
+<pre><code class="language-json">{&quot;schema&quot;: 1, &quot;game&quot;: &quot;game&quot;, &quot;target&quot;: &quot;GAME01-rev0&quot;,
+ &quot;source&quot;: {&quot;revision&quot;: &quot;&lt;commit sha&gt;&quot;, &quot;committedAt&quot;: &quot;2026-01-02T00:00:00Z&quot;, &quot;title&quot;: &quot;&lt;commit subject&gt;&quot;,
+            &quot;url&quot;: &quot;https://github.com/owner/game/commit/&lt;sha&gt;&quot;,
+            &quot;runUrl&quot;: &quot;https://github.com/owner/game/actions/runs/&lt;id&gt;&quot;},
+ &quot;measuredAt&quot;: &quot;2026-01-02T00:01:00Z&quot;,
+ &quot;tools&quot;: [{&quot;name&quot;: &quot;build-environment&quot;, &quot;version&quot;: &quot;ghcr.io/owner/game-build@sha256:...&quot;},
+           {&quot;name&quot;: &quot;dtk&quot;, &quot;version&quot;: &quot;v1.8.3&quot;}, {&quot;name&quot;: &quot;objdiff&quot;, &quot;version&quot;: &quot;v3.6.1&quot;}],
+ &quot;summary&quot;: {
+   &quot;code&quot;: {&quot;total&quot;: 1618968, &quot;linked&quot;: 213044, &quot;matched&quot;: 260640, &quot;fuzzy&quot;: 292438.68},
+   &quot;data&quot;: {&quot;total&quot;: 870056, &quot;linked&quot;: 131316, &quot;matched&quot;: 157536, &quot;fuzzy&quot;: 183267.63},
+   &quot;functions&quot;: {&quot;total&quot;: 4746, &quot;exact&quot;: 1253, &quot;named&quot;: 2595},
+   &quot;files&quot;: {&quot;total&quot;: 519, &quot;exact&quot;: 119, &quot;named&quot;: 374}},
+ &quot;modules&quot;: {&quot;map&quot;: &quot;map.json&quot;, &quot;contributors&quot;: null}}
+</code></pre>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>source</code></td>
+<td>The measured commit: its SHA, commit time, subject, URL and the CI run that measured it (<code>runUrl</code> is the provenance)</td>
+</tr>
+<tr>
+<td><code>measuredAt</code></td>
+<td>The <code>measured-at</code> input, UTC</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>The <code>tools</code> input, one object per line</td>
+</tr>
+<tr>
+<td><code>summary.code</code>, <code>summary.data</code></td>
+<td>Bytes of the original: <code>total</code>, <code>linked</code> (units that link into the byte-identical executable), <code>matched</code> (bytes matching exactly, linked or not), <code>fuzzy</code> (size-weighted similarity; may be <code>null</code>)</td>
+</tr>
+<tr>
+<td><code>summary.functions</code></td>
+<td><code>total</code>, <code>exact</code> (100% match) and <code>named</code> (symbol is not <code>fn_&lt;hex&gt;</code> or <code>func_&lt;hex&gt;</code>); may be <code>null</code></td>
+</tr>
+<tr>
+<td><code>summary.files</code></td>
+<td>Units: <code>total</code>, <code>named</code> (not tool-generated) and <code>exact</code> (named and fully matched); may be <code>null</code></td>
+</tr>
+<tr>
+<td><code>modules</code></td>
+<td><code>map</code> names the map file; <code>contributors</code> names the optional contributors file or is <code>null</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>linked</code>, <code>matched</code> and <code>fuzzy</code> overlap and are never added together. <code>matched &lt;= fuzzy &lt;= total</code>.</p>
+<h2 id="historyjson">history.json</h2>
+<p>A JSON array, one row per line, ordered by <code>measuredAt</code>, at most one row per revision:</p>
+<pre><code class="language-json">[
+{&quot;code&quot;:{&quot;total&quot;:1610980,&quot;linked&quot;:0,&quot;matched&quot;:null,&quot;fuzzy&quot;:null},&quot;data&quot;:{&quot;total&quot;:870068,&quot;linked&quot;:0,&quot;matched&quot;:null,&quot;fuzzy&quot;:null},&quot;functions&quot;:null,&quot;measuredAt&quot;:&quot;2026-10-26T16:34:26Z&quot;,&quot;revision&quot;:&quot;&lt;sha&gt;&quot;,&quot;legacy&quot;:{&quot;provenance&quot;:{&quot;kind&quot;:&quot;measured&quot;,&quot;source&quot;:&quot;validate.yml run 40360367860&quot;}}},
+{&quot;code&quot;:{&quot;total&quot;:1618968,&quot;linked&quot;:213044,&quot;matched&quot;:260640,&quot;fuzzy&quot;:292438.68},&quot;data&quot;:{&quot;total&quot;:870056,&quot;linked&quot;:131316,&quot;matched&quot;:157536,&quot;fuzzy&quot;:183267.63},&quot;functions&quot;:{&quot;total&quot;:4746,&quot;exact&quot;:1253,&quot;named&quot;:2595},&quot;measuredAt&quot;:&quot;2026-10-27T19:52:22Z&quot;,&quot;revision&quot;:&quot;&lt;sha&gt;&quot;}
+]
+</code></pre>
+<p>Each row carries <code>revision</code>, <code>measuredAt</code>, <code>code</code>, <code>data</code> and <code>functions</code> from the measurement. The action appends one row per newly measured revision and never edits or removes a row. Rows imported from an older system keep whatever they had (missing measures are <code>null</code>) and their original provenance under <code>legacy</code>; nothing writes <code>legacy</code> today. The latest revision's row equals <code>latest.json</code>'s <code>total</code> and <code>linked</code>. The site draws the history chart from this file, so the first <code>main</code> publish starts the chart with one point; there is no way, and no need, to backfill.</p>
+<h2 id="mapjson">map.json</h2>
+<p><code>{"schema": 1, "files": [&lt;node&gt;, ...], "sections": [&lt;node&gt;, ...]}</code>: two views of the same bytes. <code>files</code> groups function tiles by source unit (what the page draws) and adds one data tile per unit; <code>sections</code> groups the same functions by code section plus one <code>Data sections</code> group. A node is <code>{"name", "kind": "code"|"data", "size", "linked", "matched", "fuzzy"}</code> plus either <code>address</code> (a leaf) or <code>mapped_extents</code> (<code>[{"start", "end"}]</code>, hex), and optionally <code>children</code>. Function leaves add <code>"type": "function"</code>, <code>function_address</code> and <code>original_size</code>.</p>
+<p>The checker enforces that a parent's measures are its children's sums, that extents never overlap, that both views cover exactly the same bytes, that per kind the top-level nodes sum to the summary, and that every function is covered once with counts matching the summary. The action builds the map from the same report as the summary, so a producer never writes it by hand.</p>
+<h2 id="contributorsjson">contributors.json</h2>
+<p>Optional; <code>modules.contributors</code> names it when present. Nothing in this guide produces it: the action writes <code>"contributors": null</code>. The shape, for a producer that adds its own step later, is <code>{"schema": 1, "credited_functions": N, "contributors": [{"id", "login", "functions"}], "functions": [{"id": "&lt;target&gt;:&lt;address&gt;:&lt;size&gt;", "authors": [id]}]}</code>, where every exact function is credited once and the totals agree with the summary. The page shows contributor rankings only when the file exists.</p>
+<h2 id="validation-rules-the-producer-meets">Validation rules the producer meets</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Where it bites</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Target ids <code>[A-Za-z0-9._-]+</code>, unique; default listed; platform lower case; <code>sha1</code> 40 lower-case hex; status in <code>active</code>, <code>planned</code>, <code>archived</code></td>
+<td><code>targets.json</code></td>
+</tr>
+<tr>
+<td><code>slug</code> <code>[a-z0-9][a-z0-9-]*</code>; <code>title</code> and <code>console</code> non-empty strings</td>
+<td><code>site.json</code></td>
+</tr>
+<tr>
+<td>Report function count and exact count equal its <code>measures</code></td>
+<td>The objdiff report; a mismatch means a different objdiff version or an edited report</td>
+</tr>
+<tr>
+<td>Every function inside a code section of its unit; data sections sum to the unit's <code>total_data</code></td>
+<td>The report against <code>code-sections</code></td>
+</tr>
+<tr>
+<td>Timestamps UTC ISO 8601</td>
+<td><code>measured-at</code></td>
+</tr>
+<tr>
+<td>One history row per revision, in <code>measuredAt</code> order</td>
+<td>Only the action writes it</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="versioning">Versioning</h2>
+<p>Adding a field never changes <code>schema</code>; readers ignore fields they do not know. A breaking change bumps <code>schema</code>, rewrites the whole data repository in one commit and switches the site in the same change; the action at <code>@main</code> follows, and producers pick it up on their next run without editing anything. Writers are strict and readers are lenient: the action refuses anything the checker rejects, and the site shows "unavailable" for a target whose files do not parse.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/publishing/"><small>Previous</small><span>Publishing</span></a><a href="/wiki/site/"><small>Next</small><span>The site</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#layout">Layout</a><a href="#gamejson">game.json</a><a href="#latestjson">latest.json</a><a href="#historyjson">history.json</a><a href="#mapjson">map.json</a><a href="#contributorsjson">contributors.json</a><a href="#validation-rules-the-producer-meets">Validation rules the producer meets</a><a href="#versioning">Versioning</a></nav></aside></main>

@@ -1,0 +1,77 @@
+<main class="wiki-layout" data-chapter="build-environment">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/" aria-current="page"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Foundation <span aria-hidden="true">/</span> 04</span><a href="/docs/wiki/build-environment.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="build-environment">Build environment</h1>
+<p>The private image that holds the originals and the toolchain, pinned by digest.</p>
+<p>CI must build with the original executable, and the original must never be public. The solution is a second, private repository whose only job is to build a container image containing the original and the exact toolchain, and to publish that image to GitHub Container Registry as a private package that the public repository's workflow may pull. The public repository then references the image by digest, so every build runs against a known set of bytes.</p>
+<h2 id="the-private-repository">The private repository</h2>
+<p>Create <code>owner/game-build</code> as a private repository. Copy the three files from the starter kit's <code>build-image/</code> directory to its root and commit the original under <code>orig/&lt;target id&gt;/</code>:</p>
+<pre><code class="language-text">game-build/
+  Dockerfile
+  .github/workflows/image.yml
+  README.md
+  orig/GAME01-rev0/main.dol
+</code></pre>
+<p>The original is committed to this repository on purpose: the image build copies it in and verifies its SHA-1, so the image can only be produced from the right file.</p>
+<h2 id="the-dockerfile">The Dockerfile</h2>
+<p>The starter Dockerfile is a three-stage build for a GameCube or Wii project:</p>
+<ol>
+<li><code>dependencies</code>: downloads the binutils and compiler archives, checks their SHA-256 and unpacks them to <code>/binutils</code> and <code>/compilers</code>.</li>
+<li><code>dtk</code>: clones decomp-toolkit at the tag <code>configure.py</code> pins, checks the commit and builds it to <code>/dtk</code>. A project patch to the toolkit is applied in this stage.</li>
+<li>The final image: copies every original to <code>/orig/&lt;target id&gt;/&lt;original path&gt;</code>, checks each SHA-1 against the value you also put in <code>config/targets.json</code>, copies the tools in, and installs <code>gcompat git ninja python3</code>.</li>
+</ol>
+<p>Parameters, each marked <code>PARAMETER</code> in the file: the archive URLs and checksums, the toolkit tag and commit, and one <code>COPY</code> plus one <code>sha1sum -c</code> line per active target. The base images are pinned by digest; keep them that way.</p>
+<p>What the final image must provide, whatever the platform, because <code>validate.yml</code> and the publish action run inside it:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/orig/&lt;target id&gt;/&lt;original path&gt;</code> for every active target</td>
+<td>The <code>Provide and verify target original</code> step copies it into the checkout</td>
+</tr>
+<tr>
+<td><code>sh</code>, <code>git</code>, <code>python3</code></td>
+<td>Composite action steps run with <code>sh</code>; <code>tools/</code> and <code>publish.py</code> are Python; <code>publish.py</code> runs <code>git log</code>, <code>git clone</code> and <code>git push</code></td>
+</tr>
+<tr>
+<td><code>gcompat</code> on Alpine</td>
+<td>The Actions runner mounts its own glibc Node.js into the container to run <code>actions/checkout</code> and the token-minting action</td>
+</tr>
+<tr>
+<td>The toolchain at fixed paths</td>
+<td>The configure command in <code>validate.yml</code> names them (<code>/usr/local/bin/dtk</code>, <code>/binutils</code>, <code>/compilers</code> in the starter)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="the-image-workflow">The image workflow</h2>
+<p><code>image.yml</code> runs on every push and pull request:</p>
+<ol>
+<li><code>Build image</code>: <code>docker build --tag ghcr.io/owner/game-build:candidate .</code></li>
+<li><code>Verify toolchain inside image</code>: runs <code>sha1sum</code> on each original and probes the tool files. Edit this step to match your Dockerfile (<code>PARAMETER</code>).</li>
+<li><code>Publish image</code>, on <code>main</code> only: logs in to <code>ghcr.io</code> with the workflow's <code>GITHUB_TOKEN</code>, pushes the tags <code>:main</code> and <code>:&lt;commit sha&gt;</code>, and appends the image digest (<code>ghcr.io/owner/game-build@sha256:...</code>) to the run summary.</li>
+</ol>
+<p>The job has <code>packages: write</code>; nothing else in either repository does.</p>
+<h2 id="owner-setup-after-the-first-publish">Owner setup after the first publish</h2>
+<p>These steps are done once, on GitHub, by the owner:</p>
+<ol>
+<li>Open the package <code>game-build</code> under the owner's packages and confirm its visibility is <strong>private</strong>. A package created by a workflow from a private repository starts private; check anyway.</li>
+<li>In the package settings, under <strong>Manage Actions access</strong>, add the repository <code>owner/game</code> with the <strong>Read</strong> role. This is what lets the public repository's workflow pull the image with its own <code>GITHUB_TOKEN</code>.</li>
+<li>Copy the digest from the <code>Publish image</code> step summary into <code>validate.yml</code> (<code>container.image</code>).</li>
+</ol>
+<p>The public workflow's <code>target</code> job declares <code>permissions: packages: read</code> and pulls with <code>credentials: {username: github.actor, password: secrets.GITHUB_TOKEN}</code>. No personal token is involved.</p>
+<h2 id="referencing-the-image-by-digest">Referencing the image by digest</h2>
+<p><code>validate.yml</code> names the image as <code>ghcr.io/owner/game-build@sha256:&lt;64 hex digits&gt;</code>, never <code>:main</code>. The digest is part of the measurement's provenance: <code>tools/measuring_tools.py</code> extracts exactly that line and the publish action records it as the <code>build-environment</code> tool in <code>latest.json</code>. Changing the digest is a reviewed change to <code>validate.yml</code>, and it is an owner decision: the image defines the compiler and the original, so a different image can change every number.</p>
+<p>The reference repositories keep the digest line commented with the image workflow run that produced it.</p>
+<h2 id="other-platforms">Other platforms</h2>
+<p>The pattern does not depend on the platform. For another console, the Dockerfile's <code>dependencies</code> stage fetches that platform's toolchain, the original goes under <code>/orig/&lt;target id&gt;/</code> at whatever path your build expects (the <code>ORIGINAL</code> constant in <code>tools/verify_target.py</code> and <code>PARAMETER 2</code> in <code>validate.yml</code> name it), and the configure and build commands in <code>validate.yml</code> change. A single image may hold several targets, and a reference binary from another platform may be added for comparison in the same way; it is just one more <code>COPY</code> with a checksum.</p>
+<h2 id="local-builds">Local builds</h2>
+<p>Contributors build locally with their own copy of the game and their own tool installation; the image is for CI. Running the image locally is possible with <code>docker run --rm -it -v "$PWD:/work" -w /work ghcr.io/owner/game-build@sha256:... sh</code> after <code>docker login ghcr.io</code>, but only for people who already hold the original, because pulling the image requires read access to the private package.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/targets/"><small>Previous</small><span>Targets</span></a><a href="/wiki/build-verify-measure/"><small>Next</small><span>Build, verify, measure</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#the-private-repository">The private repository</a><a href="#the-dockerfile">The Dockerfile</a><a href="#the-image-workflow">The image workflow</a><a href="#owner-setup-after-the-first-publish">Owner setup after the first publish</a><a href="#referencing-the-image-by-digest">Referencing the image by digest</a><a href="#other-platforms">Other platforms</a><a href="#local-builds">Local builds</a></nav></aside></main>

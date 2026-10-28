@@ -1,0 +1,120 @@
+<main class="wiki-layout" data-chapter="build-verify-measure">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/" aria-current="page"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Reconstruction <span aria-hidden="true">/</span> 05</span><a href="/docs/wiki/build-verify-measure.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="build-verify-measure">Build, verify, measure</h1>
+<p>Relink the original byte for byte, replace units with source and produce objdiff's report.</p>
+<p>Three things happen in one <code>ninja</code> invocation, locally and in CI: the original is split into objects and relinked, the objects marked <code>Matching</code> are replaced by compiled source and the result is checked against the expected hash, and objdiff measures every unit against its original. The publish action reads only the last step's output, <code>build/&lt;target id&gt;/report.json</code>.</p>
+<p>The commands below are for decomp-toolkit and dtk-template, which the reference repositories use for GameCube. The section at the end says what another platform must provide instead.</p>
+<h2 id="local-setup-for-a-dtk-template-project">Local setup for a dtk-template project</h2>
+<ol>
+<li>Start from <a href="https://github.com/encounter/dtk-template">dtk-template</a> (<code>configure.py</code>, <code>tools/project.py</code> and the rest of its <code>tools/</code>). Follow its documentation for <code>config/&lt;target id&gt;/config.yml</code>, <code>splits.txt</code> and <code>symbols.txt</code>; those are the platform-specific part this guide cannot write for you.</li>
+<li>
+<p>Wire <code>configure.py</code> to the target list so the active targets are the only versions it accepts and <code>--version</code> takes a target id. Replace dtk-template's hard-coded <code>VERSIONS</code> list with:</p>
+<p>```python
+from tools.targets import registry, build_targets</p>
+<p>TARGET_REGISTRY = registry()
+VERSIONS = build_targets(TARGET_REGISTRY)
+DEFAULT_VERSION = VERSIONS.index(TARGET_REGISTRY['defaultTarget'])
+```</p>
+<p>and add <code>Path("config/targets.json")</code> and <code>Path("tools/targets.py")</code> to <code>config.reconfig_deps</code>. dtk-template already builds each version into <code>build/&lt;version&gt;/</code>, which is what makes <code>build/&lt;target id&gt;/</code> the generated directory.
+3. Keep <code>config.dtk_tag</code> and <code>config.objdiff_tag</code> in <code>configure.py</code> as the single place tool versions are pinned; <code>tools/measuring_tools.py</code> reads them, and the Dockerfile builds the same dtk tag.
+4. Place your own copy of the original at <code>orig/&lt;target id&gt;/sys/main.dol</code> (the path <code>config.yml</code> and <code>tools/verify_target.py</code> name; <code>orig/*/*</code> is ignored by Git) and verify it:</p>
+<p><code>sh
+python3 tools/verify_target.py --target GAME01-rev0</code></p>
+</li>
+<li>
+<p>Configure and build:</p>
+<p><code>sh
+python3 configure.py --version GAME01-rev0
+ninja -f build/GAME01-rev0/build.ninja</code></p>
+<p>The generated build downloads dtk, objdiff and the compilers at their pinned tags unless <code>--dtk</code>, <code>--objdiff</code> and <code>--compilers</code> point at local copies. The build fails unless the linked executable's SHA-1 equals <code>config/&lt;target id&gt;/build.sha1</code>, which must equal the original's hash from <code>targets.json</code>.</p>
+</li>
+<li>
+<p>Measure:</p>
+<p><code>sh
+ninja -f build/GAME01-rev0/build.ninja progress build/GAME01-rev0/report.json</code></p>
+<p><code>progress</code> prints the per-category summary; <code>build/&lt;target id&gt;/report.json</code> is the objdiff report CI publishes. This is exactly the command the starter <code>validate.yml</code> runs, after the same <code>configure.py</code> call with the image's tool paths.</p>
+</li>
+</ol>
+<h2 id="what-the-three-measures-mean">What the three measures mean</h2>
+<p>Each object in <code>configure.py</code> is declared <code>Matching</code> or <code>NonMatching</code> (dtk-template's <code>Equivalent</code> is for <code>--non-matching</code> builds and never counts). The publish action turns objdiff's report into the contract's three measures:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Measure</th>
+<th>Source in the report</th>
+<th>What it says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linked</code></td>
+<td><code>complete_code</code> and <code>complete_data</code>: units whose <code>metadata.complete</code> is true, which dtk-template's generated <code>objdiff.json</code> sets for <code>Matching</code> objects</td>
+<td>Bytes that compile from source into the byte-identical executable</td>
+</tr>
+<tr>
+<td><code>matched</code></td>
+<td><code>matched_code</code> and <code>matched_data</code>: functions at 100% and data sections at 100%, in any unit</td>
+<td>Bytes that match exactly, linked or not</td>
+</tr>
+<tr>
+<td><code>fuzzy</code></td>
+<td><code>size * fuzzy_match_percent / 100</code> summed over functions, and over data sections, by the action itself</td>
+<td>Size-weighted similarity</td>
+</tr>
+</tbody>
+</table></div>
+<p>So a <code>NonMatching</code> unit with three exact functions out of ten contributes those three functions' bytes to <code>matched</code>, their fuzzy score to <code>fuzzy</code>, and nothing to <code>linked</code>; the original bytes stay linked. Promoting the unit to <code>Matching</code> moves its whole size into <code>linked</code>. Function counts come from the report too: <code>exact</code> is functions at 100%, <code>named</code> is functions whose symbol is not <code>fn_&lt;hex&gt;</code> or <code>func_&lt;hex&gt;</code>. File counts treat each unit as a file, <code>named</code> when the unit is not <code>auto_generated</code> and <code>exact</code> when it is named and both its code and data are fully matched.</p>
+<p>The action checks the report's own totals against its function list and refuses a report whose numbers disagree, so a report from an unexpected objdiff version fails the publish step rather than publishing wrong numbers. Pin <code>config.objdiff_tag</code> and change it deliberately.</p>
+<h2 id="partial-source">Partial source</h2>
+<p>Useful partial reconstruction stays in its normal file under <code>src/</code> and is registered as a <code>NonMatching</code> object. The combined executable still matches because the original bytes for that unit remain linked; objdiff measures the source separately. Reviewers and CI treat matching incompleteness as progress, not as a failure. See <a href="/wiki/contribution-workflow/">Contribution workflow</a> for how partial units are reviewed and promoted.</p>
+<h2 id="reading-the-report">Reading the report</h2>
+<p>The publish action reads these parts of <code>report.json</code>, so any producer must write them the way objdiff does:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Path in the report</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>measures.total_code</code>, <code>matched_code</code>, <code>complete_code</code>, <code>total_data</code>, <code>matched_data</code>, <code>complete_data</code>, <code>total_functions</code>, <code>matched_functions</code></td>
+<td>The summary; 64-bit values are strings, zero values may be absent</td>
+</tr>
+<tr>
+<td><code>units[].name</code></td>
+<td>Unit name; the <code>unit-prefix</code> input (default <code>main/</code>) is stripped for display</td>
+</tr>
+<tr>
+<td><code>units[].metadata.complete</code>, <code>units[].metadata.auto_generated</code></td>
+<td>Linked status and tool-generated units</td>
+</tr>
+<tr>
+<td><code>units[].measures.total_data</code>, <code>matched_data</code>, and <code>matched_code</code>, <code>total_code</code></td>
+<td>Per-unit data tile and the exact-file test</td>
+</tr>
+<tr>
+<td><code>units[].sections[]</code>: <code>name</code>, <code>size</code>, <code>fuzzy_match_percent</code>, <code>metadata.virtual_address</code></td>
+<td>Section extents; sections named in <code>code-sections</code> (default <code>.init,.text</code>) are code, all others data</td>
+</tr>
+<tr>
+<td><code>units[].functions[]</code>: <code>name</code>, <code>size</code>, <code>fuzzy_match_percent</code>, <code>metadata.virtual_address</code></td>
+<td>Function tiles and counts</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every function must lie inside one of the code sections of its unit, or the action stops with <code>&lt;unit&gt;: &lt;function&gt; lies outside the code sections</code>. A platform whose code lives in differently named sections passes <code>code-sections</code> to the action (<a href="/wiki/publishing/">Publishing</a>).</p>
+<h2 id="other-platforms">Other platforms</h2>
+<p>The publish action converts objdiff reports and nothing else. objdiff supports several architectures, so a project on another platform that produces <code>report.json</code> with <code>objdiff-cli report generate</code> can use the whole pipeline unchanged apart from these parameters:</p>
+<ul>
+<li>the original's path under <code>orig/&lt;target id&gt;/</code> (<code>ORIGINAL</code> in <code>tools/verify_target.py</code>, <code>PARAMETER 2</code> in <code>validate.yml</code>, the <code>COPY</code> in the Dockerfile);</li>
+<li>the configure and build commands (<code>PARAMETER 3</code> in <code>validate.yml</code>), which must fail unless the complete executable matches and must write <code>build/&lt;target id&gt;/report.json</code>;</li>
+<li>the <code>code-sections</code> and <code>unit-prefix</code> inputs of the publish action if the defaults do not fit;</li>
+<li>the <code>TAGS</code> dictionary in <code>tools/measuring_tools.py</code>, which names the version lines of <code>configure.py</code> to report.</li>
+</ul>
+<p>A project that cannot produce an objdiff report cannot use the publish action as shipped; that is a site-side change and outside this guide.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/build-environment/"><small>Previous</small><span>Build environment</span></a><a href="/wiki/evidence/"><small>Next</small><span>Evidence</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#local-setup-for-a-dtk-template-project">Local setup for a dtk-template project</a><a href="#what-the-three-measures-mean">What the three measures mean</a><a href="#partial-source">Partial source</a><a href="#reading-the-report">Reading the report</a><a href="#other-platforms">Other platforms</a></nav></aside></main>

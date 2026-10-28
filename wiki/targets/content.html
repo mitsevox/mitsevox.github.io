@@ -1,0 +1,198 @@
+<main class="wiki-layout" data-chapter="targets">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/" aria-current="page"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Foundation <span aria-hidden="true">/</span> 03</span><a href="/docs/wiki/targets.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="targets">Targets</h1>
+<p><code>config/targets.json</code>, <code>config/site.json</code> and <code>config/ci-targets.json</code>, field by field.</p>
+<p>A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement. The three files below are the producer's only inputs to the site apart from the objdiff report. Copies with placeholders are in the <a href="/wiki/starter-kit/">starter kit</a>.</p>
+<h2 id="configtargetsjson">config/targets.json</h2>
+<pre><code class="language-json">{
+  &quot;schema&quot;: 1,
+  &quot;defaultTarget&quot;: &quot;GAME01-rev0&quot;,
+  &quot;targets&quot;: [
+    {&quot;id&quot;: &quot;GAME01-rev0&quot;, &quot;platform&quot;: &quot;gamecube&quot;, &quot;label&quot;: &quot;GAME01&quot;, &quot;region&quot;: &quot;USA&quot;, &quot;revision&quot;: &quot;0&quot;,
+     &quot;sha1&quot;: &quot;0000000000000000000000000000000000000000&quot;, &quot;status&quot;: &quot;active&quot;},
+    {&quot;id&quot;: &quot;GAME01-rev1&quot;, &quot;platform&quot;: &quot;gamecube&quot;, &quot;label&quot;: &quot;GAME01&quot;, &quot;region&quot;: &quot;USA&quot;, &quot;revision&quot;: &quot;1&quot;,
+     &quot;sha1&quot;: &quot;1111111111111111111111111111111111111111&quot;, &quot;status&quot;: &quot;planned&quot;}
+  ]
+}
+</code></pre>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema</code></td>
+<td>Format version</td>
+<td>Always <code>1</code></td>
+</tr>
+<tr>
+<td><code>defaultTarget</code></td>
+<td>The target the game page and hub card show first</td>
+<td>Must be listed, and must be <code>active</code></td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>The target's identity: directory names, <code>?target=</code>, the data directory</td>
+<td><code>[A-Za-z0-9._-]+</code>, unique, never changed once published</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td>Lower-case platform name</td>
+<td><code>[a-z0-9]+</code>, for example <code>gamecube</code>, <code>wii</code>, <code>ps2</code></td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>Display: the game id on disc; the target picker groups by it</td>
+<td>Non-empty string</td>
+</tr>
+<tr>
+<td><code>region</code></td>
+<td>Display</td>
+<td>Non-empty string</td>
+</tr>
+<tr>
+<td><code>revision</code></td>
+<td>Display: the disc revision, unrelated to Git revisions; the picker groups by it under <code>label</code></td>
+<td>Non-empty string</td>
+</tr>
+<tr>
+<td><code>sha1</code></td>
+<td>SHA-1 of the original executable</td>
+<td>40 lower-case hex digits</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>active</code>: built, verified, measured, published. <code>planned</code> or <code>archived</code>: listed on the page, never built</td>
+<td>One of the three</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two readers validate this file and both must accept it. <code>tools/targets.py</code> (starter) rejects any other field, requires exactly <code>schema</code>, <code>defaultTarget</code> and <code>targets</code> at the top level, and requires <code>defaultTarget</code> to be active. The publish action's <code>publish.py</code> reads the seven fields above, requires the default to be listed and writes the list verbatim into <code>game.json</code>. Run <code>python3 -m unittest discover -s tests -p 'test_*.py'</code> after every edit: <code>tests/test_targets.py</code> loads the file.</p>
+<p>Every active target needs a directory <code>config/&lt;id&gt;/</code>, an original in the build image at <code>/orig/&lt;id&gt;/&lt;original path&gt;</code>, and an entry in <code>config/ci-targets.json</code>. A <code>planned</code> or <code>archived</code> target needs only the <code>ci-targets.json</code> entry (the planner requires every listed target to be covered) and may have an empty <code>config/&lt;id&gt;/</code>.</p>
+<p>To find the SHA-1 of an original:</p>
+<pre><code class="language-sh">sha1sum /path/to/main.dol        # Linux
+shasum -a 1 /path/to/main.dol    # macOS
+</code></pre>
+<h2 id="configsitejson">config/site.json</h2>
+<pre><code class="language-json">{
+  &quot;schema&quot;: 1,
+  &quot;slug&quot;: &quot;game&quot;,
+  &quot;title&quot;: &quot;A Game: Full Title&quot;,
+  &quot;shortTitle&quot;: &quot;A Game&quot;,
+  &quot;console&quot;: &quot;GameCube&quot;,
+  &quot;year&quot;: &quot;2002&quot;,
+  &quot;contributions&quot;: {&quot;accepting&quot;: false},
+  &quot;artwork&quot;: {&quot;cover&quot;: &quot;cover.webp&quot;, &quot;width&quot;: 1112, &quot;height&quot;: 1600}
+}
+</code></pre>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema</code></td>
+<td>Format version</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td>The game's name everywhere on the site and in the data repository</td>
+<td><code>[a-z0-9][a-z0-9-]*</code>, required</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>Full title shown on the page</td>
+<td>Required, non-empty</td>
+</tr>
+<tr>
+<td><code>shortTitle</code></td>
+<td>Shorter title for the hub card</td>
+<td>Optional; defaults to <code>title</code></td>
+</tr>
+<tr>
+<td><code>console</code></td>
+<td>Display name of the console; the hub filters by it and it picks the console icon</td>
+<td>Required, non-empty</td>
+</tr>
+<tr>
+<td><code>year</code></td>
+<td>Release year, a string</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>contributions</code></td>
+<td><code>{"accepting": true, "guideUrl": "&lt;url&gt;"}</code> shows a Contribute link to that URL; <code>accepting: false</code> hides it</td>
+<td>Optional; defaults to <code>{"accepting": false}</code></td>
+</tr>
+<tr>
+<td><code>artwork</code></td>
+<td><code>cover</code> is a file name relative to <code>data/&lt;slug&gt;/</code> in the data repository, <code>width</code> and <code>height</code> its pixel size</td>
+<td>Optional; add it only after committing the cover (<a href="/wiki/site/">The site</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The publish action copies this file into <code>game.json</code> on every publish, adding <code>repository</code> (from the CI run's <code>GITHUB_REPOSITORY</code>), <code>defaultTarget</code> and <code>targets</code>. Changing the presentation is therefore an edit to this file followed by a merge to <code>main</code>; the next publish of any active target rewrites <code>game.json</code>.</p>
+<h2 id="configci-targetsjson">config/ci-targets.json</h2>
+<pre><code class="language-json">{
+  &quot;schemaVersion&quot;: 1,
+  &quot;shared&quot;: [&quot;src/**&quot;, &quot;include/**&quot;, &quot;asm/**&quot;, &quot;configure.py&quot;, &quot;tools/**&quot;, &quot;.github/workflows/validate.yml&quot;,
+             &quot;config/targets.json&quot;, &quot;config/ci-targets.json&quot;, &quot;config/site.json&quot;],
+  &quot;targets&quot;: {
+    &quot;GAME01-rev0&quot;: [&quot;config/GAME01-rev0/**&quot;, &quot;orig/GAME01-rev0/**&quot;],
+    &quot;GAME01-rev1&quot;: [&quot;config/GAME01-rev1/**&quot;, &quot;orig/GAME01-rev1/**&quot;]
+  },
+  &quot;nonBuild&quot;: [&quot;*.md&quot;, &quot;docs/**&quot;, &quot;references/**&quot;, &quot;tests/**&quot;, &quot;.github/workflows/review.yml&quot;,
+               &quot;.github/pull_request_template.md&quot;, &quot;.gitignore&quot;, &quot;.gitattributes&quot;]
+}
+</code></pre>
+<p><code>tools/ci_targets.py</code> reads it in the <code>Plan affected targets</code> job and decides which active targets a push or pull request must build:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>A changed path that matches</th>
+<th>Selects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a <code>shared</code> pattern</td>
+<td>every active target</td>
+</tr>
+<tr>
+<td>a <code>targets.&lt;id&gt;</code> pattern</td>
+<td>that target, if active</td>
+</tr>
+<tr>
+<td>a <code>nonBuild</code> pattern only</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>no pattern at all</td>
+<td>every active target (unknown paths never skip validation)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Patterns are <code>fnmatch</code> globs matched against the repository-relative path; <code>*</code> and <code>**</code> both match across <code>/</code>. Rules: <code>schemaVersion</code> is <code>1</code>; the four keys are exactly <code>schemaVersion</code>, <code>shared</code>, <code>targets</code> and <code>nonBuild</code>; <code>targets</code> must name every target in <code>targets.json</code>, including planned and archived ones; no pattern may start with <code>/</code> or contain <code>..</code>. A manual run (<code>workflow_dispatch</code>), a push with no known base (first push, force push) and a changed path that cannot be diffed all select every active target.</p>
+<p>A change that selects no target still runs the <code>Tool tests</code> job and passes the <code>Validate targets</code> check.</p>
+<h2 id="adding-or-changing-a-target">Adding or changing a target</h2>
+<ol>
+<li>Commit the original to the private repository under <code>orig/&lt;id&gt;/</code>, add its <code>COPY</code> and checksum lines to the Dockerfile and the <code>image.yml</code> verification, push, and take the new digest (<a href="/wiki/build-environment/">Build environment</a>).</li>
+<li>Add the entry to <code>config/targets.json</code> (<code>status: active</code>), its patterns to <code>config/ci-targets.json</code> and its inputs to <code>config/&lt;id&gt;/</code>.</li>
+<li>Point <code>validate.yml</code> at the new digest.</li>
+<li>Push to <code>main</code>. The data directory <code>data/&lt;slug&gt;/&lt;id&gt;/</code> appears with the first publish.</li>
+</ol>
+<p>Setting a published target to <code>archived</code> keeps its data directory and history in the data repository, but the site reads <code>latest.json</code> only for <code>active</code> targets, so the page lists it without a measurement. Removing a target from the list entirely removes it from <code>game.json</code> on the next publish; the data directory is deleted by hand, if at all.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/repository-layout/"><small>Previous</small><span>Repository layout</span></a><a href="/wiki/build-environment/"><small>Next</small><span>Build environment</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#configtargetsjson">config/targets.json</a><a href="#configsitejson">config/site.json</a><a href="#configci-targetsjson">config/ci-targets.json</a><a href="#adding-or-changing-a-target">Adding or changing a target</a></nav></aside></main>

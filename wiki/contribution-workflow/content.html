@@ -1,0 +1,65 @@
+<main class="wiki-layout" data-chapter="contribution-workflow">
+<aside class="wiki-sidebar">
+<label class="wiki-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg><input type="search" placeholder="Search the wiki" aria-label="Search the wiki" autocomplete="off"></label>
+<p class="wiki-search-status sr-only" role="status" aria-live="polite"></p><div class="wiki-results" hidden></div>
+<details class="wiki-chapters" open><summary>Chapters</summary><nav class="wiki-nav" aria-label="Wiki chapters"><p class="wiki-nav-group">Foundation</p><a href="/wiki/"><span class="wiki-nav-number">01</span>Start here</a><a href="/wiki/repository-layout/"><span class="wiki-nav-number">02</span>Repository layout</a><a href="/wiki/targets/"><span class="wiki-nav-number">03</span>Targets</a><a href="/wiki/build-environment/"><span class="wiki-nav-number">04</span>Build environment</a><p class="wiki-nav-group">Reconstruction</p><a href="/wiki/build-verify-measure/"><span class="wiki-nav-number">05</span>Build, verify, measure</a><a href="/wiki/evidence/"><span class="wiki-nav-number">06</span>Evidence</a><p class="wiki-nav-group">Contribution</p><a href="/wiki/contribution-workflow/" aria-current="page"><span class="wiki-nav-number">07</span>Contribution workflow</a><a href="/wiki/review-gate/"><span class="wiki-nav-number">08</span>Review gate</a><p class="wiki-nav-group">Pipeline</p><a href="/wiki/ci/"><span class="wiki-nav-number">09</span>CI</a><a href="/wiki/publishing/"><span class="wiki-nav-number">10</span>Publishing</a><a href="/wiki/data-contract/"><span class="wiki-nav-number">11</span>Data contract</a><a href="/wiki/site/"><span class="wiki-nav-number">12</span>The site</a><p class="wiki-nav-group">Reference</p><a href="/wiki/troubleshooting/"><span class="wiki-nav-number">13</span>Troubleshooting</a><a href="/wiki/starter-kit/"><span class="wiki-nav-number">14</span>Starter kit</a></nav></details></aside>
+<div class="wiki-reading"><div class="wiki-meta"><span>Contribution <span aria-hidden="true">/</span> 07</span><a href="/docs/wiki/contribution-workflow.md" download>Markdown ↓</a></div>
+<article class="wiki-article"><h1 id="contribution-workflow">Contribution workflow</h1>
+<p>Bounded tasks, isolated branches, independent reviews and an owner-only merge.</p>
+<p>This is the default contribution policy. It is written for people and agents alike: the same rules, the same records, the same gate. The starter <code>CONTRIBUTING.md</code> states it in full and <code>AGENTS.md</code> summarizes it for agents; both go into the repository with the parameters filled in. The owner may adopt a different policy, but then <code>CONTRIBUTING.md</code>, <code>AGENTS.md</code> and the <a href="/wiki/review-gate/">review gate</a> change together.</p>
+<h2 id="authority">Authority</h2>
+<p>Only the owner (<code>OWNER_LOGIN</code>) merges into <code>main</code>. Contributors and agents prepare branches, open PRs and review. A <code>SHIP</code> verdict, a green CI run and an owner clearance comment are three different states, and none of them lets a contributor merge.</p>
+<p>Optionally, the owner delegates clearance and merging to a <strong>merge gate</strong>: one agent acting under the owner's account, on a standing basis the owner can revoke. The gate checks reviewer independence, commissions missing reviews from fresh reviewers, posts clearance and squash-merges; it never authors contributions, never pushes to <code>main</code>, and escalates to the owner anything the rules reserve for the owner (matching-integrity exceptions, workflow and approval-control changes, dependency changes). If there is no merge gate, delete that section of the starter <code>CONTRIBUTING.md</code> and the references to it in <code>AGENTS.md</code>.</p>
+<p>Nobody but the owner changes branch protection, <code>review.yml</code>, <code>REVIEW_OWNER</code>, the build image or its access controls. A dependency problem is reported in an issue, not fixed by changing the dependency.</p>
+<h2 id="one-task-start-to-finish">One task, start to finish</h2>
+<ol>
+<li><strong>Reserve.</strong> Check open PRs and active branches. Record a bounded reservation in an issue or draft PR: the specific functions or unit, the branch and the shared files it touches. Reserve the batch being worked on, not a subsystem. A reservation expires after 48 hours without a progress update; release scope you abandon, and check existing branches before taking over expired work.</li>
+<li><strong>Branch.</strong> Work on a dedicated branch from current <code>main</code>, in your own checkout or worktree: <code>git switch -c your-task</code>. Branches live in the repository, not in forks; CI refuses to build a fork's pull request because fork builds would otherwise reach the private image.</li>
+<li><strong>Establish evidence.</strong> Boundaries, types and references before source; see <a href="/wiki/evidence/">Evidence</a>. Search existing headers and accepted units before declaring a shared address.</li>
+<li><strong>Reconstruct and measure.</strong> Compile and compare with objdiff. Keep discarded variants local. Register partial work as a <code>NonMatching</code> object in <code>configure.py</code> so CI measures it; promote to <code>Matching</code> when the unit links byte-identically. The source file does not move on promotion.</li>
+<li><strong>Record.</strong> Add <code>evidence.tsv</code> rows for every name, boundary, type and compiler claim in the same PR. Keep source comments free of scores and process notes.</li>
+<li><strong>Self-check.</strong> Build the complete executable (<code>ninja -f build/&lt;target id&gt;/build.ninja</code>) and confirm it still matches; run <code>ninja ... progress</code> and compare with the base revision; list unresolved functions and shared-file changes.</li>
+<li><strong>Blind accuracy review.</strong> A reviewer who did not author or shape the reconstruction interprets the scoped functions with the proposed names and comments withheld, then reconciles that interpretation with the submission and posts an <code>Accuracy:</code> record.</li>
+<li><strong>Hostile review.</strong> A fresh reviewer applies the checklist in <code>CONTRIBUTING.md</code> (source fidelity, compiler settings, types and layouts, names, comments, unit boundaries, comparison integrity, validation) and posts a <code>Hostile:</code> record with <code>SHIP</code>, <code>FIX</code>, <code>REDO</code> or <code>BLOCKED</code>.</li>
+<li><strong>Resolve and recheck.</strong> Fix findings; the reviewer rechecks the delta, not the whole PR, and posts a final-revision record that cites the earlier one.</li>
+<li><strong>Submit.</strong> Fill the PR template: scope, evidence and validation, review records. Request the owner's decision only when CI and both records cover the final revision.</li>
+<li><strong>Owner clearance and merge.</strong> The owner (or merge gate) posts the clearance comment; <code>Owner review clearance</code> turns green; the owner merges. On <code>main</code>, CI builds and publishes.</li>
+</ol>
+<h2 id="reviewer-independence">Reviewer independence</h2>
+<p>Independence is about authorship and prior reasoning, not display names. A second agent spawned with the author's conversation is not independent; a reviewer given the task, the target evidence, the relevant configuration and the validation artifacts in a fresh context is. Each record states the reviewer's identity, prior involvement, supplied inputs and the reviewed revision. If isolation is impossible, disclose it; never assert an independent pass that did not occur.</p>
+<p>Partial source is reviewed for fidelity, evidence and comparison integrity. A measured mismatch is not a finding. A reviewer may return <code>SHIP</code> with documented incompleteness.</p>
+<h2 id="rechecks-refreshes-and-batches">Rechecks, refreshes and batches</h2>
+<p>After a fix, the reviewer checks the finding, the correction and its affected dependencies and carries the rest of the coverage forward by linking the earlier record and its revision. A replacement reviewer may continue from that record. A full restart needs a concrete reason that invalidates coverage across the PR.</p>
+<p>After refreshing from <code>main</code>, verify the diff, conflict resolutions and shared declarations, then post final-revision records that cite the earlier ones and name the checked delta. An earlier verdict does not cover a new head; the review gate enforces this mechanically by comparing the revision in each record with the PR head.</p>
+<p>Compatible bounded contributions may be batched into one PR with each original PR, author revision and review coverage identified; the combined delta is reviewed and CI runs on the combined tree. Compiler-profile and comparison changes get their own review and never ride along in unrelated work.</p>
+<h2 id="delivery">Delivery</h2>
+<p>Every handoff states: changed files, evidence, the validation commands and their results on which revision, unresolved findings and the exact review and publication state. "Implemented", "reviewed", "CI passed", "owner cleared", "merged" and "published" are different states. Do not keep running diaries of agent activity in the repository; PRs and issues are the record.</p>
+<h2 id="the-files">The files</h2>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What to fill in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CONTRIBUTING.md</code></td>
+<td><code>OWNER_LOGIN</code>, <code>owner/game</code>, the target directory, the README's build section link; delete the merge-gate section if unused</td>
+</tr>
+<tr>
+<td><code>AGENTS.md</code></td>
+<td><code>OWNER_LOGIN</code>, the target directory; delete the merge-gate sentence if unused</td>
+</tr>
+<tr>
+<td><code>.github/pull_request_template.md</code></td>
+<td>Nothing; it is generic</td>
+</tr>
+<tr>
+<td><code>README.md</code></td>
+<td>Yours: the game, platform, region and revision, the original's SHA-1, the owner, the build commands, links to <code>CONTRIBUTING.md</code> and <code>AGENTS.md</code>; the README is what the other two files point readers at</td>
+</tr>
+</tbody>
+</table></div>
+<p>The record formats and the clearance comment the gate checks are specified in the next chapter and repeated in <code>CONTRIBUTING.md</code>.</p></article><nav class="wiki-pagination" aria-label="Handbook pagination"><a href="/wiki/evidence/"><small>Previous</small><span>Evidence</span></a><a href="/wiki/review-gate/"><small>Next</small><span>Review gate</span></a></nav></div>
+<aside class="wiki-on-page"><nav aria-label="On this page"><a href="#authority">Authority</a><a href="#one-task-start-to-finish">One task, start to finish</a><a href="#reviewer-independence">Reviewer independence</a><a href="#rechecks-refreshes-and-batches">Rechecks, refreshes and batches</a><a href="#delivery">Delivery</a><a href="#the-files">The files</a></nav></aside></main>
