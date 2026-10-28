@@ -1,1 +1,198 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="config/targets.json, config/site.json and config/ci-targets.json, field by field."><title>Targets · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="config/targets.json, config/site.json and config/ci-targets.json, field by field."><title>Targets · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><noscript><article class="wiki-article"><h1 id="targets">Targets</h1>
+<p><code>config/targets.json</code>, <code>config/site.json</code> and <code>config/ci-targets.json</code>, field by field, and what adding a target takes.</p>
+<p>A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement.</p>
+<p><strong>Lay out every project as multi-target from the first commit, even with one disc.</strong> The target id always carries its revision (<code>GAME01-rev0</code>, never a bare <code>GAME01</code>), every per-target path is keyed by that id, and <code>targets.json</code> is a list with one entry. Adding a revision or region later is then a new folder and a new list entry; nothing is renamed or moved. A target id is permanent once published, because it names the target's directory in the data repository and the <code>?target=</code> value in its URLs. The three files below are the producer's only inputs to the site apart from the objdiff report. Copies with placeholders are in the <a href="/wiki/starter-kit/">starter kit</a>.</p>
+<h2 id="configtargetsjson">config/targets.json</h2>
+<pre><code class="language-json">{
+  &quot;schema&quot;: 1,
+  &quot;defaultTarget&quot;: &quot;GAME01-rev0&quot;,
+  &quot;targets&quot;: [
+    {&quot;id&quot;: &quot;GAME01-rev0&quot;, &quot;platform&quot;: &quot;gamecube&quot;, &quot;label&quot;: &quot;GAME01&quot;, &quot;region&quot;: &quot;USA&quot;, &quot;revision&quot;: &quot;0&quot;,
+     &quot;sha1&quot;: &quot;0000000000000000000000000000000000000000&quot;, &quot;status&quot;: &quot;active&quot;},
+    {&quot;id&quot;: &quot;GAME01-rev1&quot;, &quot;platform&quot;: &quot;gamecube&quot;, &quot;label&quot;: &quot;GAME01&quot;, &quot;region&quot;: &quot;USA&quot;, &quot;revision&quot;: &quot;1&quot;,
+     &quot;sha1&quot;: &quot;1111111111111111111111111111111111111111&quot;, &quot;status&quot;: &quot;planned&quot;}
+  ]
+}
+</code></pre>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema</code></td>
+<td>Format version</td>
+<td>Always <code>1</code></td>
+</tr>
+<tr>
+<td><code>defaultTarget</code></td>
+<td>The target the game page and hub card show first</td>
+<td>Must be listed, and must be <code>active</code></td>
+</tr>
+<tr>
+<td><code>id</code></td>
+<td>The target's identity: directory names, <code>?target=</code>, the data directory, the define</td>
+<td><code>[A-Za-z0-9._-]+</code>, unique, never changed once published; no two ids may give the same define</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td>Lower-case platform name</td>
+<td><code>[a-z0-9]+</code>, for example <code>gamecube</code>, <code>wii</code>, <code>ps2</code></td>
+</tr>
+<tr>
+<td><code>label</code></td>
+<td>Display: the game id on disc; the target picker groups by it</td>
+<td>Non-empty string</td>
+</tr>
+<tr>
+<td><code>region</code></td>
+<td>Display</td>
+<td>Non-empty string</td>
+</tr>
+<tr>
+<td><code>revision</code></td>
+<td>Display: the disc revision, unrelated to Git revisions; the picker groups by it under <code>label</code></td>
+<td>Non-empty string</td>
+</tr>
+<tr>
+<td><code>sha1</code></td>
+<td>SHA-1 of the original executable</td>
+<td>40 lower-case hex digits</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>active</code>: built, verified, measured, published. <code>planned</code> or <code>archived</code>: listed on the page, never built</td>
+<td>One of the three</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two readers validate this file and both must accept it. <code>tools/targets.py</code> (starter) rejects any other field, requires exactly <code>schema</code>, <code>defaultTarget</code> and <code>targets</code> at the top level, and requires <code>defaultTarget</code> to be active. The publish action's <code>publish.py</code> reads the seven fields above, requires the default to be listed and writes the list verbatim into <code>game.json</code>. Run <code>python3 -m unittest discover -s tests -p 'test_*.py'</code> after every edit: <code>tests/test_targets.py</code> loads the file.</p>
+<p><code>tools/targets.py</code> is the one reader of this file in the repository: <code>configure.py</code> takes its version list from it, the CI planner derives each target's paths from it, and <code>python3 tools/targets.py check</code> confirms that the three places a hash lives agree per target (<code>targets.json</code>, <code>config/&lt;id&gt;/config.yml</code> and <code>config/&lt;id&gt;/build.sha1</code>) and that every target has its files. The <code>Tool tests</code> job runs it.</p>
+<h2 id="what-active-requires">What <code>active</code> requires</h2>
+<p>An active target has an entry here with the original's SHA-1; <code>config/&lt;id&gt;/</code> with the toolkit inputs (<code>config.yml</code>, <code>splits.txt</code>, <code>symbols.txt</code> for decomp-toolkit), <code>build.sha1</code>, <code>evidence.tsv</code> and <code>README.md</code>; <code>orig/&lt;id&gt;/.gitkeep</code>; the original in the private image at <code>/orig/&lt;id&gt;/&lt;original path&gt;</code>; and a byte-identical relink proven by CI. Progress is not a condition: a target at a true 0 percent, every unit <code>NonMatching</code>, is active. A <code>planned</code> or <code>archived</code> target needs <code>config/&lt;id&gt;/README.md</code> and <code>orig/&lt;id&gt;/.gitkeep</code> only.</p>
+<p>To find the SHA-1 of an original:</p>
+<pre><code class="language-sh">sha1sum /path/to/main.dol        # Linux
+shasum -a 1 /path/to/main.dol    # macOS
+</code></pre>
+<h2 id="configsitejson">config/site.json</h2>
+<pre><code class="language-json">{
+  &quot;schema&quot;: 1,
+  &quot;slug&quot;: &quot;game&quot;,
+  &quot;title&quot;: &quot;A Game: Full Title&quot;,
+  &quot;shortTitle&quot;: &quot;A Game&quot;,
+  &quot;console&quot;: &quot;GameCube&quot;,
+  &quot;year&quot;: &quot;2002&quot;,
+  &quot;contributions&quot;: {&quot;accepting&quot;: false},
+  &quot;contributors&quot;: false,
+  &quot;artwork&quot;: {&quot;cover&quot;: &quot;cover.webp&quot;, &quot;width&quot;: 1112, &quot;height&quot;: 1600}
+}
+</code></pre>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+<th>Rule</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schema</code></td>
+<td>Format version</td>
+<td><code>1</code></td>
+</tr>
+<tr>
+<td><code>slug</code></td>
+<td>The game's name everywhere on the site and in the data repository</td>
+<td><code>[a-z0-9][a-z0-9-]*</code>, required</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>Full title shown on the page</td>
+<td>Required, non-empty</td>
+</tr>
+<tr>
+<td><code>shortTitle</code></td>
+<td>Shorter title for the hub card</td>
+<td>Optional; defaults to <code>title</code></td>
+</tr>
+<tr>
+<td><code>console</code></td>
+<td>Display name of the console; the hub filters by it and it picks the console icon</td>
+<td>Required, non-empty</td>
+</tr>
+<tr>
+<td><code>year</code></td>
+<td>Release year, a string</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td><code>contributions</code></td>
+<td><code>{"accepting": true, "guideUrl": "&lt;url&gt;"}</code> shows a Contribute link to that URL; <code>accepting: false</code> hides it</td>
+<td>Optional; defaults to <code>{"accepting": false}</code></td>
+</tr>
+<tr>
+<td><code>contributors</code></td>
+<td><code>true</code> publishes who made each exact function exact and shows the rankings (<a href="/wiki/publishing/">Publishing</a>, "Credits")</td>
+<td>Optional; defaults to <code>false</code></td>
+</tr>
+<tr>
+<td><code>artwork</code></td>
+<td><code>cover</code> is a file name relative to <code>data/&lt;slug&gt;/</code> in the data repository, <code>width</code> and <code>height</code> its pixel size</td>
+<td>Optional; add it only after committing the cover (<a href="/wiki/site/">The site</a>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The publish action copies this file into <code>game.json</code> on every publish, adding <code>repository</code> (from the CI run's <code>GITHUB_REPOSITORY</code>), <code>defaultTarget</code> and <code>targets</code>. Changing the presentation is therefore an edit to this file followed by a merge to <code>main</code>; the next publish of any active target rewrites <code>game.json</code>.</p>
+<h2 id="configci-targetsjson">config/ci-targets.json</h2>
+<pre><code class="language-json">{
+  &quot;schemaVersion&quot;: 1,
+  &quot;shared&quot;: [&quot;src/**&quot;, &quot;include/**&quot;, &quot;asm/**&quot;, &quot;configure.py&quot;, &quot;tools/**&quot;, &quot;.github/workflows/validate.yml&quot;,
+             &quot;config/targets.json&quot;, &quot;config/ci-targets.json&quot;, &quot;config/site.json&quot;],
+  &quot;nonBuild&quot;: [&quot;*.md&quot;, &quot;docs/**&quot;, &quot;references/**&quot;, &quot;tests/**&quot;,
+               &quot;.github/pull_request_template.md&quot;, &quot;.gitignore&quot;, &quot;.gitattributes&quot;]
+}
+</code></pre>
+<p><code>tools/ci_targets.py</code> reads it in the <code>Plan affected targets</code> job and decides which active targets a push or pull request must build:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>A changed path that matches</th>
+<th>Selects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a <code>shared</code> pattern</td>
+<td>every active target</td>
+</tr>
+<tr>
+<td><code>config/&lt;id&gt;/**</code> or <code>orig/&lt;id&gt;/**</code></td>
+<td>that target, if active</td>
+</tr>
+<tr>
+<td>a <code>nonBuild</code> pattern only</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>no pattern at all</td>
+<td>every active target (unknown paths never skip validation)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The per-target patterns are not written down: every target owns <code>config/&lt;id&gt;/**</code> and <code>orig/&lt;id&gt;/**</code>, and the planner derives them from <code>targets.json</code>, so adding a target never touches this file. Patterns are <code>fnmatch</code> globs matched against the repository-relative path; <code>*</code> and <code>**</code> both match across <code>/</code>. Rules: <code>schemaVersion</code> is <code>1</code>; the keys are exactly <code>schemaVersion</code>, <code>shared</code> and <code>nonBuild</code> (a <code>targets</code> key is a scaffold-check warning); no pattern may start with <code>/</code> or contain <code>..</code>. A manual run (<code>workflow_dispatch</code>) and a push with no known base (first push, force push) select every active target, and so does a changed path that matches no pattern.</p>
+<p>A change that selects no target still runs the <code>Tool tests</code> job and passes the <code>Validate targets</code> check. <code>tests/**</code> is <code>nonBuild</code> in the kit because every test runs in <code>Tool tests</code> on the bare runner; a repository whose tests need the toolchain and run in the target job's <code>Project checks</code> lists <code>tests/**</code> under <code>shared</code> instead, so that a test change rebuilds every target (<a href="/wiki/ci/">CI</a>, builds without <code>configure.py</code>).</p>
+<h2 id="adding-a-target">Adding a target</h2>
+<ol>
+<li>Hash the executable and add a <code>planned</code> entry to <code>config/targets.json</code>. The owner commits the original to the private repository under <code>orig/&lt;id&gt;/</code>, adds its <code>COPY</code> and checksum lines to the Dockerfile and the <code>image.yml</code> verification, pushes, takes the new digest and puts it in <code>validate.yml</code> in a pull request of their own; nobody else changes the digest (<a href="/wiki/build-environment/">Build environment</a>). By hand; minutes.</li>
+<li><code>python3 tools/new_target.py &lt;id&gt;</code> writes <code>config/&lt;id&gt;/config.yml</code> with the original's path and hash from the registry, an empty <code>evidence.tsv</code> with its header row, a <code>README.md</code> stub and <code>orig/&lt;id&gt;/.gitkeep</code>. It refuses an id the registry does not list and never overwrites a file: a file that already exists is adopted, and left as it is, only when it is exactly the stub the tool would write, an empty <code>.gitkeep</code>, or the <code>README.md</code> that is a planned or archived target's only file; that placeholder is kept with a printed reminder to rewrite it, since it describes a target that is not built, and anything else stops the tool.</li>
+<li><code>python3 tools/matching_scope.py pin &lt;every id active so far&gt;</code> rewrites every unconditional <code>Matching</code> in <code>configure.py</code> to <code>MatchingFor(&lt;those ids&gt;)</code>, so that the new target inherits no claim: on it every unit is <code>NonMatching</code> until proven. It must name every active target, all of them (a subset would drop the others' claims), and the new target is still <code>planned</code> or <code>archived</code> at this point. For the targets named nothing changes: run <code>python3 configure.py --version &lt;id&gt;</code> for each and compare the <code>build.ninja</code> and <code>objdiff.json</code> it writes (under <code>build/&lt;id&gt;/</code>, or at the repository root with stock dtk-template, where the next configure overwrites them) with the ones from before the rewrite: identical; <code>objdiff.json</code> needs the original at hand. The file is read as Python tokens; an <code>Object</code> call whose first argument is none of <code>Matching</code>, <code>NonMatching</code>, <code>Equivalent</code> or <code>MatchingFor</code>, or a use of <code>Matching</code> anywhere else, stops the tool and is pinned by hand. <code>python3 tools/matching_scope.py show</code> lists each unit's declared scope.</li>
+<li>Set <code>status: active</code> (<code>configure.py</code> accepts active targets only) and write <code>config/&lt;id&gt;/build.sha1</code> in <code>sha1sum</code> format (<code>&lt;sha1&gt;  build/&lt;id&gt;/main.dol</code>) before the first build, which reads it for its hash check. Then run the toolkit's analysis on the new original for a first <code>symbols.txt</code> and <code>splits.txt</code>, build, and confirm that the relink is byte-identical with every unit <code>NonMatching</code> on the new target. The digest in <code>validate.yml</code> is already the owner's from step 1. Hand-driven; hours.</li>
+<li>Open the pull request; the owner merges it. The planner builds the new target because <code>config/&lt;id&gt;/</code> changed, and the first <code>main</code> run publishes it: <code>data/&lt;slug&gt;/&lt;id&gt;/</code> appears in the data repository.</li>
+<li>Then widen the shared work: a function already decompiled for a sibling counts on the new target as soon as the new target's <code>splits.txt</code> names the same unit, the unit's <code>MatchingFor(...)</code> in <code>configure.py</code> names the new target (plain <code>Matching</code> is the form of a repository with one active target only), and its <code>symbols.txt</code> gives the function the same name. Nothing is copied between targets; each target's own objdiff report scores it. Seeding <code>symbols.txt</code> and <code>splits.txt</code> from the sibling is the real cost of a new revision; a symbol-porting tool belongs here once a second original has passed step 4. From here <code>python3 tools/matching_scope.py check</code> fails, in <code>Tool tests</code>, any unit declared <code>Matching</code> without naming targets, which would claim the new target by habit. The steps with their gates, the transfer's specification and a target's life afterwards are in <a href="/wiki/multi-target/">Multiple targets</a>.</li>
+</ol>
+<p>Setting a published target to <code>archived</code> keeps its data directory and history in the data repository, but the site reads <code>latest.json</code> only for <code>active</code> targets, so the page lists it without a measurement. Removing a target from the list entirely removes it from <code>game.json</code> on the next publish; the data directory is deleted by hand, if at all.</p></article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>

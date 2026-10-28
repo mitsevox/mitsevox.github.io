@@ -50,6 +50,8 @@ for i, chapter in enumerate(chapters):
     (dest / "content.html").write_text(main)
     html = re.sub(r"<title>.*?</title>", f"<title>{escape(title)} · Wiki · mitsevox</title>", entry)
     html = html.replace('content="GameCube decompilation projects by mitsevox."', f'content="{escape(chapter["summary"], quote=True)}"')
+    # Readers that do not run JavaScript (agents fetching the page) get the chapter itself.
+    html = html.replace('<div class="shell">', f'<noscript><article class="wiki-article">{article}</article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell">', 1)
     (dest / "index.html").write_text(html)
     plain = re.sub(r"<[^>]+>", " ", article)
     index.append({"title":title,"href":route,"summary":chapter["summary"],"text":re.sub(r"\s+", " ", plain)})

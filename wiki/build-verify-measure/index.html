@@ -1,1 +1,128 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Relink the original byte for byte, replace units with source and produce objdiff&#x27;s report."><title>Build, verify, measure · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><meta name="description" content="Relink the original byte for byte, replace units with source and produce objdiff&#x27;s report."><title>Build, verify, measure · Wiki · mitsevox</title><link rel="stylesheet" href="/assets/style.css?v=2"><link rel="stylesheet" href="/assets/portfolio.css?v=5"><link rel="stylesheet" href="/assets/wiki.css?v=4"></head><body><noscript><article class="wiki-article"><h1 id="build-verify-measure">Build, verify, measure</h1>
+<p>Relink the original byte for byte, replace units with source and produce objdiff's report.</p>
+<p>Three things happen in one <code>ninja</code> invocation, locally and in CI: the original is split into objects and relinked, the objects marked <code>Matching</code> are replaced by compiled source and the result is checked against the expected hash, and objdiff measures every unit against its original. The publish action reads only the last step's output, <code>build/&lt;target id&gt;/report.json</code>.</p>
+<p>The commands below are for decomp-toolkit and dtk-template, which the reference repositories use for GameCube. The section at the end says what another platform must provide instead.</p>
+<h2 id="local-setup-for-a-dtk-template-project">Local setup for a dtk-template project</h2>
+<ol>
+<li>Start from <a href="https://github.com/encounter/dtk-template">dtk-template</a> (<code>configure.py</code>, <code>tools/project.py</code> and the rest of its <code>tools/</code>). dtk-template names its config folder after the game ID (<code>config/GAMEID/</code>); rename it to the target id (<code>config/GAME01-rev0/</code>) before adding anything, and use the target id wherever the template says version. Follow its documentation for <code>config/&lt;target id&gt;/config.yml</code>, <code>splits.txt</code> and <code>symbols.txt</code>; those are the platform-specific part this guide cannot write for you. Record the template's revision in <code>CREDITS.md</code> and link its documentation from the README rather than copying it into the repository.</li>
+<li>
+<p>Wire <code>configure.py</code> to the target list so the active targets are the only versions it accepts, <code>--version</code> takes a target id and the target's define is derived. Replace dtk-template's hard-coded <code>VERSIONS</code> list with:</p>
+<p>```python
+from tools.targets import registry, build_targets, define</p>
+<p>TARGET_REGISTRY = registry()
+VERSIONS = build_targets(TARGET_REGISTRY)
+DEFAULT_VERSION = VERSIONS.index(TARGET_REGISTRY['defaultTarget'])
+```</p>
+<p>add <code>Path("config/targets.json")</code> and <code>Path("tools/targets.py")</code> to <code>config.reconfig_deps</code>, point <code>config.config_path</code> and <code>config.check_sha_path</code> at <code>config/&lt;version&gt;/config.yml</code> and <code>config/&lt;version&gt;/build.sha1</code>, and pass <code>f"-D{define(config.version)}"</code> in <code>cflags_base</code> next to the template's <code>-DBUILD_VERSION=</code>. Remove <code>type=str.upper</code> from the <code>--version</code> argument: dtk-template upper-cases it, which no target id with a lower-case revision (<code>GAME01-rev0</code>) can pass. dtk-template compiles each version into <code>build/&lt;version&gt;/</code> and writes <code>report.json</code> there, but its <code>tools/project.py</code> writes <code>build.ninja</code>, <code>objdiff.json</code> and <code>compile_commands.json</code> at the repository root, and the next <code>configure.py</code> run overwrites them. The kit's <code>validate.yml</code> and README expect them under <code>build/&lt;target id&gt;/</code> with everything else generated (<a href="/wiki/repository-layout/">Repository layout</a>): either edit <code>generate_build_ninja</code>, <code>generate_objdiff_config</code> and <code>generate_compile_commands</code> in <code>tools/project.py</code> to write under <code>config.build_dir / config.version</code>, or keep the stock paths and write PARAMETER 3 and the README's build lines without <code>-f</code> (<code>ninja progress build/&lt;id&gt;/report.json</code>), configuring one target at a time.
+3. Keep <code>config.dtk_tag</code> and <code>config.objdiff_tag</code> in <code>configure.py</code> as the single place tool versions are pinned; <code>tools/measuring_tools.py</code> reads them, and the Dockerfile builds the same dtk tag. The two can drift apart, since the build uses the image's dtk and not the tag; in CI <code>tools/measuring_tools.py --verify</code> runs the image's <code>dtk --version</code> and fails the job unless it reports the pinned tag, as a whole word. It verifies the version word only: a project that patches dtk and names the patch in the reported version (its hash, say) gets the stock version from the patched binary, so the patch itself is the image's to carry and the Dockerfile's to check. objdiff is downloaded at the pinned tag by the build itself, so the pin is what runs.
+4. Place your own copy of the original at <code>orig/&lt;target id&gt;/sys/main.dol</code>, the path <code>config.yml</code> names (<code>orig/*/*</code> is ignored by Git). The toolkit refuses an original whose hash differs from <code>config.yml</code>, and <code>python3 tools/targets.py check</code> confirms that <code>config.yml</code>, <code>build.sha1</code> and <code>targets.json</code> agree.
+5. Configure and build:</p>
+<p><code>sh
+python3 configure.py --version GAME01-rev0
+ninja -f build/GAME01-rev0/build.ninja</code></p>
+<p>The generated build downloads dtk, objdiff and the compilers at their pinned tags unless <code>--dtk</code>, <code>--objdiff</code> and <code>--compilers</code> point at local copies. The build fails unless the linked executable's SHA-1 equals <code>config/&lt;target id&gt;/build.sha1</code>, which must equal the original's hash from <code>targets.json</code>.</p>
+</li>
+<li>
+<p>Measure:</p>
+<p><code>sh
+ninja -f build/GAME01-rev0/build.ninja progress build/GAME01-rev0/report.json</code></p>
+<p><code>progress</code> prints the per-category summary; <code>build/&lt;target id&gt;/report.json</code> is the objdiff report CI publishes. This is exactly the command the starter <code>validate.yml</code> runs, after the same <code>configure.py</code> call with the image's tool paths.</p>
+</li>
+</ol>
+<p>With more than one active target, repeat steps 5 and 6 per target; the README's Building section shows the loop. A shared change is safe for every target only when every target has been built.</p>
+<h2 id="what-the-three-measures-mean">What the three measures mean</h2>
+<p>Each object in <code>configure.py</code> is declared <code>Matching</code> or <code>NonMatching</code> (dtk-template's <code>Equivalent</code> is for <code>--non-matching</code> builds and never counts). The publish action turns objdiff's report into the contract's three measures:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Measure</th>
+<th>Source in the report</th>
+<th>What it says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>linked</code></td>
+<td><code>complete_code</code> and <code>complete_data</code>: units whose <code>metadata.complete</code> is true, which dtk-template's generated <code>objdiff.json</code> sets for <code>Matching</code> objects</td>
+<td>Bytes that compile from source into the byte-identical executable</td>
+</tr>
+<tr>
+<td><code>matched</code></td>
+<td><code>matched_code</code> and <code>matched_data</code>: functions at 100% and data sections at 100%, in any unit</td>
+<td>Bytes that match exactly, linked or not</td>
+</tr>
+<tr>
+<td><code>fuzzy</code></td>
+<td><code>size * fuzzy_match_percent / 100</code> summed over functions, and over data sections, by the action itself</td>
+<td>Size-weighted similarity</td>
+</tr>
+</tbody>
+</table></div>
+<p>So a <code>NonMatching</code> unit with three exact functions out of ten contributes those three functions' bytes to <code>matched</code>, their fuzzy score to <code>fuzzy</code>, and nothing to <code>linked</code>; the original bytes stay linked. Promoting the unit to <code>Matching</code> moves its whole size into <code>linked</code>. Function counts come from the report too: <code>exact</code> is functions at 100%, <code>named</code> is functions whose symbol is not <code>fn_&lt;hex&gt;</code> or <code>func_&lt;hex&gt;</code>. File counts treat each unit as a file, <code>named</code> when the unit is not <code>auto_generated</code> and <code>exact</code> when it is named and both its code and data are fully matched.</p>
+<p>The action checks the report's own totals against its function list and refuses a report whose numbers disagree, so a report from an unexpected objdiff version fails the publish step rather than publishing wrong numbers. Pin <code>config.objdiff_tag</code> and change it deliberately.</p>
+<h2 id="partial-source">Partial source</h2>
+<p>Useful partial reconstruction stays in its normal file under <code>src/</code> and is registered as a <code>NonMatching</code> object. The combined executable still matches because the original bytes for that unit remain linked; objdiff measures the source separately. Reviewers and CI treat matching incompleteness as progress, not as a failure. See <a href="/wiki/contribution-workflow/">Contribution workflow</a> for how partial units are reviewed and promoted.</p>
+<h2 id="version-differences">Version differences</h2>
+<p>Every target has one preprocessor define, <code>VERSION_&lt;ID&gt;</code>: the id upper-cased with <code>-</code> and <code>.</code> replaced by <code>_</code>, so <code>GAME01-rev0</code> compiles with <code>VERSION_GAME01_REV0</code>. <code>tools/targets.py</code> derives it and <code>configure.py</code> passes it; no file stores it. dtk-template also passes a numeric <code>BUILD_VERSION</code>; it stays defined for compatibility and is never read, because <code>BUILD_VERSION &gt;= 1</code> stops meaning anything the day a region is inserted between two revisions.</p>
+<ul>
+<li>A difference lives in the shared file under <code>#if VERSION_GAME01_REV0</code>. A condition is a boolean expression of <code>VERSION_</code> tokens and group macros, with <code>!</code>, <code>&amp;&amp;</code> and <code>||</code> only, and nothing else: no numeric comparison, no other macro in the same condition. A version condition nested inside an ordinary <code>#ifdef</code> is fine; the two must not mix in one line.</li>
+<li>When two or more targets share a difference, name the group once in <code>include/version.h</code>: <code>#define REGION_USA (VERSION_GAME01_REV0 || VERSION_GAME01_REV1)</code>. The header exists from the first commit with the rule as its comment, so the first divergent PR cannot invent a second scheme.</li>
+<li>A condition names the targets it includes. The rule is exact: a branch is broad when a target listed later would take it, that is, when its condition holds with every <code>VERSION_</code> token false (<code>#if !VERSION_GAME01_REV0</code>, <code>#if !REGION_USA</code>), or when it is the <code>#else</code> of a chain none of whose conditions does. <code>VERSION_GAME01_REV0 &amp;&amp; !VERSION_GAME01_REV1</code> is not broad, and neither is a double negation through a group. With two targets listed a broad branch is the other target's and <code>versions.py check</code> only warns; from the third listed target on it is an error, so the pull request that lists a third target makes every such block explicit, with <code>#elif VERSION_GAME01_REV1</code> or a group. <code>view</code> and <code>diff</code> resolve a broad branch like any other.</li>
+<li>Inline blocks are the default. When a function would carry three or more blocks, or more than about a third of its lines inside blocks, write the whole function once per variant under one function-level <code>#if ... #else ... #endif</code>, in the same file. Never a <code>src/&lt;id&gt;/</code> file for a unit two targets share.</li>
+<li>A unit that matches on some targets only is <code>Object(MatchingFor("GAME01-rev0"), "unit.cpp")</code>; a unit absent from a target is absent from that target's <code>splits.txt</code>. With two or more active targets a plain <code>Matching</code> claims every one of them, so <code>python3 tools/matching_scope.py check</code> fails it in <code>Tool tests</code> until the claim names its targets. Compiler or flag differences between targets are whole profiles chosen by <code>config.version</code> in <code>configure.py</code>, with a <code>compiler</code> evidence row in each target's <code>evidence.tsv</code>.</li>
+</ul>
+<p><code>tools/versions.py</code> reads this convention back:</p>
+<pre><code class="language-sh">python3 tools/versions.py view --target GAME01-rev0 src/unit.cpp
+python3 tools/versions.py diff --target GAME01-rev0 --target GAME01-rev1 src/unit.cpp
+python3 tools/versions.py check
+</code></pre>
+<p><code>view</code> prints the file as one target compiles it: it resolves exactly the directives whose condition is a version expression and leaves every other directive and all macros untouched, so what you read is still source, not preprocessor output. <code>diff</code> is the unified diff between two targets' views; a reviewer of a change to a file with version blocks reads it instead of tracing the branches by eye. <code>check</code> fails on a <code>VERSION_</code> token that is not a known define or group, a <code>MatchingFor</code> argument that is not a known target id, a version condition mixed with other macros, any <code>BUILD_VERSION</code> in <code>src/</code> or <code>include/</code>, and, once three targets are listed, a branch a later target would take (a printed warning while two are listed). The <code>Tool tests</code> job runs <code>check</code>; the scaffold check runs it too.</p>
+<p>A function decompiled for one target counts for another automatically when, on that target, <code>splits.txt</code> names the unit, <code>configure.py</code> names that target in the unit's <code>MatchingFor(...)</code> (plain <code>Matching</code> is the form of a repository with one active target only), and <code>symbols.txt</code> gives the function the same name, because objdiff pairs by symbol name. Different addresses are a per-target <code>symbols.txt</code> and <code>splits.txt</code> matter and never touch source; a function present on one target only, or data that differs, is an <code>#if</code> block with <code>MatchingFor</code> until both targets link. How a second target is activated without inheriting any claim, and how a map is carried across, is in <a href="/wiki/multi-target/">Multiple targets</a>.</p>
+<h2 id="reading-the-report">Reading the report</h2>
+<p>The publish action reads these parts of <code>report.json</code>, so any producer must write them the way objdiff does:</p>
+<div class="wiki-table"><table>
+<thead>
+<tr>
+<th>Path in the report</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>measures.total_code</code>, <code>matched_code</code>, <code>complete_code</code>, <code>total_data</code>, <code>matched_data</code>, <code>complete_data</code>, <code>total_functions</code>, <code>matched_functions</code></td>
+<td>The summary; 64-bit values are strings, zero values may be absent</td>
+</tr>
+<tr>
+<td><code>units[].name</code></td>
+<td>Unit name; the <code>unit-prefix</code> input (default <code>main/</code>) is stripped for display</td>
+</tr>
+<tr>
+<td><code>units[].metadata.complete</code>, <code>units[].metadata.auto_generated</code></td>
+<td>Linked status and tool-generated units</td>
+</tr>
+<tr>
+<td><code>units[].measures.total_data</code>, <code>matched_data</code>, and <code>matched_code</code>, <code>total_code</code></td>
+<td>Per-unit data tile and the exact-file test</td>
+</tr>
+<tr>
+<td><code>units[].sections[]</code>: <code>name</code>, <code>size</code>, <code>fuzzy_match_percent</code>, <code>metadata.virtual_address</code></td>
+<td>Section extents; sections named in <code>code-sections</code> (default <code>.init,.text</code>) are code, all others data</td>
+</tr>
+<tr>
+<td><code>units[].functions[]</code>: <code>name</code>, <code>size</code>, <code>fuzzy_match_percent</code>, <code>metadata.virtual_address</code></td>
+<td>Function tiles and counts</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every function must lie inside one of the code sections of its unit, or the action stops with <code>&lt;unit&gt;: &lt;function&gt; lies outside the code sections</code>. A platform whose code lives in differently named sections passes <code>code-sections</code> to the action (<a href="/wiki/publishing/">Publishing</a>).</p>
+<h2 id="other-platforms">Other platforms</h2>
+<p>The per-target directory, the define rule, the planner, the tiers, the Targets table and the settings are toolchain-neutral. The publish action converts objdiff reports and nothing else, and objdiff supports several architectures, so a project on another platform that produces <code>report.json</code> with <code>objdiff-cli report generate</code> can use the whole pipeline unchanged apart from these parameters:</p>
+<ul>
+<li>the original's path under <code>orig/&lt;target id&gt;/</code> (<code>PARAMETER 2</code> in <code>validate.yml</code>, the <code>COPY</code> in the Dockerfile, the toolchain's own config);</li>
+<li>the configure and build commands (<code>PARAMETER 3</code> in <code>validate.yml</code>), which must fail unless the complete executable matches and must write <code>build/&lt;target id&gt;/report.json</code>;</li>
+<li><code>config/&lt;target id&gt;/</code> holds a splat or custom configuration instead of dtk's three files; <code>tools/versions.py</code> reads the same <code>#if</code> convention, and the <code>MatchingFor</code> equivalent lives in whatever generates the build;</li>
+<li>the <code>code-sections</code> and <code>unit-prefix</code> inputs of the publish action and of the report check if the defaults do not fit;</li>
+<li>in <code>tools/measuring_tools.py</code>, <code>TAGS</code> (the version lines of <code>configure.py</code> to report) or <code>PINS</code> (the JSON pin files of a build without <code>configure.py</code>), and <code>VERIFY</code>, the commands that confirm each image-installed tool's version against the pin.</li>
+</ul>
+<p>A producer that writes its own report sets a unit's <code>metadata.complete</code> only when the whole unit links from source into the byte-identical executable: that is what <code>linked</code> means on the site. A status of the producer's own, such as whether a unit's boundaries have evidence, stays in the repository's files; the contract has no field for it and it never sets <code>complete</code>. Bytes of a code section that no function covers (alignment padding, code the producer does not split into functions) become one <code>(other code)</code> tile per piece on the site only when the unit's <code>total_code</code> counts them, that is, when it exceeds the unit's function sizes by exactly those bytes; the tile holds the matched bytes no exact function accounts for. objdiff's <code>total_code</code> is the sum of the function sizes, so a dtk-template report's padding is outside the measurement and gets no tile, and a unit whose <code>total_code</code> is neither its functions nor its functions plus the uncovered bytes is refused (<a href="/wiki/data-contract/">Data contract</a>).</p>
+<p>A project that cannot produce an objdiff report cannot use the publish action as shipped; that is a site-side change and outside this guide.</p></article><p>All chapters: <a href="/wiki/downloads/handbook.md">handbook.md</a></p></noscript><div class="shell"><p class="startup" role="status">Loading…</p></div><script>function startupFailed(){var s=document.querySelector(".shell");if(s&&!s.querySelector("header"))s.innerHTML='<p class="startup">The site could not load. <a href="">Reload</a></p>';}setTimeout(startupFailed,10000);addEventListener("error",function(){setTimeout(startupFailed,0);});addEventListener("unhandledrejection",function(){setTimeout(startupFailed,0);});</script><script type="module" src="/assets/app.js?v=8" onerror="startupFailed()"></script></body></html>

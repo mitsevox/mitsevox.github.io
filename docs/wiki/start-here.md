@@ -2,6 +2,8 @@
 
 How to set up a decompilation repository that builds in a private environment, accepts reviewed contributions and publishes its progress to this site.
 
+Every page of this wiki carries its text in its HTML for readers that do not run JavaScript, and the whole guide is one Markdown file at [`/wiki/downloads/handbook.md`](/wiki/downloads/handbook.md).
+
 This guide is written for someone, or some agent, dropped into an empty repository with a game binary and no other context. Followed in order, it ends with a repository whose every push to `main` builds each target, verifies it byte for byte, measures it with objdiff and publishes the measurement to the progress site. The only things it cannot decide for you are your project's parameters: the platform, the compiler versions and tooling, the split configuration, the target ids and the presentation. Everything else is specified exactly, every command, file name, field and secret named here matches the shipped code, and a scaffold check in CI keeps the repository matching the guide afterwards.
 
 ## The three repositories

@@ -6,6 +6,7 @@
 <div class="wiki-reading"><div class="wiki-meta"><span>Foundation <span aria-hidden="true">/</span> 01</span><a href="/docs/wiki/start-here.md" download>Markdown ↓</a></div>
 <article class="wiki-article"><h1 id="start-here">Start here</h1>
 <p>How to set up a decompilation repository that builds in a private environment, accepts reviewed contributions and publishes its progress to this site.</p>
+<p>Every page of this wiki carries its text in its HTML for readers that do not run JavaScript, and the whole guide is one Markdown file at <a href="/wiki/downloads/handbook.md"><code>/wiki/downloads/handbook.md</code></a>.</p>
 <p>This guide is written for someone, or some agent, dropped into an empty repository with a game binary and no other context. Followed in order, it ends with a repository whose every push to <code>main</code> builds each target, verifies it byte for byte, measures it with objdiff and publishes the measurement to the progress site. The only things it cannot decide for you are your project's parameters: the platform, the compiler versions and tooling, the split configuration, the target ids and the presentation. Everything else is specified exactly, every command, file name, field and secret named here matches the shipped code, and a scaffold check in CI keeps the repository matching the guide afterwards.</p>
 <h2 id="the-three-repositories">The three repositories</h2>
 <p>Each game is three repositories. Two are yours; the third is shared by every game on the site.</p>
