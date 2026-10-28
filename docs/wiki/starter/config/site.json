@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "slug": "game",
+  "title": "A Game: Full Title",
+  "shortTitle": "A Game",
+  "console": "GameCube",
+  "year": "2002",
+  "contributions": {"accepting": false}
+}

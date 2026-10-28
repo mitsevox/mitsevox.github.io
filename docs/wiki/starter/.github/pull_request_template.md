@@ -1,17 +1,15 @@
 ## Scope
 
-Task, affected units/tools, dependencies and unresolved work.
+Task/issue, affected unit or tools, dependencies, and unresolved work.
 
 ## Evidence and validation
 
-Exact tested revision, target/environment, commands/artifacts and actual results.
-Distinguish original baseline, source build and independent comparisons.
+Evidence records and test/build commands with results. Identify what was checked; a baseline relink does not validate reconstructed source.
 
 ## Review
 
-- Accuracy record (or justified scope-based N/A):
-- Hostile record and verdict:
-- Delta recheck / carried-forward coverage:
+- Reviewed revision: full commit SHA
+- Independent accuracy pass: record link, or justified N/A
+- Fresh hostile pass and recheck: record link and verdict
 
-Request the owner's decision only after final-revision coverage and required CI.
-Contributors do not merge. Preserve original attribution when project policy requires tracking.
+Request the owner's decision only after reviews and required CI cover the final revision. New substantive changes require renewed review. Contributors do not merge.

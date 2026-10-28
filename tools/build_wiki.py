@@ -8,7 +8,6 @@ from html import escape
 import json
 import re
 import zipfile
-from urllib.parse import urljoin
 import markdown
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -62,35 +61,15 @@ for i, chapter in enumerate(chapters):
     + json.dumps([chapter['slug'] for chapter in chapters]) + ');\n')
 downloads = ROOT / "wiki/downloads"
 downloads.mkdir(exist_ok=True)
-(downloads / "handbook.md").write_text("# mitsevox project handbook\n\nReference snapshot: 2026-10-25. Project repository rules take precedence.\n\n"+"\n\n---\n\n".join(handbook))
+(downloads / "handbook.md").write_text("# Decompilation project guide\n\nReference snapshot: 2026-10-28. Project repository rules take precedence.\n\n"+"\n\n---\n\n".join(handbook))
 with zipfile.ZipFile(downloads / "repository-starter.zip", "w", zipfile.ZIP_DEFLATED) as archive:
     for path in sorted((SOURCE / "starter").rglob("*")):
         if path.is_file():
             info = zipfile.ZipInfo("repository-starter/"+str(path.relative_to(SOURCE / "starter")), date_time=(2026,10,25,0,0,0))
             info.compress_type = zipfile.ZIP_DEFLATED
             archive.writestr(info, path.read_bytes())
-    info = zipfile.ZipInfo("repository-starter/INTEGRATION.md", date_time=(2026,10,25,0,0,0))
+    # The data contract the publish action writes, so the kit stands on its own.
+    info = zipfile.ZipInfo("repository-starter/contract/README.md", date_time=(2026,10,25,0,0,0))
     info.compress_type = zipfile.ZIP_DEFLATED
-    integration = (ROOT / "docs/reporting/onboarding.md").read_text()
-    # Keep the standalone handoff's reference links usable outside the checkout.
-    integration = re.sub(r"\]\((?!https?://|#)([^)]+)\)",
-                         lambda match: "](" + urljoin("https://mitsevox.github.io/docs/reporting/", match[1]) + ")",
-                         integration)
-    archive.writestr(info, integration.encode())
-    info = zipfile.ZipInfo('repository-starter/OPTIONAL-ADOPTION.md', date_time=(2026,10,25,0,0,0))
-    info.compress_type = zipfile.ZIP_DEFLATED
-    archive.writestr(info, (SOURCE / 'existing-projects.md').read_bytes())
-    # Ship the actual generic interface with the offline starter, not per-game adapters.
-    references = [ROOT / 'docs/reporting/platform.md', ROOT / 'docs/reporting/contract-v1.md', ROOT / 'docs/reporting/policy-sync.md', ROOT / 'docs/reporting/contract-v2.md']
-    references += [ROOT / 'docs/reporting/schema' / name for name in (
-        'report-v1.schema.json', 'project-v1.schema.json', 'producer-v1.schema.json',
-        'execution-v1.schema.json', 'map-v1.schema.json', 'map-v2.schema.json', 'timeline-v1.schema.json',
-        'contributors-v1.schema.json', 'target-v2.schema.json', 'targets-v1.schema.json',
-        'report-v2.schema.json', 'execution-v2.schema.json', 'producer-v2.schema.json', 'project-v2.schema.json')]
-    references += list((ROOT / 'docs/reporting/examples').glob('*.json'))
-    for path in sorted(references):
-        info = zipfile.ZipInfo('repository-starter/reporting/' + str(path.relative_to(ROOT / 'docs/reporting')),
-                               date_time=(2026,10,25,0,0,0))
-        info.compress_type = zipfile.ZIP_DEFLATED
-        archive.writestr(info, path.read_bytes())
+    archive.writestr(info, (ROOT / "contract/README.md").read_bytes())
 print(f"Built {len(chapters)} wiki routes, search index and starter downloads.")

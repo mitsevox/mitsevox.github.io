@@ -2,85 +2,85 @@
   {
     "slug": "start-here",
     "title": "Start here",
-    "summary": "From an empty repository to a measured, reviewable decompilation project.",
+    "summary": "Three repositories, one data contract and the order in which to set them up.",
     "group": "Foundation"
   },
   {
-    "slug": "repository-setup",
-    "title": "Repository setup",
-    "summary": "Establish ownership, target identity and a safe working environment before the first reconstruction.",
+    "slug": "repository-layout",
+    "title": "Repository layout",
+    "summary": "What the public repository tracks, what it ignores and where each file lives.",
     "group": "Foundation"
   },
   {
-    "slug": "layout-and-naming",
-    "title": "Layout & naming",
-    "summary": "Keep source readable, evidence discoverable and generated material disposable.",
+    "slug": "targets",
+    "title": "Targets",
+    "summary": "config/targets.json, config/site.json and config/ci-targets.json, field by field.",
     "group": "Foundation"
   },
   {
-    "slug": "evidence-and-reconstruction",
+    "slug": "build-environment",
+    "title": "Build environment",
+    "summary": "The private image that holds the originals and the toolchain, pinned by digest.",
+    "group": "Foundation"
+  },
+  {
+    "slug": "build-verify-measure",
+    "title": "Build, verify, measure",
+    "summary": "Relink the original byte for byte, replace units with source and produce objdiff's report.",
+    "group": "Reconstruction"
+  },
+  {
+    "slug": "evidence",
     "title": "Evidence",
-    "summary": "Recover what the target supports, and keep uncertainty explicit.",
+    "summary": "Recover what the target supports, record it, and never manufacture a match.",
     "group": "Reconstruction"
   },
   {
-    "slug": "build-and-validation",
-    "title": "Build & validation",
-    "summary": "Separate a working baseline, reconstructed source and independent comparison measurements.",
-    "group": "Reconstruction"
+    "slug": "contribution-workflow",
+    "title": "Contribution workflow",
+    "summary": "Bounded tasks, isolated branches, independent reviews and an owner-only merge.",
+    "group": "Contribution"
   },
   {
-    "slug": "agent-workflow",
-    "title": "Agent workflow",
-    "summary": "Scope, evidence, isolated author work, independent review and final-revision delivery.",
-    "group": "Delivery"
+    "slug": "review-gate",
+    "title": "Review gate",
+    "summary": "Review records, the owner clearance comment and the status check that verifies them.",
+    "group": "Contribution"
   },
   {
-    "slug": "review-and-approval",
-    "title": "Review & approval",
-    "summary": "Independent evidence, exact revisions and an owner-controlled merge decision.",
-    "group": "Delivery"
+    "slug": "ci",
+    "title": "CI",
+    "summary": "validate.yml: plan the affected targets, run the tool tests, build each target in the image, publish on main.",
+    "group": "Pipeline"
   },
   {
-    "slug": "ci-and-publication",
-    "title": "CI & publication",
-    "summary": "Validate once, preserve the evidence and publish only a coherent verified result.",
-    "group": "Delivery"
+    "slug": "publishing",
+    "title": "Publishing",
+    "summary": "The GitHub App credential, the publish action's inputs and what happens on a push to main.",
+    "group": "Pipeline"
   },
   {
-    "slug": "cache-and-proof",
-    "title": "Cache & proof",
-    "summary": "Optional input-keyed caches, fresh main audits and authenticated publication reuse.",
-    "group": "Delivery"
+    "slug": "data-contract",
+    "title": "Data contract",
+    "summary": "The schema-1 files the publish action writes and the checker that enforces them.",
+    "group": "Pipeline"
   },
   {
-    "slug": "credits-and-history",
-    "title": "Credits & history",
-    "summary": "Choose attribution policy deliberately, and preserve the meaning of every historical measurement.",
-    "group": "Delivery"
+    "slug": "site",
+    "title": "The site",
+    "summary": "How the data repository is served and read, cover art, URLs and local preview.",
+    "group": "Pipeline"
   },
   {
-    "slug": "website-integration",
-    "title": "Website",
-    "summary": "Export a versioned public report and register it with the shared renderer.",
-    "group": "Integration"
-  },
-  {
-    "slug": "operations",
-    "title": "Troubleshooting & upkeep",
-    "summary": "Diagnose the failing layer before changing source, configuration or publication.",
-    "group": "Integration"
+    "slug": "troubleshooting",
+    "title": "Troubleshooting",
+    "summary": "Failure messages from the build, the publish action and the page, with their causes.",
+    "group": "Reference"
   },
   {
     "slug": "starter-kit",
     "title": "Starter kit",
-    "summary": "Repository scaffolding and an agent prompt for applying the project template.",
-    "group": "Integration"
-  },
-  {
-    "slug": "existing-projects",
-    "title": "Existing projects",
-    "summary": "Optional guidance for adopting the template with existing workflows or legacy data. New projects can skip this appendix.",
-    "group": "Optional appendix"
+    "summary": "The downloadable files, their parameters, the acceptance checklist and an agent prompt.",
+    "group": "Reference"
   }
 ]

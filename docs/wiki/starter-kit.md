@@ -1,64 +1,76 @@
 # Starter kit
 
-Repository scaffolding and an agent prompt for applying this handbook.
+The downloadable files, their parameters, the acceptance checklist and an agent prompt.
 
-## Files
+Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It unpacks to `repository-starter/` and contains every copyable file this guide refers to, the data contract, and nothing that pretends to be a build system. The same files are browsable in the site repository under [`docs/wiki/starter/`](https://github.com/mitsevox/mitsevox.github.io/tree/main/docs/wiki/starter).
 
-Download the [repository starter archive](/wiki/downloads/repository-starter.zip). It contains README, AGENTS, CONTRIBUTING, setup checklist, PR template, .gitignore examples, integration checklist and agent prompt, plus:
+## Contents
 
-| File | Use |
-| --- | --- |
-| `config/ci.example.json` | Verified project facts, adopted policy, command mapping and acceleration switches |
-| `.github/workflows/validate.yml.template` | Editable fresh-validation workflow with optional cache/proof lanes; no deployment authority |
-| `.github/workflows/review.yml.template` | Optional metadata-only clearance verifier for the default review policy |
-| `CI.md` | Exact adapter operations, GitHub outputs, state/paths, packaging and producer-step policy |
-| `reporting/platform.md` and `contract-v1.md` | Implemented shared interface, command usage and metric definitions |
-| `reporting/schema/` and `reporting/examples/` | Generic public schemas and unregistered configuration/report examples |
-| `OPTIONAL-ADOPTION.md` | Optional existing-workflow and legacy-data guidance; outside the new-project checklist |
+| File | Copy to | Chapter |
+| --- | --- | --- |
+| `README.md` | nowhere; it lists the parameters | this one |
+| `AGENTS.md`, `CONTRIBUTING.md`, `.gitignore`, `.github/pull_request_template.md` | the repository root and `.github/` | [Contribution workflow](/wiki/contribution-workflow/) |
+| `.github/workflows/validate.yml.template` | `.github/workflows/validate.yml` | [CI](/wiki/ci/) |
+| `.github/workflows/review.yml.template` | `.github/workflows/review.yml` | [Review gate](/wiki/review-gate/) |
+| `config/targets.json`, `config/site.json`, `config/ci-targets.json`, `config/README.md` | `config/` | [Targets](/wiki/targets/), [Evidence](/wiki/evidence/) |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/verify_target.py`, `tools/measuring_tools.py` | `tools/` | [Targets](/wiki/targets/), [CI](/wiki/ci/) |
+| `tests/test_targets.py`, `tests/review_gate.mjs` | `tests/` | [CI](/wiki/ci/), [Review gate](/wiki/review-gate/) |
+| `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the private repository | [Build environment](/wiki/build-environment/) |
+| `contract/README.md` | reference only | [Data contract](/wiki/data-contract/) |
 
-Fill visible placeholders from verified project facts. The project supplies its own compiler, build/comparison engines and internal evidence formats. Implement `tools/project_ci.py` as the documented thin adapter to those real tools; the kit does not include a fake success-producing adapter. Existing repositories keep established paths where those responsibilities are implemented.
+Not included, because they are the project's own: `README.md`, `configure.py` and the rest of dtk-template, `config/<target id>/`, `src/` and `include/`.
 
-Adopt project review/merge policy explicitly; independent accuracy/hostile review and owner-only merging are the default, not a site-imposed rule. Attribution is a separate choice. Leave caching and proof reuse disabled until fresh validation works, then enable/test requested mechanisms independently. Rename a workflow `.template` only after its adapter and configuration are ready.
+## Parameters
 
-## Prompt for an agent
+Every project-specific value, and where it goes:
 
-```prose
-Read this wiki and the project's current README, CONTRIBUTING and AGENTS. Use its structure as the template for repository layout, naming, evidence, validation, review, CI, public reporting and shared-site integration. Inspect the existing project before editing and preserve unrelated work. Use a dedicated branch and checkout/worktree.
-
-Record the actual target/hash, approved toolchain, build commands, source objective, current validation and supported report capabilities. Adapt the handbook's responsibilities to this project's established structure.
-
-Read the starter's CI.md and map its exact operations to real project tools. Adopt review/merge policy explicitly, using independent accuracy/hostile and owner-only merges as the default. Implement fresh validation first. Caches and publication reuse are optional later optimizations, with their own invalidation, main-audit, zero-reuse proof and bootstrap acceptance tests.
-
-Implement missing pieces needed for a reproducible build, honest exact/fuzzy measurements, versioned public reports, preserved history and site integration. Keep contribution acceptance, attribution tracking and rankings independent. Use the shared report contract and renderer rather than a separate game UI.
-
-Validate real inputs and both success/failure paths. Retain useful partial source. Do not invent metrics, evidence, authorship, approval or test results. Follow the project's task authorization for pushes, PRs, publication and merge.
-
-Deliver the changes with commands, tested revisions, artifacts, capability settings and remaining limitations. Verify the public route and next refresh before declaring the site integration complete.
-```
+| Parameter | Value | Files |
+| --- | --- | --- |
+| Public repository | `owner/game` | `CONTRIBUTING.md`, `tests/review_gate.mjs`, `build-image/README.md` |
+| Owner login | `OWNER_LOGIN`; also the `REVIEW_OWNER` variable | `AGENTS.md`, `CONTRIBUTING.md`, `tests/review_gate.mjs` |
+| Slug | `game` | `config/site.json` |
+| Target ids | `GAME01-rev0`, `GAME01-rev1` | `config/targets.json`, `config/ci-targets.json`, `AGENTS.md`, `CONTRIBUTING.md`, `build-image/*` |
+| Target display strings | `label`, `region`, `revision` | `config/targets.json` |
+| Original SHA-1 | 40 lower-case hex digits | `config/targets.json`, `build-image/Dockerfile` |
+| Presentation | `title`, `shortTitle`, `console`, `year`, `contributions`, `artwork` | `config/site.json` |
+| Build image | `owner/game-build` and its digest | `validate.yml.template` PARAMETER 1, `build-image/README.md` |
+| Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `tools/verify_target.py`, `build-image/*` |
+| Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |
+| Credential names | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | `validate.yml.template` PARAMETER 4 |
+| Reported tool versions | `dtk_tag`, `objdiff_tag` | `tools/measuring_tools.py` |
+| Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
 
 ## Acceptance checklist
 
-| Stage | Evidence |
-| --- | --- |
-| Identity | Owner, source objective, platform/region/revision and executable hash |
-| Structure | Source, declarations, configuration, evidence, tools and generated output are discoverable |
-| Tools | Approved versions/hashes, supported hosts and reproducible setup |
-| Baseline and build | Applicable complete-target checks and accepted-source result |
-| Comparisons | Full extents, profiles, dependencies and exact/fuzzy measurements |
-| Review | Scope-appropriate independent coverage, actual revision and resolved findings |
-| CI | Documented command mapping; real passing/failing/stale cases; appropriately scoped permissions |
-| Optional acceleration | Off until fresh correctness; actual cold/warm parity, dependency invalidation, main audit and complete-tree proof evidence before enabling |
-| Credits | Explicit policy, with evidence reconciliation when enabled |
-| Reports | Validated shared manifest, raw parity, supported modules and execution proof |
-| History | Durable continuity, idempotence, ordering and recovery |
-| Website | Shared presentation, configured modules, direct route, deployment and subsequent refresh |
+The repository is set up when each line is true and can be shown with a run, a commit or a URL.
 
-The [integration checklist](/docs/reporting/onboarding.md) repeats the producer/consumer boundary and completion checks in one handoff. Keep project-specific commands and decisions in that repository, not in this generic template.
+- The public repository has the layout in [Repository layout](/wiki/repository-layout/); `git status` after a local build shows no original or generated file.
+- `python3 -m unittest discover -s tests -p 'test_*.py'` and `node --test tests/review_gate.mjs` pass locally.
+- `python3 tools/verify_target.py --target <id>` reports the SHA-1 verified, and `ninja -f build/<id>/build.ninja` produces the byte-identical executable.
+- `ninja -f build/<id>/build.ninja progress build/<id>/report.json` writes a report that `publish.py publish --dry-run` converts and `publish.py check` accepts.
+- The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest.
+- A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and shows `Owner review clearance` pending.
+- `review.yml` is on `main`; a test clearance turns the status green; a new commit turns it pending. Branch protection requires both checks.
+- The GitHub App is installed on the data repository; the producer holds the variable and the secret.
+- The first `main` run's `Publish to the site` step printed `published <slug>/<id> <sha>`; the data repository has the commit; `https://mitsevox.github.io/games/<slug>/` shows it.
+- Cover art is committed to the data repository and `artwork` is in `config/site.json`, or the owner has decided to go without.
 
-## Explicit-target overlay
+## Prompt for an agent
 
-The starter download includes `optional-targets/`: editable target/CI-dependency registries, a
-changed-path planner, a target matrix workflow and exact adapter operations. Use it when starting
-a revision-aware project. It preserves shared source and separates originals, generated outputs,
-reports and histories by canonical target ID. Its README names every operation an agent must
-implement; it contains no fake-success build adapter. Single-target v1 integrations need no change.
+```text
+Set up a decompilation repository by following the guide in handbook.md exactly, using the files
+in repository-starter/. The project parameters are: <platform>, <toolchain and versions>, <target
+ids with labels, regions, revisions and SHA-1s>, <slug and presentation>, <owner login>,
+<public repository>, <private build repository>. Do not invent any other value.
+
+Work through the chapters in the order Start here gives. Copy each starter file to its destination
+and fill only the marked parameters. Where the guide names a command, run it and report its output;
+where a step needs the owner (creating the private repository, committing the original, installing
+the GitHub App, setting repository variables, secrets, package access or branch protection), stop
+and list exactly what the owner must do.
+
+Finish with the acceptance checklist from the Starter kit chapter: for each line, the evidence
+(command output, commit, run or URL) or the reason it is not yet true. Never substitute a
+placeholder for a real value to make a check pass, never commit an original, and never change the
+build image, the review workflow or branch protection on your own.
+```
