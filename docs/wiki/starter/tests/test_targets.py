@@ -190,24 +190,27 @@ class Targets(unittest.TestCase):
 
     def test_matching_scope_pins_unconditional_matching_to_the_proven_targets(self):
         from tools.matching_scope import pin,scopes,other_uses,run
+        # The scratch root carries this repository's own registry, whatever its ids: the first active
+        # target is the proven one, and a made-up id stands for a target activated later.
+        active=build_targets(registry());first=active[0];later=first+'-later'
         text=('Matching = True  # Object matches and should be linked\nNonMatching = False\nEquivalent = config.non_matching\n'
               'def MatchingFor(*versions):\n    return config.version in versions\nx = []\n'
               'objects = [\n    Object(Matching, "a.c"),\n    Object(NonMatching, "b.c"),  # Matching soon\n'
-              '    Object(MatchingFor("GAME01-rev0"), "c.c"),\n    Object(Equivalent, "d.c"),\n    Object( Matching , "e.c", cflags=x),\n'
-              '    Object(Matching, "f# Matching.c"), Object(Matching, "g.c"),\n]\n')
-        self.assertEqual([(u,s) for _,u,s in scopes(text)],[('a.c','all'),('b.c','none'),('c.c',['GAME01-rev0']),('d.c','none'),('e.c','all'),('f# Matching.c','all'),('g.c','all')])
+              '    Object(MatchingFor("%s"), "c.c"),\n    Object(Equivalent, "d.c"),\n    Object( Matching , "e.c", cflags=x),\n'
+              '    Object(Matching, "f# Matching.c"), Object(Matching, "g.c"),\n]\n'%first)
+        self.assertEqual([(u,s) for _,u,s in scopes(text)],[('a.c','all'),('b.c','none'),('c.c',[first]),('d.c','none'),('e.c','all'),('f# Matching.c','all'),('g.c','all')])
         self.assertEqual(other_uses(text),[])  # the comment, the string and the first arguments are not other uses
-        new,count=pin(text,['GAME01-rev0'])
+        new,count=pin(text,[first])
         self.assertEqual(count,4)
-        self.assertEqual([s for _,_,s in scopes(new)],[['GAME01-rev0'],'none',['GAME01-rev0'],'none',['GAME01-rev0'],['GAME01-rev0'],['GAME01-rev0']])
-        self.assertEqual(pin(new,['GAME01-rev0'])[1],0)
+        self.assertEqual([s for _,_,s in scopes(new)],[[first],'none',[first],'none',[first],[first],[first]])
+        self.assertEqual(pin(new,[first])[1],0)
         # What each target's configure sees: unchanged for the proven target, nothing linked for a new one.
         def flags(source,version):
             seen={};scope={'config':type('C',(),{'version':version,'non_matching':False})(),
                            'Object':lambda flag,name,**kw:seen.__setitem__(name,bool(flag))}
             exec(source,scope);return seen
-        self.assertEqual(flags(text,'GAME01-rev0'),flags(new,'GAME01-rev0'))
-        self.assertEqual(set(flags(new,'GAME01-rev1').values()),{False})
+        self.assertEqual(flags(text,first),flags(new,first))
+        self.assertEqual(set(flags(new,later).values()),{False})
         # Other uses and unclassified calls are found through the tokens, not the text.
         self.assertEqual(other_uses(text+'flag = Matching if fast else NonMatching\n'),['15: flag = Matching if fast else NonMatching'])
         self.assertEqual(other_uses(text+'Linked = Matching\n'),['15: Linked = Matching'])
@@ -215,20 +218,28 @@ class Targets(unittest.TestCase):
         self.assertEqual([(u,s) for _,u,s in scopes(text+'Object(True, "z.c")\nObject(Linked, "w.c")\n')[-2:]],[('z.c','unclassified'),('w.c','unclassified')])
         with tempfile.TemporaryDirectory() as tmp:
             root=scratch(tmp);(root/'configure.py').write_text(text)
-            with self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev1'])  # listed, not active
+            with self.assertRaises(SystemExit):run(root,'pin',[later])  # not an active target
             with self.assertRaises(SystemExit):run(root,'pin',[])
-            self.assertTrue(run(root,'pin',['GAME01-rev0'])[0].startswith('pinned 4 '))
-            self.assertIn('a.c: GAME01-rev0',run(root,'show'))
+            self.assertTrue(run(root,'pin',active)[0].startswith('pinned 4 '))
+            self.assertIn('a.c: '+', '.join(sorted(active)),run(root,'show'))
             for tail in ('flag = Matching\n','Object(True, "z.c")\n','Linked = Matching\nObject(Linked, "w.c")\n'):
                 (root/'configure.py').write_text(text+tail)
-                with self.subTest(tail=tail),self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev0'])
-            # Every active target must be named: a subset would drop the others' claims.
-            registry_text=(root/'config/targets.json').read_text().replace('"status": "planned"','"status": "active"',1)
-            (root/'config/targets.json').write_text(registry_text)
+                with self.subTest(tail=tail),self.assertRaises(SystemExit):run(root,'pin',active)
+            # Every active target must be named: a subset would drop the others' claims. The scratch
+            # registry gets a second active target: a listed inactive one activated, or, when every
+            # listed target is active, a made-up copy of the first.
+            value=registry(root/'config/targets.json')
+            inactive=[t for t in value['targets'] if t['status']!='active']
+            if inactive:inactive[0]['status']='active'
+            else:
+                sha1='0'*40 if value['targets'][0]['sha1']!='0'*40 else '1'*40
+                value['targets'].append(dict(value['targets'][0],id=later,sha1=sha1))
+            (root/'config/targets.json').write_text(json.dumps(value))
             (root/'configure.py').write_text(text)
-            if len(build_targets(registry(root/'config/targets.json')))>1:
-                with self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev0'])
-                self.assertTrue(run(root,'pin',build_targets(registry(root/'config/targets.json')))[0].startswith('pinned 4 '))
+            now=build_targets(registry(root/'config/targets.json'))
+            self.assertGreater(len(now),1)
+            with self.assertRaises(SystemExit):run(root,'pin',now[:1])
+            self.assertTrue(run(root,'pin',now)[0].startswith('pinned 4 '))
 
     def test_matching_scope_check_refuses_a_claim_on_every_target_once_two_are_active(self):
         from tools.matching_scope import check,run
