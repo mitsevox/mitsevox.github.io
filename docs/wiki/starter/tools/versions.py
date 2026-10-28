@@ -11,10 +11,12 @@ the group macros of include/version.h; this tool resolves exactly those directiv
 is not a known target id, a version condition mixed with other macros, and any use of
 BUILD_VERSION in source (it stays defined for dtk-template and is never read).
 
-A version condition names the targets it includes. `!VERSION_X`, and `#else` after a version
-condition, cover every target not named, a target listed later too. With two targets listed they
-mean the other target and `check` only warns about them; from the third listed target on they are
-errors, so the pull request that lists a third target makes every such block explicit."""
+A version condition names the targets it includes. A branch that a target listed later would take,
+a condition that holds when every version token is false (`!VERSION_X`, `!GROUP`) or the `#else`
+of a chain no condition of which does, covers every target not named. With two targets listed it
+is the other target's branch and `check` only warns; from the third listed target on it is an
+error, so the pull request that lists a third target makes every such block explicit. `view` and
+`diff` resolve such branches like any other."""
 import argparse
 import difflib
 from pathlib import Path
@@ -91,13 +93,6 @@ class Expression:
         left=self.evaluate(lookup,node[1]);right=self.evaluate(lookup,node[2])
         return (left and right) if node[0]=='and' else (left or right)
 
-    def negated(self,node=None):
-        """Whether any token is negated: such a condition covers every target not named."""
-        node=node or self.tree
-        if node[0]=='id':return False
-        if node[0]=='not':return True
-        return self.negated(node[1]) or self.negated(node[2])
-
 
 class Versions:
     def __init__(self,root=ROOT):
@@ -116,13 +111,10 @@ class Versions:
                     self.errors.append('include/version.h:%d: group %s is not a boolean expression of known VERSION_ tokens and earlier groups'%(number,m.group(1)))
                     continue
                 self.groups[m.group(1)]=expr
-                if expr.negated():
-                    error=self.broad('include/version.h:%d: group %s negates a version token'%(number,m.group(1)))
-                    if error:self.errors.append(error)
 
     def broad(self,message,warnings=None):
-        """A condition that covers every target not named: an error from the third listed target
-        on, a warning before (with two targets it names the other one)."""
+        """A branch a target listed later would take: an error from the third listed target on,
+        a warning before (with two targets it is the other target's branch)."""
         message+=': it covers every target not named, a target listed later too; name the targets or a group'
         if len(self.ids)>=3:return message
         (self.warnings if warnings is None else warnings).append(message)
@@ -144,12 +136,20 @@ class Versions:
             return self.groups[ident].evaluate(lookup)
         return lookup
 
+    def future(self,expr):
+        """Whether a condition holds for a target listed later: it is true when every version
+        token is false (a group stands for its expression, so a double negation is not broad)."""
+        def lookup(ident):return self.groups[ident].evaluate(lookup) if ident in self.groups else False
+        return expr.evaluate(lookup)
+
     def walk(self,lines,target_id=None,warnings=None):
-        """Resolve the version directives; yield (output line or None, error or None). Broad
-        conditions (a negated token, `#else` after a version condition) go to `warnings` while
-        two targets are listed and are errors from the third on."""
+        """Resolve the version directives; yield (output line or None, error or None). A branch a
+        target listed later would take (a condition that holds with every version token false, or
+        the `#else` of a chain no condition of which does) is reported through `warnings` while two
+        targets are listed and as an error from the third on; it is resolved like any other, so
+        `view` and `diff` show every target's source whatever `check` says."""
         lookup=self.truth(target_id) if target_id else (lambda ident:False)
-        stack=[]  # [resolved, active, taken] per open conditional
+        stack=[]  # [resolved, active, taken, taken by a later target] per open conditional
         for number,line in enumerate(lines,1):
             m=DIRECTIVE.match(line);error=None
             if m:
@@ -161,23 +161,30 @@ class Versions:
                     if unknown:error='%d: unknown VERSION_ token %s'%(number,', '.join(unknown))
                     elif cls=='mixed':error='%d: version condition mixed with other macros: %s'%(number,condition)
                     elif cls=='version' and kind=='elif' and stack and not stack[-1][0]:error='%d: version #elif inside a non-version conditional'%number
-                    elif cls=='version' and expr.valid and expr.negated():error=self.broad('%d: a negated version token'%number,warnings)
                     if 'BUILD_VERSION' in expr.identifiers:error='%d: BUILD_VERSION is never read in source'%number
                     resolved=cls=='version' and not error and (kind=='if' or (stack and stack[-1][0]))
+                    if resolved:
+                        earlier=stack[-1][3] if kind=='elif' else False
+                        later=not earlier and self.future(expr)
+                        if later:error=self.broad('%d: a version condition that holds for every target not named'%number,warnings)
                     if kind=='if':
                         if resolved:
-                            value=expr.evaluate(lookup);stack.append([True,value,value]);yield None,error;continue
-                        stack.append([False,True,True])
+                            value=expr.evaluate(lookup);stack.append([True,value,value,later]);yield None,error;continue
+                        stack.append([False,True,True,False])
                     elif resolved:
-                        frame=stack[-1];frame[1]=not frame[2] and expr.evaluate(lookup);frame[2]=frame[2] or frame[1];yield None,error;continue
+                        frame=stack[-1];frame[1]=not frame[2] and expr.evaluate(lookup);frame[2]=frame[2] or frame[1];frame[3]=earlier or later
+                        yield None,error;continue
                 elif stack and stack[-1][0]:
-                    if kind=='else':stack[-1][1]=not stack[-1][2];error=self.broad('%d: #else after a version condition'%number,warnings)
+                    if kind=='else':
+                        stack[-1][1]=not stack[-1][2]
+                        if not stack[-1][3]:error=self.broad('%d: #else after a version condition'%number,warnings)
+                        stack[-1][3]=True
                     else:stack.pop()
                     yield None,error;continue
                 elif kind=='endif' and stack:stack.pop()
             elif 'BUILD_VERSION' in IDENT.findall(line):
                 error='%d: BUILD_VERSION is never read in source'%number
-            emit=all(active for resolved,active,_ in stack if resolved)
+            emit=all(active for resolved,active,_,_ in stack if resolved)
             yield (line if emit else None),error
 
     def view(self,path,target_id):
