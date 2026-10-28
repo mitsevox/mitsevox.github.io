@@ -36,7 +36,7 @@ For a `name` claim, `target` requires explicit target name evidence; behavior al
 `inferred`. Record the function's extent in a separate `function` row so a name claim cannot silently
 establish its boundaries. Types and fields likewise need their own evidence.
 
-Edge claims other than `-` belong to `function`, `data` and `unit` rows. `exact` means evidence establishes that edge. `provisional` means a candidate edge still needs
+Edge claims other than `-` belong to `function`, `data`, `unit`, `assembly` and `linker` rows. `exact` means evidence establishes that edge. `provisional` means a candidate edge still needs
 confirmation. `open` marks an anchor with the true start at or before it, or the true end at or after it.
 Use `-` where no edge is claimed. A `unit-anchor` identifies evidence of a source path, not a unit's extent
 or ownership of neighboring functions.

@@ -5,7 +5,7 @@
 
 Each row has eight tab-separated columns; addresses are `0x` plus eight upper-case hex digits or
 `-`, with an exclusive end after the start; kinds and origins come from the lists below; edge
-claims (start_boundary, end_boundary) other than `-` appear only on function, data and unit rows."""
+claims (start_boundary, end_boundary) other than `-` appear only on function, data, unit, assembly and linker rows."""
 from pathlib import Path
 import re
 import sys
@@ -19,7 +19,7 @@ COLUMNS=['kind','start','end','subject','origin','start_boundary','end_boundary'
 KINDS={'name','function','data','unit-anchor','unit','type','field','external','compiler','assembly','source-form','linker'}
 ORIGINS={'target','signature','related','inferred'}
 EDGES={'exact','provisional','open','-'}
-EDGE_KINDS={'function','data','unit'}
+EDGE_KINDS={'function','data','unit','assembly','linker'}
 ADDRESS=re.compile(r'0x[0-9A-F]{8}')
 
 
@@ -42,7 +42,7 @@ def check_text(text,name='evidence.tsv'):
         if end!='-' and start=='-':problems.append(where+'end without start')
         for label,value in (('start_boundary',start_edge),('end_boundary',end_edge)):
             if value not in EDGES:problems.append(where+'%s is not exact, provisional, open or -'%label)
-            elif value!='-' and kind not in EDGE_KINDS:problems.append(where+'%s on a %s row; edges belong to function, data and unit rows'%(label,kind))
+            elif value!='-' and kind not in EDGE_KINDS:problems.append(where+'%s on a %s row; edges belong to function, data, unit, assembly and linker rows'%(label,kind))
         if not subject.strip():problems.append(where+'empty subject')
         if not evidence.strip():problems.append(where+'empty evidence')
     return problems
