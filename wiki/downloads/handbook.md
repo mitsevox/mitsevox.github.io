@@ -821,7 +821,7 @@ Tool tests ─────────────┘            │
 
 ### Plan affected targets
 
-Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `python3 tools/ci_targets.py`. The planner reads the event: for a pull request it diffs the base SHA against the head, for a push it diffs `before` against the pushed commit, and for `workflow_dispatch`, a push without a usable `before` (first push, force push) or `--force-all` it selects every active target. It applies `config/ci-targets.json` ([Targets](/wiki/targets/)), with each target's `config/<id>/**` and `orig/<id>/**` derived from the registry, and writes two outputs:
+Checks out with `fetch-depth: 0` (the planner diffs two commits) and runs `python3 tools/ci_targets.py`. The planner reads the event: for a pull request it diffs GitHub's test merge commit against that commit's first parent, the base branch as the merge was built on it (the event's base SHA can lag the branch, and diffing from it would count the base's newer commits as the pull request's; `tools/tier.py` uses the same base), for a push it diffs `before` against the pushed commit, and for `workflow_dispatch`, a push without a usable `before` (first push, force push) or `--force-all` it selects every active target. It applies `config/ci-targets.json` ([Targets](/wiki/targets/)), with each target's `config/<id>/**` and `orig/<id>/**` derived from the registry, and writes two outputs:
 
 - `matrix`: `{"include":[{"target":"GAME01-rev0"}, ...]}`
 - `has_targets`: `true` or `false`
