@@ -137,7 +137,10 @@ optionally `children`. Function leaves add `"type": "function"`, `function_addre
 `original_size`. Optional evidence fields: `source` and `comparison_source` (repository-relative
 paths), `complete`, `auto_generated`, `boundary`, `scope`. Code a unit's functions do not cover (alignment padding, code
 the producer does not split into functions) is one leaf per section piece named `<unit> (other code)`,
-without a `type`; the matched bytes no exact function accounts for are given to it.
+without a `type`, when the unit's `total_code` counts those bytes (it exceeds its function sizes by
+exactly them); the matched bytes no exact function accounts for are given to it. objdiff's `total_code`
+is the sum of the function sizes, so such a report has no such leaf; a `total_code` that is neither
+of the two is refused.
 
 The checker enforces: a parent's measures are its children's sums; extents never overlap; both views
 cover exactly the same bytes; per kind, the top-level nodes sum to the summary; every function is
