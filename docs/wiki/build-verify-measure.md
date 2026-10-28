@@ -8,7 +8,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
 
 ## Local setup for a dtk-template project
 
-1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you.
+1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). dtk-template names its config folder after the game ID (`config/GAMEID/`); rename it to the target id (`config/GAME01-rev0/`) before adding anything, and use the target id wherever the template says version. Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you.
 2. Wire `configure.py` to the target list so the active targets are the only versions it accepts and `--version` takes a target id. Replace dtk-template's hard-coded `VERSIONS` list with:
 
     ```python

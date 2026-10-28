@@ -2,7 +2,9 @@
 
 `config/targets.json`, `config/site.json` and `config/ci-targets.json`, field by field.
 
-A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement. The three files below are the producer's only inputs to the site apart from the objdiff report. Copies with placeholders are in the [starter kit](/wiki/starter-kit/).
+A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement.
+
+**Lay out every project as multi-target from the first commit, even with one disc.** The target id always carries its revision (`GAME01-rev0`, never a bare `GAME01`), every per-target path is keyed by that id, and `targets.json` is a list with one entry. Adding a revision or region later is then a new folder and a new list entry; nothing is renamed or moved. A target id is permanent once published, because it names the target's directory in the data repository and the `?target=` value in its URLs. The three files below are the producer's only inputs to the site apart from the objdiff report. Copies with placeholders are in the [starter kit](/wiki/starter-kit/).
 
 ## config/targets.json
 

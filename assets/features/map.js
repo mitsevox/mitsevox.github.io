@@ -1,12 +1,15 @@
-import {pageScope} from './lifecycle.js';
-import {fetchProgress, fetchSummary, fetchBoundaryGraph} from './reports.js';
-import {validMeasure} from './report-map-validation.js';
-import {mapLabel, showMapDetails} from './map-evidence.js';
-export function mountProgress(root, project, buildLink) {
+// The project map: every function and data block as a tile, by file and by section.
+import {createSearchField} from '../components/ui/search-field.js';
+import {createSegmentedControl} from '../components/ui/segmented-control.js';
+import {createAction} from '../components/ui/action.js';
+import {pageScope} from '../lifecycle.js';
+import {fetchProgress, fetchBoundaryGraph} from '../reports.js';
+import {mapLabel, showMapDetails} from '../map-evidence.js';
+
+export function mount(root, {project, tooltip: tooltipUI}) {
 const scope = pageScope();
 const {signal, listen, frame, cancelFrame, animate} = scope;
-const mapEnabled = project.modules?.map !== false;
-const mapListen = mapEnabled ? listen : () => {};
+const mapListen = listen;
 let sections=[];
 const canvas=root.querySelector('#canvas');
 const projectMap = root.querySelector('#project-map');
@@ -16,7 +19,7 @@ const mapLift = document.createElement('div');
 mapLift.className = 'map-lift';
 mapLift.setAttribute('aria-hidden', 'true');
 mapLift.hidden = true;
-if (mapEnabled) canvas.parentElement.append(mapLift);
+canvas.parentElement.append(mapLift);
 const similarity = item => (item.fuzzy ?? item.matched) / item.size;
 const partialColorStrength = .65;
 function color(item) {
@@ -27,13 +30,18 @@ function color(item) {
 // Preserve report order so neighboring files and functions stay together.
 // Balanced area partitioning keeps byte proportions exact across viewport sizes.
 function partition(items,x,y,w,h,out){if(!items.length)return;if(items.length===1){out.push({...items[0],x,y,w,h});return;}let total=items.reduce((s,a)=>s+a.size,0),sum=0,split=1;for(let i=0;i<items.length-1;i++){sum+=items[i].size;split=i+1;if(sum>=total/2)break;}const ratio=sum/total;if(w>=h){partition(items.slice(0,split),x,y,w*ratio,h,out);partition(items.slice(split),x+w*ratio,y,w*(1-ratio),h,out);}else{partition(items.slice(0,split),x,y,w,h*ratio,out);partition(items.slice(split),x,y+h*ratio,w,h*(1-ratio),out);}}
-const tooltip = root.querySelector('#map-tooltip');
-const back = root.querySelector('#map-back');
-const search = root.querySelector('#map-search');
-const kindPicker = root.querySelector('#map-kind');
-if (!mapEnabled) { root.append(tooltip); projectMap.remove(); }
+const back=createAction({id:'map-back',icon:'back',hidden:true,ariaLabel:'Back to files'});
+root.querySelector('[data-ui="map-back"]').replaceWith(back);
+const closeDetails=createAction({icon:'close',ariaLabel:'Close map details'});
+root.querySelector('[data-ui="map-close"]').replaceWith(closeDetails);
+const searchField=createSearchField({id:'map-search',label:'Search map names',placeholder:'Search names'});
+root.querySelector('[data-ui="map-search"]').replaceWith(searchField.node);
+const search=searchField.input;
+const kindControl=createSegmentedControl({id:'map-kind',label:'Map type',value:'code',scope,
+  options:[{value:'code',label:'Code',icon:'code'},{value:'data',label:'Data',icon:'data'}],
+  onChange(value,event,button){mapKind=value;projectMap.dataset.kind=value;path.length=0;render('switch',clickOrigin(event,button));}});
+root.querySelector('[data-ui="map-kind"]').replaceWith(kindControl.node);
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
-const countAnimations = new WeakMap();
 let mapFrame = null;
 let activePulses = [];
 let rippleSurface = null;
@@ -42,29 +50,14 @@ let renderVersion = 0;
 const yieldWork = () => new Promise(resolve => setTimeout(resolve, 0));
 let mapLayout = [];
 let hoverTarget = null;
+// The map is one Tab stop; arrow keys, Home and End move within it.
+let tabStop = null;
+function rove(element) {
+  if (tabStop && tabStop !== element) tabStop.tabIndex = -1;
+  element.tabIndex = 0;
+  tabStop = element;
+}
 let hoverItem = null;
-function countUp(element, value, decimals = 0, suffix = '') {
-  const previous = countAnimations.get(element);
-  if (previous) cancelFrame(previous);
-  const format = number => decimals ? number.toFixed(decimals) + suffix : Math.round(number).toLocaleString() + suffix;
-  if (motionPreference.matches) {
-    element.textContent = format(value);
-    return;
-  }
-  const start = performance.now();
-  const step = now => {
-    const t = motionPreference.matches ? 1 : Math.max(0, Math.min((now - start) / 780, 1));
-    element.textContent = format(value * (1 - Math.pow(1 - t, 3)));
-    if (t < 1) countAnimations.set(element, frame(step));
-    else countAnimations.delete(element);
-  };
-  element.textContent = format(0);
-  countAnimations.set(element, frame(step));
-}
-function fillTo(element, percent) {
-  if (motionPreference.matches) element.style.width = percent + '%';
-  else frame(() => frame(() => { element.style.width = percent + '%'; }));
-}
 function clearMapMotion() {
   if (mapFrame !== null) cancelFrame(mapFrame);
   mapFrame = null;
@@ -252,22 +245,10 @@ mapListen(search, 'input', () => {
   path.length = 0;
   render('search');
 });
-kindPicker.querySelectorAll('button').forEach(button => {
-  mapListen(button, 'click', event => {
-    mapKind = button.dataset.kind;
-    kindPicker.dataset.selected = mapKind;
-    projectMap.dataset.kind = mapKind;
-    kindPicker.querySelectorAll('button').forEach(option => option.setAttribute('aria-pressed', option === button));
-    path.length = 0;
-    render('switch', clickOrigin(event, button));
-  });
-});
-let activeTile = null;
 let liftedItem = null;
 let liftAnimation = null;
 let hoverFrame = null;
 let hoverPoint = null;
-let tooltipWidth = 0, tooltipHeight = 0;
 function clearMapLift() {
   liftedItem = null;
   liftAnimation?.cancel();
@@ -281,45 +262,14 @@ function cancelMapHover() {
 }
 const percent = item => (similarity(item) * 100).toFixed(2) +
   (item.matched === item.size ? '% matched' : '% similarity');
-function hideTooltip() {
-  cancelMapHover();
-  clearMapLift();
-  tooltip.hidden = true;
-  activeTile?.removeAttribute('aria-describedby');
-  activeTile = null;
-}
+function hideTooltip() { tooltipUI.hide(); }
 function showTooltip(block, item, x, y) {
   showTooltipText(block, mapLabel(item), x, y, percent(item));
   liftMapBlock(item);
 }
 function showTooltipText(block, text, x, y, value = '') {
   if (!value) clearMapLift();
-  const changed = tooltip.hidden || tooltip.dataset.label !== text || tooltip.dataset.value !== value;
-  if (activeTile !== block) {
-    activeTile?.removeAttribute('aria-describedby');
-    activeTile = block;
-    block.setAttribute('aria-describedby', 'map-tooltip');
-  }
-  if (changed) {
-    tooltip.dataset.label = text;
-    tooltip.dataset.value = value;
-    const name = document.createElement('span');
-    name.className = 'tooltip-name';
-    name.textContent = text + (value ? ' ' : '');
-    tooltip.replaceChildren(name);
-    if (value) {
-      const measure = document.createElement('span');
-      measure.className = 'tooltip-value';
-      measure.textContent = value;
-      tooltip.append(measure);
-    }
-    tooltip.hidden = false;
-    tooltipWidth = tooltip.offsetWidth;
-    tooltipHeight = tooltip.offsetHeight;
-  }
-  const gap = 14;
-  tooltip.style.left = Math.max(10, Math.min(x + gap, window.innerWidth - tooltipWidth - 10)) + 'px';
-  tooltip.style.top = Math.max(10, Math.min(y + gap, window.innerHeight - tooltipHeight - 10)) + 'px';
+  tooltipUI.show({anchor:block,label:text,value,x,y,onHide(){cancelMapHover();clearMapLift();}});
 }
 let palette = null;
 function colorValue(item) {
@@ -435,10 +385,9 @@ function targetItem(item) {
   if (hoverItem === item && hoverTarget) return hoverTarget;
   hoverItem = item;
   if (!hoverTarget) {
-    hoverTarget = document.createElement('button');
-    hoverTarget.type = 'button';
-    hoverTarget.className = 'tile map-hit';
-    mapListen(hoverTarget, 'blur', () => { if (activeTile === hoverTarget) hideTooltip(); });
+    hoverTarget = createAction({className:'tile map-hit'});
+    hoverTarget.tabIndex = -1;
+    mapListen(hoverTarget, 'blur', () => { if (tooltipUI.anchor === hoverTarget) hideTooltip(); });
     mapListen(hoverTarget, 'focus', () => {
       if (!hoverTarget.matches(':focus-visible')) return;
       const rect = hoverTarget.getBoundingClientRect();
@@ -472,6 +421,7 @@ mapListen(canvas, 'keydown', event => {
     Math.max(0, Math.min(mapLayout.length - 1, index + (['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : -1)));
   if (mapLayout[next]) {
     const target = targetItem(mapLayout[next]);
+    rove(target);
     target.focus();
     const rect = target.getBoundingClientRect();
     showTooltip(target, mapLayout[next], rect.left, rect.top);
@@ -490,7 +440,6 @@ mapListen(canvas, 'pointerleave', () => {
 });
 async function render(direction = null, origin = null) {
   const version = ++renderVersion;
-  if (!mapEnabled) return;
   if (!sections.length) return;
   const continuing = activePulses.filter(pulse => performance.now() - pulse.start < pulse.duration)
     .map(pulse => ({origin: {x: pulse.origin.x / pulse.width * canvas.clientWidth,
@@ -508,6 +457,7 @@ async function render(direction = null, origin = null) {
   const layout = [];
   partition(items, 0, 0, canvas.clientWidth, canvas.clientHeight, layout);
   canvas.replaceChildren();
+  tabStop = null;
   hoverTarget = null;
   hoverItem = null;
   rippleSurface = null;
@@ -526,15 +476,14 @@ async function render(direction = null, origin = null) {
   // Pixel drawing keeps dense maps fast; larger cells and search results retain native keyboard targets.
   const targets = search.value.trim() ? layout.slice(0, 128) : layout.slice(0, 64);
   for (const [index, item] of targets.entries()) {
-    const block = document.createElement('button');
-    block.type = 'button';
-    block.className = 'tile';
+    const block = createAction({className:'tile'});
+    block.tabIndex = -1;
     block.dataset.name = item.name;
     block.dataset.mapIndex = index;
     Object.assign(block.style, {left: item.x + 'px', top: item.y + 'px', width: item.w + 'px', height: item.h + 'px'});
     block.setAttribute('aria-label', mapLabel(item) + ' · ' + percent(item));
     item.target = block;
-    mapListen(block, 'blur', () => { if (activeTile === block) hideTooltip(); });
+    mapListen(block, 'blur', () => { if (tooltipUI.anchor === block) hideTooltip(); });
     mapListen(block, 'focus', () => {
       if (!block.matches(':focus-visible')) return;
       const rect = block.getBoundingClientRect();
@@ -544,6 +493,9 @@ async function render(direction = null, origin = null) {
     if (index === focusedIndex) block.focus();
   }
   if (focusedIndex !== null && focusedIndex >= targets.length && layout[focusedIndex]) targetItem(layout[focusedIndex]).focus();
+  const entry = canvas.contains(document.activeElement) && document.activeElement !== canvas ? document.activeElement : targets[0]?.target;
+  tabStop = null;
+  if (entry) rove(entry);
   for (const pulse of continuing) ripple(pulse.origin, pulse.start);
   if (direction !== 'search') ripple(origin);
   return true;
@@ -574,150 +526,31 @@ mapListen(window, 'scroll', () => {
     if (item && rect.bottom > 0 && rect.top < window.innerHeight) showTooltip(focused, item, rect.left, rect.top);
   });
 }, {passive: true});
-function renderCounts(functions, type, basis) {
-  if (!root.querySelector('[data-stats="' + type + '"]')) return;
-  const available = functions && functions.total > 0;
-  if (functions && (!Number.isSafeInteger(functions.total) || functions.total < 0 ||
-      !['exact', 'named'].every(field => Number.isSafeInteger(functions[field]) && functions[field] >= 0 && functions[field] <= functions.total))) {
-    throw new Error('Invalid function progress');
-  }
-  root.querySelector('[data-stats="' + type + '"] .stats-total span').textContent = available ? functions.total.toLocaleString() : '—';
-  for (const field of ['exact', 'named']) {
-    const stat = root.querySelector('[data-' + type + '="' + field + '"]');
-    const value = available ? functions[field] / functions.total * 100 : 0;
-    if (available) countUp(stat.querySelector('strong'), functions[field]);
-    else stat.querySelector('strong').textContent = '—';
-    const track = stat.querySelector('.function-track');
-    fillTo(track.firstElementChild, value);
-    if (available) {
-      track.setAttribute('aria-valuenow', value);
-      track.setAttribute('aria-valuetext', `${functions[field].toLocaleString()} of ${functions.total.toLocaleString()}`);
-    } else {
-      track.removeAttribute('aria-valuenow');
-      track.setAttribute('aria-valuetext', 'Unavailable');
-    }
-  }
-}
-
-function renderSummary(data) {
-if(data.schema!==1||data.target!==project.target||data.target_sha1!==project.targetSha1||data.baseline!=='verified'||!(/^[a-f0-9]{40}$/).test(data.revision)||!validMeasure(data.measures?.code)||!validMeasure(data.measures?.data))throw new Error('Invalid progress');
-renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(data.file_counts, 'file', 'mapped-file-inventory');root.querySelectorAll('.progress-element').forEach(element => {
-  const kind = element.dataset.progress;
-  const measures = data.measures[kind];
-  element.querySelector('.fuzzy-key').parentElement.hidden=measures.fuzzy===undefined;
-  const available=measures.total>0;
-  const linked = available ? measures.linked / measures.total * 100 : 0;
-  const matched = available ? measures.matched / measures.total * 100 : 0;
-  const fuzzy = measures.fuzzy===undefined ? null : available ? measures.fuzzy/measures.total*100 : 0;
-  const track = element.querySelector('.track');
-  const description = !available?`${kind === 'code' ? 'Code' : 'Data'} unavailable`:`${kind === 'code' ? 'Code' : 'Data'} · Linked ${linked.toFixed(2)}% · Matched ${matched.toFixed(2)}%${fuzzy===null?'':' · Fuzzy '+fuzzy.toFixed(2)+'%'}`;
-  if(available)countUp(element.querySelector('.progress-value'), matched, 2, '%');
-  else element.querySelector('.progress-value').textContent='Unavailable';
-  if(available)track.setAttribute('aria-valuenow', matched);else track.removeAttribute('aria-valuenow');
-  track.setAttribute('aria-valuetext', available?`Linked ${linked.toFixed(2)}%, matched ${matched.toFixed(2)}%${fuzzy===null?'':', fuzzy '+fuzzy.toFixed(2)+'%'}`:'Unavailable');
-  fillTo(track.querySelector('.progress-linked'), linked);
-  fillTo(track.querySelector('.progress-matched'), matched);
-  track.querySelector('.progress-fuzzy').hidden=fuzzy===null;
-  if(fuzzy!==null)fillTo(track.querySelector('.progress-fuzzy'), fuzzy);
-  const strips = [
-    {field: 'linked', label: 'Linked', value: linked},
-    {field: 'matched', label: 'Matched', value: matched},
-    ...(fuzzy===null?[]:[{field: 'fuzzy', label: 'Fuzzy', value: fuzzy}])
-  ];
-  const lift = document.createElement('div');
-  lift.className = 'progress-hover';
-  lift.setAttribute('aria-hidden', 'true');
-  lift.hidden = true;
-  track.append(lift);
-  let liftedStrip = null, stripAnimation = null;
-  function clearHover() {
-    stripAnimation?.cancel();
-    liftedStrip = null;
-    lift.hidden = true;
-    hideTooltip();
-  }
-  function hoverStrip(event) {
-    if(!available)return;
-    const rect = track.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    let start = 0;
-    for (const strip of strips) {
-      const end = track.querySelector('i.progress-' + strip.field).getBoundingClientRect().width;
-      if (x >= start && x < end) {
-        if (liftedStrip !== strip.field || lift.style.width !== (end - start) + 'px') {
-          stripAnimation?.cancel();
-          liftedStrip = strip.field;
-          lift.hidden = false;
-          lift.className = 'progress-hover progress-' + strip.field;
-          lift.style.left = start + 'px';
-          lift.style.width = (end - start) + 'px';
-          if (!motionPreference.matches) stripAnimation = animate(lift, [
-            {transform: 'translateY(-50%) scale(1)', opacity: .5},
-            {transform: 'translateY(-50%) scale(1.008,1.3)', opacity: 1}
-          ], {duration: 160, easing: 'cubic-bezier(.22,1,.36,1)'});
-        }
-        showTooltipText(track, `${strip.label} ${strip.value.toFixed(2)}%`, event.clientX, event.clientY);
-        return;
-      }
-      start = Math.max(start,end);
-    }
-    clearHover();
-  }
-  listen(track, 'pointerenter', event => {
-    if (event.pointerType !== 'touch') hoverStrip(event);
-  });
-  listen(track, 'pointermove', event => {
-    if (event.pointerType !== 'touch') hoverStrip(event);
-  });
-  listen(track, 'pointerleave', clearHover);
-  listen(window, 'resize', clearHover);
-  listen(motionPreference, 'change', () => { if (motionPreference.matches) stripAnimation?.cancel(); });
-  listen(window, 'scroll', clearHover, {passive: true});
-  listen(track, 'focus', () => {
-    if (!track.matches(':focus-visible')) return;
-    const rect = track.getBoundingClientRect();
-    showTooltipText(track, description, rect.left, rect.bottom);
-  });
-  listen(track, 'blur', clearHover);
-  listen(track, 'click', hoverStrip);
-});const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Verified report · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Measured '+(project.report?.measuredAt||data.built_at)+'; published '+data.built_at;
-}
-async function loadProgress() {
-  try {
-    const summary = await fetchSummary(project, signal);
-    if (signal.aborted) return;
-    renderSummary(summary);
-  } catch {
-    if (signal.aborted) return;
-    renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');
-    buildLink.textContent='Progress unavailable';
-    root.querySelectorAll('.track').forEach(track=>track.setAttribute('aria-valuetext','Unavailable'));
-    if (mapEnabled) canvas.textContent='Progress unavailable';
-    return;
-  }
-  if (!mapEnabled) return;
+async function load() {
   canvas.setAttribute('aria-busy','true');
-  const loading=document.createElement('span');loading.className='map-loading';loading.textContent='Loading map…';canvas.append(loading);
+  const loading=document.createElement('span');loading.className='map-loading';loading.textContent='Loading map…';canvas.replaceChildren(loading);
   try {
     const data = await fetchProgress(project, signal);
     if (signal.aborted) return;
     sections=data.files||data.sections;
     await render();
   } catch {
-    if (!signal.aborted) canvas.textContent='Map unavailable';
+    if (signal.aborted) return;
+    canvas.textContent='Map unavailable ';
+    const retry=createAction({className:'inline-retry',label:'Retry'});
+    listen(retry,'click',()=>load(),{once:true});canvas.append(retry);
   } finally {
     if (!signal.aborted) canvas.removeAttribute('aria-busy');
   }
 }
 let resizeFrame = null, previousSize = '';
-const observer = mapEnabled ? new ResizeObserver(() => {
+const observer = new ResizeObserver(() => {
   const size = canvas.clientWidth + ':' + canvas.clientHeight;
   if (size === previousSize) return;previousSize = size;
   if (resizeFrame !== null) cancelFrame(resizeFrame);
   resizeFrame = frame(() => {resizeFrame = null;if (!signal.aborted) render();});
-}) : null;
-observer?.observe(canvas);
-const ready = loadProgress();
-return {ready, destroy() { observer?.disconnect(); ++renderVersion; clearMapMotion(); scope.destroy(); }};
-
+});
+observer.observe(canvas);
+const ready = load();
+return {ready, destroy() { observer.disconnect(); ++renderVersion; clearMapMotion(); scope.destroy(); }};
 }

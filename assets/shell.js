@@ -1,15 +1,16 @@
+import {createContributionLink} from './components/ui/contribution-link.js';
 import {createDropdown} from './components/ui/dropdown.js';
 import {projects} from './projects.js';
 export const arrow = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>';
 const github = '<svg class="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.77-.24.77-.54v-2.09c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.64-1.25-1.64-1.02-.7.08-.69.08-.69 1.13.08 1.72 1.16 1.72 1.16 1 1.71 2.62 1.22 3.26.93.1-.73.39-1.22.71-1.5-2.5-.29-5.13-1.25-5.13-5.54 0-1.22.44-2.22 1.15-3-.12-.28-.5-1.42.11-2.96 0 0 .94-.3 3.08 1.15a10.72 10.72 0 0 1 5.6 0c2.14-1.45 3.08-1.15 3.08-1.15.61 1.54.23 2.68.11 2.96.71.78 1.15 1.78 1.15 3 0 4.3-2.64 5.25-5.15 5.53.4.35.76 1.03.76 2.08v3.09c0 .3.2.65.77.54A11.2 11.2 0 0 0 12 .8Z"/></svg>';
-const contributionIcon = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v10a4 4 0 0 0 4 4h4M16 4v4a4 4 0 0 1-4 4H8"/><circle cx="8" cy="4" r="2"/><circle cx="16" cy="4" r="2"/><circle cx="18" cy="18" r="2"/></svg>';
-const chevron = '<svg class="switch-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
 export function createHeader() {
   const node=document.createElement('header');
-  node.innerHTML=`<div class="header-location"><a class="wordmark" href="/" aria-label="mitsevox — all projects">mitsevox</a><span class="wordmark-slash" aria-hidden="true">/</span></div><nav class="main-nav" aria-label="Main navigation"><a class="wiki-link" href="/wiki/" aria-label="Wiki"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></svg><span>Wiki</span></a><a class="github-link">${github}<span>GitHub</span></a><a class="contribute-link" aria-label="Contribute" hidden>${contributionIcon}<span>Contribute</span></a></nav>`;
-  const contribute=node.querySelector('.contribute-link');
+  const skip=document.createElement('a');skip.className='skip-link';skip.href='#page-content';skip.textContent='Skip to content';
+  node.innerHTML=`<div class="header-location"><a class="wordmark" href="/" aria-label="mitsevox — all projects">mitsevox</a><span class="wordmark-slash" aria-hidden="true">/</span></div><nav class="main-nav" aria-label="Main navigation"><a class="wiki-link" href="/wiki/" aria-label="Wiki"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v15m0-15C9 3 5 3 2 4v15c3-1 7-1 10 1 3-2 7-2 10-1V4c-3-1-7-1-10 1Z"/></svg><span>Wiki</span></a><a class="github-link">${github}<span>GitHub</span></a></nav>`;
+  node.prepend(skip);
+  const contribute=createContributionLink({hidden:true});node.querySelector('.main-nav').append(contribute);
   const dropdown=createDropdown({id:'project-picker',label:'Switch game',className:'project-switcher',triggerClass:'project-trigger',labelClass:'game-title',menuClass:'project-menu',value:null,triggerLabel:'Projects',
-    options:projects.map(project=>({value:project.slug,label:project.title,description:project.console,image:project.cover,href:project.href}))});
+    options:projects.map(project=>({value:project.slug,label:project.title,description:project.console,image:project.thumb,imageFallback:project.cover,href:project.href}))});
   const switcher=dropdown.node,trigger=dropdown.trigger,menu=dropdown.menu;
   node.querySelector('.header-location').append(switcher);
   const wikiLabel=document.createElement('span');

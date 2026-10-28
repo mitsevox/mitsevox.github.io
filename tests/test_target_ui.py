@@ -29,7 +29,7 @@ for(const id of ['ID-rev1','invalid']){
   assert.equal(selected.contributionsEnabled,false);assert.ok(Object.values(selected.modules).every(v=>v===false));
   assert.equal(selected.unknownTarget,id==='invalid');assert.equal(selected.targetCatalog,id==='invalid'?null:targets);
 }
-const single=withTarget({...game,targets:[targets[0]]},'ID-rev0');assert.equal(single.targetCatalog,null);
+const single=withTarget({...game,targets:[targets[0]]},'ID-rev0');assert.deepEqual(single.targetCatalog,[targets[0]]);
 '''
         result = subprocess.run(['node', '--input-type=module'], input=script, text=True, cwd=ROOT, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

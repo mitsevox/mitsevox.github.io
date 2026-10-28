@@ -22,6 +22,8 @@ async function load(slug) {
     ...game, base, reports, preview:false,
     href:`/games/${slug}/`, repo:`https://github.com/${game.repository}`,
     cover:game.artwork ? base + game.artwork.cover : null,
+    // The data repository's deploy generates a 360px-wide thumbnail beside each cover.
+    thumb:game.artwork ? base + 'cover-thumb.webp' : null,
     coverWidth:game.artwork?.width, coverHeight:game.artwork?.height,
     contributeUrl:game.contributions?.guideUrl,
   };

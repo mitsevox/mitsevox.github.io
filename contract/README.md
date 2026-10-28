@@ -11,6 +11,7 @@ checker ever disagree, the checker is right and this page is the bug.
 index.json                      {"schema": 1, "games": ["<game>", ...]}
 data/<game>/game.json           presentation and the target list
 data/<game>/cover.webp          optional, committed by hand
+data/<game>/cover-thumb.webp    generated on deploy: 360px wide, what the site displays
 data/<game>/<target>/latest.json    the newest measurement
 data/<game>/<target>/history.json   every measurement, append-only
 data/<game>/<target>/map.json       the newest measurement's tile map
@@ -41,7 +42,7 @@ special about it. Only `active` targets have a directory.
 | Field | Meaning |
 | --- | --- |
 | `id` | `[A-Za-z0-9._-]+`, stable forever; it is the directory name and the `?target=` value |
-| `platform` | lower-case platform name (`gamecube`, `ps2`, ...); the site only uses it to pick an icon |
+| `platform` | lower-case platform name (`gamecube`, `ps2`, ...); identifies the toolchain family. The site's icon and console filter come from `site.json`'s `console` |
 | `label`, `region`, `revision` | display strings; the target picker groups by `label`, then `revision` |
 | `sha1` | identity of the original binary |
 | `status` | `active` (built and measured), `planned` or `archived` (listed, never measured) |

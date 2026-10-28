@@ -147,7 +147,7 @@ game/
     pull_request_template.md                                             (starter)
 ```
 
-Three directories are keyed by the target id and nothing else: `config/<target id>/` for inputs, `orig/<target id>/` for the original, `build/<target id>/` for everything generated, including `build.ninja`, `objdiff.json` and `report.json`. Switching targets never overwrites another target's files.
+Three directories are keyed by the target id and nothing else: `config/<target id>/` for inputs, `orig/<target id>/` for the original, `build/<target id>/` for everything generated, including `build.ninja`, `objdiff.json` and `report.json`. Switching targets never overwrites another target's files. This holds for a project with a single target too: there is no flat, unkeyed layout to grow out of later.
 
 ## Tracked and ignored
 
@@ -203,7 +203,9 @@ Only active targets have a directory. See [Data contract](/wiki/data-contract/).
 
 `config/targets.json`, `config/site.json` and `config/ci-targets.json`, field by field.
 
-A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement. The three files below are the producer's only inputs to the site apart from the objdiff report. Copies with placeholders are in the [starter kit](/wiki/starter-kit/).
+A target is one original binary. A game with one disc revision has one target; a second revision, region or platform is a second entry, never a replacement.
+
+**Lay out every project as multi-target from the first commit, even with one disc.** The target id always carries its revision (`GAME01-rev0`, never a bare `GAME01`), every per-target path is keyed by that id, and `targets.json` is a list with one entry. Adding a revision or region later is then a new folder and a new list entry; nothing is renamed or moved. A target id is permanent once published, because it names the target's directory in the data repository and the `?target=` value in its URLs. The three files below are the producer's only inputs to the site apart from the objdiff report. Copies with placeholders are in the [starter kit](/wiki/starter-kit/).
 
 ## config/targets.json
 
@@ -398,7 +400,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
 
 ## Local setup for a dtk-template project
 
-1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you.
+1. Start from [dtk-template](https://github.com/encounter/dtk-template) (`configure.py`, `tools/project.py` and the rest of its `tools/`). dtk-template names its config folder after the game ID (`config/GAMEID/`); rename it to the target id (`config/GAME01-rev0/`) before adding anything, and use the target id wherever the template says version. Follow its documentation for `config/<target id>/config.yml`, `splits.txt` and `symbols.txt`; those are the platform-specific part this guide cannot write for you.
 2. Wire `configure.py` to the target list so the active targets are the only versions it accepts and `--version` takes a target id. Replace dtk-template's hard-coded `VERSIONS` list with:
 
     ```python

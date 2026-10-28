@@ -45,7 +45,7 @@ game/
     pull_request_template.md                                             (starter)
 ```
 
-Three directories are keyed by the target id and nothing else: `config/<target id>/` for inputs, `orig/<target id>/` for the original, `build/<target id>/` for everything generated, including `build.ninja`, `objdiff.json` and `report.json`. Switching targets never overwrites another target's files.
+Three directories are keyed by the target id and nothing else: `config/<target id>/` for inputs, `orig/<target id>/` for the original, `build/<target id>/` for everything generated, including `build.ninja`, `objdiff.json` and `report.json`. Switching targets never overwrites another target's files. This holds for a project with a single target too: there is no flat, unkeyed layout to grow out of later.
 
 ## Tracked and ignored
 

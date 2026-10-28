@@ -99,15 +99,12 @@ export async function fetchProgress(project,signal){
   }
   return p;
 }
-export async function fetchActivity(project,signal){
-  const report=project.report;
-  const a={schema:1,revision:report.source.revision,target:project.target,target_sha1:project.targetSha1};
-  await Promise.all([
-    project.modules.timeline&&read(asset(project,'history.json'),signal,true).then(rows=>{
-      a.snapshots=rows.map(row=>({revision:row.revision,built_at:row.measuredAt,
-        code:{total:row.code.total,linked:row.code.linked},data:{total:row.data.total,linked:row.data.linked}}));
-    }),
-    project.modules.contributors&&read(asset(project,report.modules.contributors),signal,true).then(document=>{a.contributors=document.contributors;}),
-  ]);
-  return a;
+export async function fetchHistory(project,signal){
+  const rows=await read(asset(project,'history.json'),signal,true);
+  return {schema:1,revision:project.report.source.revision,target:project.target,target_sha1:project.targetSha1,
+    snapshots:rows.map(row=>({revision:row.revision,built_at:row.measuredAt,
+      code:{total:row.code.total,linked:row.code.linked},data:{total:row.data.total,linked:row.data.linked}}))};
+}
+export async function fetchContributors(project,signal){
+  return (await read(asset(project,project.report.modules.contributors),signal,true)).contributors;
 }
