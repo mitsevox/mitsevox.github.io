@@ -152,6 +152,9 @@ class Targets(unittest.TestCase):
         self.assertEqual(measuring_tools(DIGEST,configure)[0],('build-environment',DIGEST))
         with self.assertRaises(SystemExit):measuring_tools('ghcr.io/owner/game-build:main',configure)
         with self.assertRaises(SystemExit):measuring_tools(DIGEST,'')
+        pins=[{'dtk':{'version':'v1.8.4','linux-x86_64':{}}},{'objdiff':{'version':'v3.8.2'}}]
+        self.assertEqual(measuring_tools(DIGEST,pins=pins)[1:],[('dtk','v1.8.4'),('objdiff','v3.8.2')])
+        with self.assertRaises(SystemExit):measuring_tools(DIGEST,pins=[{'dtk':{}}])
 
 
 if __name__=='__main__':unittest.main()
