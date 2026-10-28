@@ -85,7 +85,8 @@ def write_json(path, document, rows=False, compact=False):
         text = json.dumps(document, sort_keys=True, separators=(',', ':')) + '\n'
     else:
         text = json.dumps(document, sort_keys=True, indent=1) + '\n'
-    path.write_text(text)
+    # LF whatever the platform: a digest is taken over the bytes Git commits.
+    path.write_text(text, newline='\n')
 
 
 # objdiff report.json -> contract measures. objdiff writes 64-bit counts as strings and leaves out
@@ -691,7 +692,11 @@ def located(where, check, *args):
 # The files the page fetches by content digest: latest.json, always revalidated, names each one's
 # digest, which keys its URL, so a corrected file has a new URL and no browser keeps the old copy.
 
-IMMUTABLE = ('map.json', 'history.json', 'contributors.json')
+def immutable_files(latest):
+    """The files beside latest.json that the page fetches by digest: the history and every module
+    latest.json names, whatever they are called."""
+    modules = latest.get('modules') or {}
+    return ['history.json'] + [modules[key] for key in ('map', 'contributors') if modules.get(key)]
 
 
 def digest(path):
@@ -701,12 +706,12 @@ def digest(path):
 
 def seal(directory):
     """Record in latest.json the digest of every immutable file beside it. Returns the names whose
-    digest changed; latest.json is rewritten only then."""
+    digest changed or went; latest.json is rewritten only then."""
     directory = Path(directory)
     path = directory / 'latest.json'
     latest = read_json(path)
     before = latest.get('digests') or {}
-    digests = {name: digest(directory / name) for name in IMMUTABLE if (directory / name).exists()}
+    digests = {name: digest(directory / name) for name in immutable_files(latest) if (directory / name).exists()}
     changed = sorted(name for name in set(before) | set(digests) if before.get(name) != digests.get(name))
     if changed or 'digests' not in latest:
         latest['digests'] = digests
@@ -715,20 +720,25 @@ def seal(directory):
 
 
 def check_digests(directory, latest):
-    """Every immutable file beside latest.json is named there with its current digest."""
+    """Every immutable file beside latest.json, the modules it names included, is listed there
+    with its current digest, and nothing else is."""
     directory = Path(directory)
     digests = latest['digests']
     require(isinstance(digests, dict), 'latest.json: digests is not an object')
-    for name in IMMUTABLE:
+    files = immutable_files(latest)
+    for name in files:
         if (directory / name).exists():
             require(name in digests, 'latest.json: %s has no digest; run publish.py reseal' % name)
     for name, value in digests.items():
-        require(name in IMMUTABLE and (directory / name).exists(), 'latest.json: digest of an unknown file %s' % name)
+        require(name in files and (directory / name).exists(), 'latest.json: digest of an unknown file %s' % name)
         require(value == digest(directory / name), '%s: digest differs from latest.json; run publish.py reseal' % name)
 
 
 def reseal_tree(tree):
-    """Reseal every target of a data tree after a hand correction; returns what changed."""
+    """Reseal every target of a data tree after a hand correction, then run the tree check, so a
+    correction the publisher's checker refuses never gets a valid digest. Returns what changed.
+    The page's own validator is the other reader: run the site's tools/check_data_tree.py on the
+    tree before merging it."""
     tree = Path(tree)
     changed = []
     for slug in read_json(tree / 'index.json')['games']:
@@ -954,6 +964,8 @@ def main(argv=None):
         elif args.command == 'reseal':
             changed = reseal_tree(args.tree)
             print('\n'.join('resealed ' + line for line in changed) or 'nothing to reseal')
+            print('checked with publish.py; next: python3 tools/check_data_tree.py %s from the site repository, '
+                  'the page\'s validator, before merging' % args.tree)
         else:
             require(args.repository, '--repository or GITHUB_REPOSITORY is required')
             publish(args)
