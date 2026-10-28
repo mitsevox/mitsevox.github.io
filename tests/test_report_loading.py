@@ -52,6 +52,17 @@ await assert.rejects(fetchProgress(retry),/unavailable/);
 await fetchProgress(retry);assert.equal(attempts,2);
 // A new measurement never reuses the previous revision's payload.
 await fetchProgress(target('/retry/',{...latest,source:{...latest.source,revision:'d'.repeat(40)}}));assert.equal(attempts,3);
+// A map corrected after publication: the browser's cached copy is invalid, the server's is not.
+// The page refetches once past the cache instead of showing "Map unavailable".
+const seen=[];
+globalThis.fetch=async(url,options)=>{seen.push(options.cache);return {ok:true,json:async()=>options.cache==='reload'?map:{...map,sections:[]}};};
+assert.deepEqual((await fetchProgress(target('/corrected/'))).files,map.files);
+assert.deepEqual(seen,['force-cache','reload']);
+// A copy that is still invalid on the server still fails, after the one refetch.
+seen.length=0;
+globalThis.fetch=async(url,options)=>{seen.push(options.cache);return {ok:true,json:async()=>({...map,sections:[]})};};
+await assert.rejects(fetchProgress(target('/broken/')),/Invalid map/);
+assert.deepEqual(seen,['force-cache','reload']);
 // History and contributors load independently: a slow history never holds up the rankings.
 let finishHistory;const history=new Promise(resolve=>finishHistory=resolve);
 globalThis.fetch=async(url)=>{if(url.includes('history.json'))await history;return {ok:true,json:async()=>url.includes('history.json')?[]:{contributors:[{login:'fast'}]}};};
