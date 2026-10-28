@@ -4,7 +4,8 @@
 #   1. the private build image, referenced by digest, in the BUILD_IMAGE variable;
 #   2. the original's path inside the image and the checkout;
 #   3. the configure and build commands of the project's toolchain;
-#   4. the names of the repository variable and secret that hold the GitHub App credential.
+#   4. the names of the repository variable and the `publish` environment secret that hold the
+#      GitHub App credential.
 # One step is optional: "Project checks", whose command the repository supplies. Everything else
 # is fixed (the job and step names, the planner, the tests, the scaffold check and the publish
 # step); the scaffold check compares this file's job and step names with the kit.
@@ -88,6 +89,13 @@ jobs:
       packages: read
       # The publish step reads the merged PR's Credits line when contributors are on.
       pull-requests: read
+    # The publishing key is an environment secret. A run on main references `publish`, whose
+    # deployment branch policy allows main only, and so gets the key; every other run references
+    # `validate`, which holds nothing. A branch workflow that names `publish` is refused before its
+    # first step (Publishing chapter). `deployment: false` keeps the runs out of the Deployments list.
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'publish' || 'validate' }}
+      deployment: false
     container:
       image: ${{ needs.plan.outputs.image }}
       credentials:
@@ -142,7 +150,8 @@ jobs:
           report: build/${{ matrix.target }}/report.json
           tools: ${{ steps.tools.outputs.lines }}
           measured-at: ${{ steps.measure.outputs.measured-at }}
-          # PARAMETER 4: the variable and secret that hold the App credential (Publishing chapter).
+          # PARAMETER 4: the repository variable and the `publish` environment's secret that hold
+          # the App credential (Publishing chapter).
           app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}
           app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}
 

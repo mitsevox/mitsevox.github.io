@@ -173,10 +173,14 @@ class Check:
             return
         text = path.read_text()
         names = []
+        previous = ''
         for line in text.splitlines():
             m = NAME.match(line)
-            if m:
+            # The `name:` under `environment:` names the environment, not a step.
+            if m and previous != 'environment:':
                 names.append(m.group(2).strip('"\''))
+            if line.strip() and not line.strip().startswith('#'):
+                previous = line.strip()
         for name in spec['jobs']:
             if name not in names:
                 self.warn(spec['path'], 'job %r is missing' % name)
@@ -190,6 +194,8 @@ class Check:
         for key in ('publishAction', 'scaffoldAction'):
             if 'uses: ' + spec[key] not in text:
                 self.warn(spec['path'], 'does not use %s' % spec[key])
+        if 'name: ' + spec['environment'] not in text:
+            self.warn(spec['path'], 'the target job must reference the publish environment on main only: name: %s' % spec['environment'])
         image = re.search(r'^\s*%s:\s*(\S+)\s*$' % re.escape(spec['imageVariable']), text, re.M)
         if not image:
             self.warn(spec['path'], 'does not export %s' % spec['imageVariable'])

@@ -48,7 +48,7 @@ a target's directory once the registry lists it.
 | `owner/game-build` and its `@sha256:` digest | The private build image | validate.yml.template (PARAMETER 1), build-image/README.md |
 | `sys/main.dol` | The original's path under `orig/<target id>/` and `/orig/<target id>/` | validate.yml.template (PARAMETER 2), build-image/*, config.yml |
 | configure and build commands | PARAMETER 3 in validate.yml.template | validate.yml.template |
-| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | The repository variable and secret holding the GitHub App credential | validate.yml.template (PARAMETER 4) |
+| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | The repository variable and the `publish` environment secret holding the GitHub App credential | validate.yml.template (PARAMETER 4) |
 | `dtk_tag`, `objdiff_tag` | The `config.<name>` lines of configure.py reported as tool provenance | tools/measuring_tools.py |
 | `## Project` | The repository's own agent rules | AGENTS.md |
 

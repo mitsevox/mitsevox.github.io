@@ -143,7 +143,7 @@
 </tr>
 <tr>
 <td>Credential names</td>
-<td><code>DATA_APP_CLIENT_ID</code>, <code>DATA_APP_PRIVATE_KEY</code></td>
+<td><code>DATA_APP_CLIENT_ID</code> (repository variable), <code>DATA_APP_PRIVATE_KEY</code> (secret of the <code>publish</code> environment)</td>
 <td><code>validate.yml.template</code> PARAMETER 4</td>
 </tr>
 <tr>
@@ -181,7 +181,7 @@
 </tr>
 <tr>
 <td>Outline</td>
-<td><code>README.md</code> (the seven headings in order), <code>CONTRIBUTING.md</code> (the section headings), <code>AGENTS.md</code> (the kit header verbatim, then <code>## Project</code>), <code>.github/pull_request_template.md</code> (contains <code>## Targets</code>), <code>validate.yml</code> (job names, step names, the publish and scaffold-check steps, <code>BUILD_IMAGE</code> by digest)</td>
+<td><code>README.md</code> (the seven headings in order), <code>CONTRIBUTING.md</code> (the section headings), <code>AGENTS.md</code> (the kit header verbatim, then <code>## Project</code>), <code>.github/pull_request_template.md</code> (contains <code>## Targets</code>), <code>validate.yml</code> (job names, step names, the publish and scaffold-check steps, <code>BUILD_IMAGE</code> by digest, the target job's environment line)</td>
 <td>Headings or the fixed part; the body is free</td>
 </tr>
 <tr>
@@ -202,7 +202,7 @@
 <li>The private repository's image workflow is green on <code>main</code>, the package is private, the public repository has Read access, and <code>validate.yml</code> names the digest in <code>BUILD_IMAGE</code>.</li>
 <li>A pull request runs <code>Plan affected targets</code>, <code>Tool tests</code>, <code>Validate &lt;id&gt;</code> and <code>Validate targets</code>, all green, and the <code>Check the scaffold</code> step prints no warning.</li>
 <li>The <code>main</code> ruleset requires a pull request and <code>Validate targets</code>, and the <code>merges</code> ruleset restricts merging to the Repository admin role; <code>python3 tools/repo_settings.py --repo owner/game --check</code> reports no drift for either repository.</li>
-<li>The GitHub App is installed on the data repository; the producer holds the variable and the secret.</li>
+<li>The GitHub App is installed on the data repository; the producer holds the variable and the <code>publish</code> environment with the secret.</li>
 <li>The first <code>main</code> run's <code>Publish to the site</code> step printed <code>published &lt;slug&gt;/&lt;id&gt; &lt;sha&gt;</code>; the data repository has the commit; <code>https://mitsevox.github.io/games/&lt;slug&gt;/</code> shows it.</li>
 <li>Cover art is committed to the data repository and <code>artwork</code> is in <code>config/site.json</code>, or the owner has decided to go without.</li>
 </ul>

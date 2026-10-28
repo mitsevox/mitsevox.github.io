@@ -45,7 +45,7 @@ mitsevox.github.io/games/game/  reads  /decomp-data/ at view time
 | `GAME01-rev0` | a target id, `[A-Za-z0-9._-]+`; `GAME01` is its label, `0` its revision |
 | `VERSION_GAME01_REV0` | that target's preprocessor define, derived from the id |
 | `ghcr.io/owner/game-build@sha256:...` | the build image, always referenced by digest |
-| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | the repository variable and secret that hold the publishing credential |
+| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | the repository variable and the `publish` environment secret that hold the publishing credential |
 
 The examples are for a GameCube target built with decomp-toolkit and dtk-template, because that is what the reference repositories use. Another platform changes the toolchain, the original's path inside the image and the build commands; it changes nothing in the layout, the CI structure, publishing or the site.
 
@@ -57,7 +57,7 @@ The examples are for a GameCube target built with decomp-toolkit and dtk-templat
 4. [Build, verify, measure](/wiki/build-verify-measure/): get a byte-identical relink locally and an objdiff `report.json`; learn how version differences are written and read.
 5. [Evidence](/wiki/evidence/) and the [contribution workflow](/wiki/contribution-workflow/): adopt `AGENTS.md`, `CONTRIBUTING.md` and the PR template.
 6. [CI](/wiki/ci/): install `validate.yml` with your image digest and build commands; the scaffold check runs in it.
-7. [Publishing](/wiki/publishing/): create the GitHub App credential, add the variable and secret, push to `main`.
+7. [Publishing](/wiki/publishing/): create the GitHub App credential, add the variable and the `publish` environment with its secret, push to `main`.
 8. [Repository settings](/wiki/repository-settings/): apply the settings standard to both repositories.
 9. [The site](/wiki/site/): check the page, commit cover art to the data repository.
 

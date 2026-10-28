@@ -18,7 +18,8 @@ Settings are part of the standard because they are what makes the rest enforceab
 | Actions may approve pull requests | off | off | off |
 | Fork pull request approval | required for all outside collaborators (the fork guard in `validate.yml` is the second line) | not applicable | required for all outside collaborators |
 | Artifact and log retention | 30 days | 30 days | 30 days |
-| Variable and secret | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY`; nothing else | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Variable and secret | the repository variable `DATA_APP_CLIENT_ID`; no repository secret | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Environments | `publish`: deployment branches `main` only, the secret `DATA_APP_PRIVATE_KEY`, nothing else; `validate`: every branch, no secrets | none | none |
 | Package | not applicable | private; `Manage Actions access` grants the source repository `Read` | not applicable |
 | Secret scanning, push protection, Dependabot alerts, private vulnerability reporting | on | on where the plan allows | on |
 | Dependabot version updates | off; pinned actions are bumped by hand twice a year | off | off |
@@ -43,11 +44,11 @@ python3 tools/repo_settings.py --repo owner/game --apply
 python3 tools/repo_settings.py --all --check
 ```
 
-`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
+`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name), the environments with their deployment branch policies, and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
 
 What the script cannot set, and prints as hand steps:
 
-- the variable and secret (set them in Settings, Secrets and variables, Actions, and delete any others);
+- the variable (Settings, Secrets and variables, Actions) and the environment secret (Settings, Environments, `publish`), and deleting any others, in particular a `DATA_APP_PRIVATE_KEY` repository secret;
 - the private package's `Manage Actions access` grant to the source repository;
 - the GitHub App that writes the data repository ([Publishing](/wiki/publishing/));
 - removing a `.github/dependabot.yml` if one exists.
@@ -67,8 +68,16 @@ The monthly workflow is committed with manual dispatch only. Once the token exis
 
 1. Merge the repository's scaffold PR, so that `validate.yml` and the `Validate targets` check exist before the ruleset requires them.
 2. Run `python3 tools/repo_settings.py --repo owner/game --apply` and `--repo owner/game-build --apply` from a site repository checkout.
-3. Do the printed hand steps: rename or create `DATA_APP_CLIENT_ID` and `DATA_APP_PRIVATE_KEY`, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
+3. Do the printed hand steps: create the `DATA_APP_CLIENT_ID` variable and the `DATA_APP_PRIVATE_KEY` environment secret, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
 4. Once, for the site repository: create the read-only token and the `SETTINGS_READ_TOKEN` secret, then enable the monthly schedule.
+
+A repository that still holds the key as a repository secret moves it in this order, so that publishing never stops:
+
+1. Create the `publish` environment with its branch policy and the environment secret ([Publishing](/wiki/publishing/)); `--apply` creates the environment and the policy, the secret is by hand.
+2. Merge the `validate.yml` change that references the environment (the kit sync).
+3. Watch the next `main` run: `Publish to the site` prints `published ...`, now with the environment secret.
+4. Delete the repository secret `DATA_APP_PRIVATE_KEY` (Settings, Secrets and variables, Actions, Secrets).
+5. `python3 tools/repo_settings.py --repo owner/game --check` reports no drift. To see the protection work, open a draft pull request whose `validate.yml` names `publish` directly: the target job is refused before its first step; close it without merging.
 
 ## Assumptions to confirm
 

@@ -44,7 +44,8 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 
 | Message | Cause and fix |
 | --- | --- |
-| The `Mint a data-repository token` step fails | The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable and secret names in `validate.yml` against the repository settings. |
+| The `Mint a data-repository token` step fails | The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable name and the `publish` environment's secret name in `validate.yml` against the repository settings; a repository secret of the same name is not read by a job that references the environment. |
+| A `Validate <target id>` job of a branch is refused before its first step with an environment protection message | The run referenced the `publish` environment outside `main`: that branch's `validate.yml` changed the environment line. Restore the kit's line ([CI](/wiki/ci/)). |
 | `DATA_TOKEN is not set` | The script ran outside the action without the token; use `--dry-run` locally. |
 | `--repository or GITHUB_REPOSITORY is required` | Local run: pass `--repository owner/game`. |
 | `Target <id> is not an active target of <slug>` | The published target is `planned` or `archived` in `targets.json`. |
@@ -76,6 +77,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | `repo_settings.py --check` reports `found unreadable` | The token lacks `Administration: read` for that setting, or the endpoint does not exist on this plan (rulesets on a private repository, say). Unreadable counts as drift on purpose. |
 | The monthly check fails at `Require the read-only token` | The `SETTINGS_READ_TOKEN` secret is missing or expired; create a new yearly token ([Repository settings](/wiki/repository-settings/)). |
 | `Check the scaffold` warns `settings: ...` | The repository's description, topics, features, merge settings or `main` rules differ from the standard; run `--apply` with the owner's token. |
+| `repo_settings.py --check` reports `environments.publish.branches: expected ["main"]` or `actions.secrets: expected []` | The `publish` environment allows every branch, or the key is still a repository secret. `--apply` sets the branch policy; the secret moves by hand ([Repository settings](/wiki/repository-settings/), the move order). |
 
 ## Recovery
 

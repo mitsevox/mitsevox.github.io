@@ -57,6 +57,10 @@ env:
     permissions:
       contents: read
       packages: read
+      pull-requests: read
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'publish' || 'validate' }}
+      deployment: false
     container:
       image: ${{ needs.plan.outputs.image }}
       credentials:
@@ -65,6 +69,8 @@ env:
     env:
       TARGET_ID: ${{ matrix.target }}
 ```
+
+The job references a deployment environment: `publish` on a `main` run, `validate` otherwise. `publish` holds the publishing key as an environment secret and its deployment branch policy allows `main` only, so a run of any other branch that names `publish` is refused by GitHub before its first step; `validate` holds nothing. `deployment: false` uses the environment's secrets without recording a deployment per run ([Publishing](/wiki/publishing/)).
 
 | Step | What it does |
 | --- | --- |
@@ -75,9 +81,9 @@ env:
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
 | `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
 | `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names), and captures its lines in the output `lines` with a random heredoc delimiter. |
-| `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the variable and secret. |
+| `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the repository variable and the `publish` environment's secret. |
 
-The two `main`-only steps use the condition `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`, so a push and a manual run on `main` both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
+The two `main`-only steps and the job's environment use the same condition, `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`, so a push and a manual run on `main` both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
 
 ### Validate targets
 
@@ -93,14 +99,14 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 ```
 
-A new push to a PR cancels that PR's running validation; pushes to `main` queue instead, so every `main` commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to `BUILD_IMAGE`.
+A new push to a PR cancels that PR's running validation; pushes to `main` queue instead, so every `main` commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential, read from the `publish` environment on `main` runs only. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to `BUILD_IMAGE`.
 
 ## Installing it
 
 1. Copy `validate.yml.template` to `.github/workflows/validate.yml`.
 2. Fill PARAMETER 1 with the digest from the image workflow ([Build environment](/wiki/build-environment/)).
 3. Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally ([Build, verify, measure](/wiki/build-verify-measure/)). The image's tool paths replace the local ones.
-4. Fill PARAMETER 4 with the variable and secret names from [Publishing](/wiki/publishing/); the step is harmless until they exist, because it only runs on `main`.
+4. Fill PARAMETER 4 with the variable and environment secret names from [Publishing](/wiki/publishing/); the step is harmless until they exist, because it only runs on `main`. The first pull request run creates the empty `validate` environment; the owner creates `publish` by hand.
 5. Copy the `tools/` and `tests/` starter files and `config/ci-targets.json`.
 6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (`build.sha1`). The `Check the scaffold` step lists what still differs from the kit.
 7. Merge. The first `main` run publishes, provided the credential is in place.

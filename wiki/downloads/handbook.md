@@ -49,7 +49,7 @@ mitsevox.github.io/games/game/  reads  /decomp-data/ at view time
 | `GAME01-rev0` | a target id, `[A-Za-z0-9._-]+`; `GAME01` is its label, `0` its revision |
 | `VERSION_GAME01_REV0` | that target's preprocessor define, derived from the id |
 | `ghcr.io/owner/game-build@sha256:...` | the build image, always referenced by digest |
-| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | the repository variable and secret that hold the publishing credential |
+| `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | the repository variable and the `publish` environment secret that hold the publishing credential |
 
 The examples are for a GameCube target built with decomp-toolkit and dtk-template, because that is what the reference repositories use. Another platform changes the toolchain, the original's path inside the image and the build commands; it changes nothing in the layout, the CI structure, publishing or the site.
 
@@ -61,7 +61,7 @@ The examples are for a GameCube target built with decomp-toolkit and dtk-templat
 4. [Build, verify, measure](/wiki/build-verify-measure/): get a byte-identical relink locally and an objdiff `report.json`; learn how version differences are written and read.
 5. [Evidence](/wiki/evidence/) and the [contribution workflow](/wiki/contribution-workflow/): adopt `AGENTS.md`, `CONTRIBUTING.md` and the PR template.
 6. [CI](/wiki/ci/): install `validate.yml` with your image digest and build commands; the scaffold check runs in it.
-7. [Publishing](/wiki/publishing/): create the GitHub App credential, add the variable and secret, push to `main`.
+7. [Publishing](/wiki/publishing/): create the GitHub App credential, add the variable and the `publish` environment with its secret, push to `main`.
 8. [Repository settings](/wiki/repository-settings/): apply the settings standard to both repositories.
 9. [The site](/wiki/site/): check the page, commit cover art to the data repository.
 
@@ -770,6 +770,10 @@ env:
     permissions:
       contents: read
       packages: read
+      pull-requests: read
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && 'publish' || 'validate' }}
+      deployment: false
     container:
       image: ${{ needs.plan.outputs.image }}
       credentials:
@@ -778,6 +782,8 @@ env:
     env:
       TARGET_ID: ${{ matrix.target }}
 ```
+
+The job references a deployment environment: `publish` on a `main` run, `validate` otherwise. `publish` holds the publishing key as an environment secret and its deployment branch policy allows `main` only, so a run of any other branch that names `publish` is refused by GitHub before its first step; `validate` holds nothing. `deployment: false` uses the environment's secrets without recording a deployment per run ([Publishing](/wiki/publishing/)).
 
 | Step | What it does |
 | --- | --- |
@@ -788,9 +794,9 @@ env:
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
 | `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
 | `List measuring tools` (`id: tools`), `main` only | Runs `python3 tools/measuring_tools.py`, which reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names), and captures its lines in the output `lines` with a random heredoc delimiter. |
-| `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the variable and secret. |
+| `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the repository variable and the `publish` environment's secret. |
 
-The two `main`-only steps use the condition `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`, so a push and a manual run on `main` both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
+The two `main`-only steps and the job's environment use the same condition, `github.ref == 'refs/heads/main' && github.event_name != 'pull_request'`, so a push and a manual run on `main` both publish, and nothing else does. Secrets are not available to pull requests from forks anyway, but the fork guard runs first in every case.
 
 ### Validate targets
 
@@ -806,14 +812,14 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 ```
 
-A new push to a PR cancels that PR's running validation; pushes to `main` queue instead, so every `main` commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to `BUILD_IMAGE`.
+A new push to a PR cancels that PR's running validation; pushes to `main` queue instead, so every `main` commit is measured and published. The workflow holds no write permission anywhere; the publish action brings its own credential, read from the `publish` environment on `main` runs only. The image is never referenced by tag, and no bot bumps the digest: changing it is a reviewed, owner-decided edit to `BUILD_IMAGE`.
 
 ## Installing it
 
 1. Copy `validate.yml.template` to `.github/workflows/validate.yml`.
 2. Fill PARAMETER 1 with the digest from the image workflow ([Build environment](/wiki/build-environment/)).
 3. Fill PARAMETERS 2 and 3 with the original's path and the configure and build commands that work locally ([Build, verify, measure](/wiki/build-verify-measure/)). The image's tool paths replace the local ones.
-4. Fill PARAMETER 4 with the variable and secret names from [Publishing](/wiki/publishing/); the step is harmless until they exist, because it only runs on `main`.
+4. Fill PARAMETER 4 with the variable and environment secret names from [Publishing](/wiki/publishing/); the step is harmless until they exist, because it only runs on `main`. The first pull request run creates the empty `validate` environment; the owner creates `publish` by hand.
 5. Copy the `tools/` and `tests/` starter files and `config/ci-targets.json`.
 6. Open a pull request with all of it and watch the four jobs. The first run of `Validate <target id>` proves the image pull (package access), the original (the toolkit's hash check), the toolchain (configure) and the match (`build.sha1`). The `Check the scaffold` step lists what still differs from the kit.
 7. Merge. The first `main` run publishes, provided the credential is in place.
@@ -853,14 +859,23 @@ For the owner's site the App already exists and is installed on `mitsevox/decomp
 3. After creating it, note the **Client ID** on the App's page and generate a **private key** (a `.pem` file downloads).
 4. Install the App on the account, choosing **Only select repositories** and selecting the data repository alone.
 
-Then, in the producer repository (Settings, Secrets and variables, Actions):
+Then, in the producer repository:
 
-| Kind | Name used in this guide | Value |
-| --- | --- | --- |
-| Variable | `DATA_APP_CLIENT_ID` | The App's client id |
-| Secret | `DATA_APP_PRIVATE_KEY` | The full contents of the `.pem` file |
+| Kind | Where | Name used in this guide | Value |
+| --- | --- | --- | --- |
+| Repository variable | Settings, Secrets and variables, Actions, Variables | `DATA_APP_CLIENT_ID` | The App's client id |
+| Environment secret | Settings, Environments, `publish`, Environment secrets | `DATA_APP_PRIVATE_KEY` | The full contents of the `.pem` file |
 
 The names are yours; `validate.yml` passes them to the action as `app-client-id: ${{ vars.DATA_APP_CLIENT_ID }}` and `app-private-key: ${{ secrets.DATA_APP_PRIVATE_KEY }}` (PARAMETER 4).
+
+The private key is an environment secret and never a repository secret, because a repository secret is readable by a workflow run of any branch of the repository, and contributors push branches. The `publish` environment's deployment branch policy allows `main` only. The target job references `publish` on a `main` run and the empty environment `validate` on every other run, so a run of any other branch, including one that edits `validate.yml` to name `publish`, is refused by GitHub before its first step ([CI](/wiki/ci/)). The owner creates the environment once:
+
+1. Settings, Environments, New environment, name `publish`, Configure environment.
+2. Deployment branches and tags: choose "Selected branches and tags", Add deployment branch or tag rule, ref type Branch, name pattern `main`, Add rule.
+3. Environment secrets, Add environment secret: name `DATA_APP_PRIVATE_KEY`, value the `.pem` contents.
+4. Leave required reviewers and the wait timer off.
+
+`validate` needs no setup: the first pull request run creates it, with no rules and no secrets, and it stays empty. The settings standard checks both ([Repository settings](/wiki/repository-settings/)).
 
 ## The action's inputs
 
@@ -934,7 +949,7 @@ python3 site/.github/actions/publish/publish.py check /tmp/tree
 ## Before the first push to main
 
 - The App is installed on the data repository with Contents read and write.
-- The producer has the variable and the secret, and `validate.yml` names them.
+- The producer has the variable and the `publish` environment with its branch policy and secret, and `validate.yml` names them.
 - `config/targets.json` and `config/site.json` validate (`python3 -m unittest discover -s tests -p 'test_*.py'` and a dry run).
 - A pull request has passed `Validate targets`.
 
@@ -963,7 +978,8 @@ Settings are part of the standard because they are what makes the rest enforceab
 | Actions may approve pull requests | off | off | off |
 | Fork pull request approval | required for all outside collaborators (the fork guard in `validate.yml` is the second line) | not applicable | required for all outside collaborators |
 | Artifact and log retention | 30 days | 30 days | 30 days |
-| Variable and secret | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY`; nothing else | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Variable and secret | the repository variable `DATA_APP_CLIENT_ID`; no repository secret | none; `GITHUB_TOKEN` publishes the image | `SETTINGS_READ_TOKEN` for the monthly check |
+| Environments | `publish`: deployment branches `main` only, the secret `DATA_APP_PRIVATE_KEY`, nothing else; `validate`: every branch, no secrets | none | none |
 | Package | not applicable | private; `Manage Actions access` grants the source repository `Read` | not applicable |
 | Secret scanning, push protection, Dependabot alerts, private vulnerability reporting | on | on where the plan allows | on |
 | Dependabot version updates | off; pinned actions are bumped by hand twice a year | off | off |
@@ -988,11 +1004,11 @@ python3 tools/repo_settings.py --repo owner/game --apply
 python3 tools/repo_settings.py --all --check
 ```
 
-`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name) and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
+`--check` prints one line per setting that differs (`expected ..., found ...`) and exits 1 when anything does. A setting the token cannot read counts as drift, so a check never passes blind. `--apply` sets, in this order, the repository fields and features, the merge settings, the Actions permissions and allowlist, the default token permissions, fork approval, retention, the `main` and `merges` rulesets (each created or updated by name), the environments with their deployment branch policies, and the security features, then re-reads everything and prints what remains. A repository that is not listed in the configuration is checked against its kind alone (`--kind source` or `--kind build`), and its description, homepage and topics are its own.
 
 What the script cannot set, and prints as hand steps:
 
-- the variable and secret (set them in Settings, Secrets and variables, Actions, and delete any others);
+- the variable (Settings, Secrets and variables, Actions) and the environment secret (Settings, Environments, `publish`), and deleting any others, in particular a `DATA_APP_PRIVATE_KEY` repository secret;
 - the private package's `Manage Actions access` grant to the source repository;
 - the GitHub App that writes the data repository ([Publishing](/wiki/publishing/));
 - removing a `.github/dependabot.yml` if one exists.
@@ -1012,8 +1028,16 @@ The monthly workflow is committed with manual dispatch only. Once the token exis
 
 1. Merge the repository's scaffold PR, so that `validate.yml` and the `Validate targets` check exist before the ruleset requires them.
 2. Run `python3 tools/repo_settings.py --repo owner/game --apply` and `--repo owner/game-build --apply` from a site repository checkout.
-3. Do the printed hand steps: rename or create `DATA_APP_CLIENT_ID` and `DATA_APP_PRIVATE_KEY`, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
+3. Do the printed hand steps: create the `DATA_APP_CLIENT_ID` variable and the `DATA_APP_PRIVATE_KEY` environment secret, delete the credentials and variables of any earlier process, confirm the package grant, and remove from the ruleset any required check whose job no longer exists.
 4. Once, for the site repository: create the read-only token and the `SETTINGS_READ_TOKEN` secret, then enable the monthly schedule.
+
+A repository that still holds the key as a repository secret moves it in this order, so that publishing never stops:
+
+1. Create the `publish` environment with its branch policy and the environment secret ([Publishing](/wiki/publishing/)); `--apply` creates the environment and the policy, the secret is by hand.
+2. Merge the `validate.yml` change that references the environment (the kit sync).
+3. Watch the next `main` run: `Publish to the site` prints `published ...`, now with the environment secret.
+4. Delete the repository secret `DATA_APP_PRIVATE_KEY` (Settings, Secrets and variables, Actions, Secrets).
+5. `python3 tools/repo_settings.py --repo owner/game --check` reports no drift. To see the protection work, open a draft pull request whose `validate.yml` names `publish` directly: the target job is refused before its first step; close it without merging.
 
 ## Assumptions to confirm
 
@@ -1223,7 +1247,8 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 
 | Message | Cause and fix |
 | --- | --- |
-| The `Mint a data-repository token` step fails | The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable and secret names in `validate.yml` against the repository settings. |
+| The `Mint a data-repository token` step fails | The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable name and the `publish` environment's secret name in `validate.yml` against the repository settings; a repository secret of the same name is not read by a job that references the environment. |
+| A `Validate <target id>` job of a branch is refused before its first step with an environment protection message | The run referenced the `publish` environment outside `main`: that branch's `validate.yml` changed the environment line. Restore the kit's line ([CI](/wiki/ci/)). |
 | `DATA_TOKEN is not set` | The script ran outside the action without the token; use `--dry-run` locally. |
 | `--repository or GITHUB_REPOSITORY is required` | Local run: pass `--repository owner/game`. |
 | `Target <id> is not an active target of <slug>` | The published target is `planned` or `archived` in `targets.json`. |
@@ -1255,6 +1280,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | `repo_settings.py --check` reports `found unreadable` | The token lacks `Administration: read` for that setting, or the endpoint does not exist on this plan (rulesets on a private repository, say). Unreadable counts as drift on purpose. |
 | The monthly check fails at `Require the read-only token` | The `SETTINGS_READ_TOKEN` secret is missing or expired; create a new yearly token ([Repository settings](/wiki/repository-settings/)). |
 | `Check the scaffold` warns `settings: ...` | The repository's description, topics, features, merge settings or `main` rules differ from the standard; run `--apply` with the owner's token. |
+| `repo_settings.py --check` reports `environments.publish.branches: expected ["main"]` or `actions.secrets: expected []` | The `publish` environment allows every branch, or the key is still a repository secret. `--apply` sets the branch policy; the secret moves by hand ([Repository settings](/wiki/repository-settings/), the move order). |
 
 ## Recovery
 
@@ -1304,7 +1330,7 @@ Every project-specific value, and where it goes:
 | Original path | `sys/main.dol` | `validate.yml.template` PARAMETER 2, `build-image/*`, `config/<id>/config.yml` |
 | Configure and build commands | your toolchain's | `validate.yml.template` PARAMETER 3 |
 | Project checks | optional step and its command | `validate.yml.template` |
-| Credential names | `DATA_APP_CLIENT_ID`, `DATA_APP_PRIVATE_KEY` | `validate.yml.template` PARAMETER 4 |
+| Credential names | `DATA_APP_CLIENT_ID` (repository variable), `DATA_APP_PRIVATE_KEY` (secret of the `publish` environment) | `validate.yml.template` PARAMETER 4 |
 | Reported tool versions | `dtk_tag`, `objdiff_tag` | `tools/measuring_tools.py` |
 | Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
@@ -1316,7 +1342,7 @@ Every project-specific value, and where it goes:
 | Class | Files | Checked |
 | --- | --- | --- |
 | Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
-| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest) | Headings or the fixed part; the body is free |
+| Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish and scaffold-check steps, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
 The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
@@ -1332,7 +1358,7 @@ The repository is set up when each line is true and can be shown with a run, a c
 - The private repository's image workflow is green on `main`, the package is private, the public repository has Read access, and `validate.yml` names the digest in `BUILD_IMAGE`.
 - A pull request runs `Plan affected targets`, `Tool tests`, `Validate <id>` and `Validate targets`, all green, and the `Check the scaffold` step prints no warning.
 - The `main` ruleset requires a pull request and `Validate targets`, and the `merges` ruleset restricts merging to the Repository admin role; `python3 tools/repo_settings.py --repo owner/game --check` reports no drift for either repository.
-- The GitHub App is installed on the data repository; the producer holds the variable and the secret.
+- The GitHub App is installed on the data repository; the producer holds the variable and the `publish` environment with the secret.
 - The first `main` run's `Publish to the site` step printed `published <slug>/<id> <sha>`; the data repository has the commit; `https://mitsevox.github.io/games/<slug>/` shows it.
 - Cover art is committed to the data repository and `artwork` is in `config/site.json`, or the owner has decided to go without.
 

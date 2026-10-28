@@ -128,7 +128,11 @@
 <tbody>
 <tr>
 <td>The <code>Mint a data-repository token</code> step fails</td>
-<td>The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable and secret names in <code>validate.yml</code> against the repository settings.</td>
+<td>The App is not installed on the data repository, the client id or private key is wrong or empty, or the App lacks Contents read and write. Check the variable name and the <code>publish</code> environment's secret name in <code>validate.yml</code> against the repository settings; a repository secret of the same name is not read by a job that references the environment.</td>
+</tr>
+<tr>
+<td>A <code>Validate &lt;target id&gt;</code> job of a branch is refused before its first step with an environment protection message</td>
+<td>The run referenced the <code>publish</code> environment outside <code>main</code>: that branch's <code>validate.yml</code> changed the environment line. Restore the kit's line (<a href="/wiki/ci/">CI</a>).</td>
 </tr>
 <tr>
 <td><code>DATA_TOKEN is not set</code></td>
@@ -235,6 +239,10 @@
 <tr>
 <td><code>Check the scaffold</code> warns <code>settings: ...</code></td>
 <td>The repository's description, topics, features, merge settings or <code>main</code> rules differ from the standard; run <code>--apply</code> with the owner's token.</td>
+</tr>
+<tr>
+<td><code>repo_settings.py --check</code> reports <code>environments.publish.branches: expected ["main"]</code> or <code>actions.secrets: expected []</code></td>
+<td>The <code>publish</code> environment allows every branch, or the key is still a repository secret. <code>--apply</code> sets the branch policy; the secret moves by hand (<a href="/wiki/repository-settings/">Repository settings</a>, the move order).</td>
 </tr>
 </tbody>
 </table></div>
