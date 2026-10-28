@@ -117,7 +117,7 @@
 </tbody>
 </table></div>
 <h2 id="publish-step">Publish step</h2>
-<p>Every message from <code>publish.py</code> is prefixed <code>publish:</code> and fails the step; nothing is pushed. The <code>Check the report</code> step of a pull request prints the same messages for the same causes, so a report problem is found before <code>main</code>.</p>
+<p>Every message from <code>publish.py</code> is prefixed <code>publish:</code> and fails the step; nothing is pushed. The <code>Check the report</code> step of a pull request prints the same messages for the report and contract causes, so a report problem is found before <code>main</code>; the history and credits messages cannot occur there, because the check writes into an empty tree without credits.</p>
 <div class="wiki-table"><table>
 <thead>
 <tr>

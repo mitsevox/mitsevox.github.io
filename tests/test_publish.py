@@ -174,16 +174,25 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(s['code']['fuzzy'], 16 + big + 8)
         m = publish.map_document(r, SECTIONS)
         publish.check_map(m, s)
+        self.assertFalse(self.page_rejects(m, s))  # the page accepts the map as written
         m['files'][0]['fuzzy'] += 1.5e-6
         self.assertTrue(self.page_rejects(m, s))
         with self.assertRaisesRegex(publish.ContractError, 'fuzzy'):  # off the summary and off its children
             publish.check_map(m, s)
-        # The page needs a name on every node.
-        m = publish.map_document(r, SECTIONS)
-        del m['files'][0]['children'][0]['name']
-        self.assertTrue(self.page_rejects(m, s))
-        with self.assertRaisesRegex(publish.ContractError, 'no name'):
-            publish.check_map(m, s)
+        # Four more shapes the page refuses: a node without a name, an empty view, a top-level
+        # node of another kind, and a node whose children list is empty.
+        for change, message in (
+                (lambda d: d['files'][0]['children'][0].pop('name'), 'no name'),
+                (lambda d: d.__setitem__('files', []), 'is empty'),
+                (lambda d: d['sections'].append({'name': 'bss', 'kind': 'bss', 'size': 4, 'linked': 0, 'matched': 0,
+                                                 'address': '0x90000000'}), 'has kind'),
+                (lambda d: d['files'][0]['children'][0].__setitem__('children', []), 'no children')):
+            m = publish.map_document(r, SECTIONS)
+            change(m)
+            with self.subTest(message=message):
+                self.assertTrue(self.page_rejects(m, s))
+                with self.assertRaisesRegex(publish.ContractError, message):
+                    publish.check_map(m, s)
 
 
 class TimestampTests(unittest.TestCase):
