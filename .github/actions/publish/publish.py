@@ -8,6 +8,8 @@ publish  objdiff report.json -> latest.json, map.json and one history row, plus 
          --no-credits skips the credits, which need the merged pull request: the report
          check a pull request runs)
 check    validate a whole data tree against the contract (contract/README.md)
+reseal   after a hand correction of a published file: rewrite the digests in every latest.json
+         (the page fetches map.json, history.json and contributors.json by digest) and check
 
 The producer is the only writer and the only validator: everything written here is checked
 before it is pushed, and the site only renders it. Standard library only.
@@ -16,6 +18,7 @@ import argparse
 import base64
 import datetime
 import functools
+import hashlib
 import json
 import math
 import operator
@@ -82,7 +85,8 @@ def write_json(path, document, rows=False, compact=False):
         text = json.dumps(document, sort_keys=True, separators=(',', ':')) + '\n'
     else:
         text = json.dumps(document, sort_keys=True, indent=1) + '\n'
-    path.write_text(text)
+    # LF whatever the platform: a digest is taken over the bytes Git commits.
+    path.write_text(text, newline='\n')
 
 
 # objdiff report.json -> contract measures. objdiff writes 64-bit counts as strings and leaves out
@@ -671,6 +675,8 @@ def check_tree(tree):
             if latest.get('modules', {}).get('contributors'):
                 name = latest['modules']['contributors']
                 located(where + '/' + name, check_contributors, read_json(directory / name), latest['summary'])
+            if 'digests' in latest:
+                located(where, check_digests, directory, latest)
             checked += 1
     return checked
 
@@ -681,6 +687,67 @@ def located(where, check, *args):
         check(*args)
     except ContractError as error:
         raise ContractError('%s: %s' % (where, error)) from None
+
+
+# The files the page fetches by content digest: latest.json, always revalidated, names each one's
+# digest, which keys its URL, so a corrected file has a new URL and no browser keeps the old copy.
+
+def immutable_files(latest):
+    """The files beside latest.json that the page fetches by digest: the history and every module
+    latest.json names, whatever they are called."""
+    modules = latest.get('modules') or {}
+    return ['history.json'] + [modules[key] for key in ('map', 'contributors') if modules.get(key)]
+
+
+def digest(path):
+    """The first 16 hex digits of a file's SHA-256."""
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()[:16]
+
+
+def seal(directory):
+    """Record in latest.json the digest of every immutable file beside it. Returns the names whose
+    digest changed or went; latest.json is rewritten only then."""
+    directory = Path(directory)
+    path = directory / 'latest.json'
+    latest = read_json(path)
+    before = latest.get('digests') or {}
+    digests = {name: digest(directory / name) for name in immutable_files(latest) if (directory / name).exists()}
+    changed = sorted(name for name in set(before) | set(digests) if before.get(name) != digests.get(name))
+    if changed or 'digests' not in latest:
+        latest['digests'] = digests
+        write_json(path, latest)
+    return changed
+
+
+def check_digests(directory, latest):
+    """Every immutable file beside latest.json, the modules it names included, is listed there
+    with its current digest, and nothing else is."""
+    directory = Path(directory)
+    digests = latest['digests']
+    require(isinstance(digests, dict), 'latest.json: digests is not an object')
+    files = immutable_files(latest)
+    for name in files:
+        if (directory / name).exists():
+            require(name in digests, 'latest.json: %s has no digest; run publish.py reseal' % name)
+    for name, value in digests.items():
+        require(name in files and (directory / name).exists(), 'latest.json: digest of an unknown file %s' % name)
+        require(value == digest(directory / name), '%s: digest differs from latest.json; run publish.py reseal' % name)
+
+
+def reseal_tree(tree):
+    """Reseal every target of a data tree after a hand correction, then run the tree check, so a
+    correction the publisher's checker refuses never gets a valid digest. Returns what changed.
+    The page's own validator is the other reader: run the site's tools/check_data_tree.py on the
+    tree before merging it."""
+    tree = Path(tree)
+    changed = []
+    for slug in read_json(tree / 'index.json')['games']:
+        for target in read_json(tree / 'data' / slug / 'game.json')['targets']:
+            directory = tree / 'data' / slug / target['id']
+            if (directory / 'latest.json').exists():
+                changed += ['%s/%s: %s' % (slug, target['id'], name) for name in seal(directory)]
+    check_tree(tree)
+    return changed
 
 
 # Writing one measurement into a data tree.
@@ -728,6 +795,9 @@ def write_target(tree, game, latest, map_doc, credits=None):
         write_json(directory / 'map.json', map_doc, compact=True)
         write_json(current_path, latest)
     write_json(history_path, rows, rows=True)
+    # The digests follow the files on every write, a late older measurement's history row too;
+    # the measurement latest.json records never changes here.
+    seal(directory)
     write_json(tree / 'data' / slug / 'game.json', game)
     index_path = tree / 'index.json'
     index = read_json(index_path) if index_path.exists() else {'schema': SCHEMA, 'games': []}
@@ -885,10 +955,17 @@ def main(argv=None):
     p.add_argument('--no-credits', action='store_true', help='skip the credits even when site.json switches them on')
     check = commands.add_parser('check')
     check.add_argument('tree')
+    reseal = commands.add_parser('reseal', help='after a hand correction: rewrite the digests in every latest.json, then check')
+    reseal.add_argument('tree')
     args = parser.parse_args(argv)
     try:
         if args.command == 'check':
             print('checked %d target(s)' % check_tree(args.tree))
+        elif args.command == 'reseal':
+            changed = reseal_tree(args.tree)
+            print('\n'.join('resealed ' + line for line in changed) or 'nothing to reseal')
+            print('checked with publish.py; next: python3 tools/check_data_tree.py %s from the site repository, '
+                  'the page\'s validator, before merging' % args.tree)
         else:
             require(args.repository, '--repository or GITHUB_REPOSITORY is required')
             publish(args)

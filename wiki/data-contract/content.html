@@ -32,7 +32,8 @@ data/game/GAME01-rev0/contributors.json   optional
    &quot;data&quot;: {&quot;total&quot;: 870056, &quot;linked&quot;: 131316, &quot;matched&quot;: 157536, &quot;fuzzy&quot;: 183267.63},
    &quot;functions&quot;: {&quot;total&quot;: 4746, &quot;exact&quot;: 1253, &quot;named&quot;: 2595},
    &quot;files&quot;: {&quot;total&quot;: 519, &quot;exact&quot;: 119, &quot;named&quot;: 374}},
- &quot;modules&quot;: {&quot;map&quot;: &quot;map.json&quot;, &quot;contributors&quot;: null}}
+ &quot;modules&quot;: {&quot;map&quot;: &quot;map.json&quot;, &quot;contributors&quot;: null},
+ &quot;digests&quot;: {&quot;map.json&quot;: &quot;3f0c6a9e5b1d2c47&quot;, &quot;history.json&quot;: &quot;9a71e0c4d2b8f615&quot;}}
 </code></pre>
 <div class="wiki-table"><table>
 <thead>
@@ -45,6 +46,10 @@ data/game/GAME01-rev0/contributors.json   optional
 <tr>
 <td><code>source</code></td>
 <td>The measured commit: its SHA, commit time, subject, URL and the CI run that measured it (<code>runUrl</code> is the provenance)</td>
+</tr>
+<tr>
+<td><code>digests</code></td>
+<td>For each of <code>map.json</code>, <code>history.json</code> and <code>contributors.json</code> beside this file: the first 16 hex digits of its SHA-256. The page fetches those files by digest (<code>?v=&lt;digest&gt;</code>), so a corrected file is a new URL (<a href="/wiki/publishing/">Publishing</a>, "Correcting published data"). Absent in data published before the digests existed; the page then keys by the revision</td>
 </tr>
 <tr>
 <td><code>measuredAt</code></td>
@@ -72,7 +77,7 @@ data/game/GAME01-rev0/contributors.json   optional
 </tr>
 </tbody>
 </table></div>
-<p><code>linked</code>, <code>matched</code> and <code>fuzzy</code> overlap and are never added together. <code>matched &lt;= fuzzy &lt;= total</code>.</p>
+<p><code>linked</code>, <code>matched</code> and <code>fuzzy</code> overlap and are never added together. <code>matched &lt;= fuzzy &lt;= total</code>, exactly: there is no tolerance, in the checker or on the page, so a fuzzy value a rounding step below <code>matched</code> is refused, which is why the action holds a data section's fuzzy within those bounds when it converts a percentage back into bytes.</p>
 <h2 id="historyjson">history.json</h2>
 <p>A JSON array, one row per line, ordered by <code>measuredAt</code>, at most one row per revision:</p>
 <pre><code class="language-json">[
@@ -118,6 +123,10 @@ data/game/GAME01-rev0/contributors.json   optional
 <tr>
 <td>One history row per revision, in <code>measuredAt</code> order</td>
 <td>Only the action writes it</td>
+</tr>
+<tr>
+<td>Every digest in <code>latest.json</code> equals its file's</td>
+<td>A hand correction without <code>publish.py reseal</code></td>
 </tr>
 </tbody>
 </table></div>

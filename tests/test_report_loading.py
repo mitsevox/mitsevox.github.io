@@ -43,6 +43,12 @@ const result=await fetchHistory(project);
 assert.equal(result.snapshots[0].revision,'c'.repeat(40));assert.equal(result.snapshots[0].built_at,'2000-01-02T00:00:00Z');
 assert.equal((await fetchContributors(project))[0].login,'credit');
 await fetchHistory(project);await fetchContributors(project);assert.equal(calls.length,3);
+// Every immutable file is fetched by the digest latest.json gives it, so a correction is a new URL.
+assert.deepEqual(calls.map(c=>c.url),['/one/map.json?v=1111111111111111','/one/history.json?v=2222222222222222','/one/contributors.json?v=3333333333333333']);
+// Data published before the digests existed is keyed by the revision instead.
+const {digests,...undigested}=latest;
+await fetchProgress(target('/plain/',undigested));
+assert.equal(calls[3].url,'/plain/map.json?v='+latest.source.revision.slice(0,12));
 // The cache cannot hide a schema/measurement disagreement or a failed response.
 await assert.rejects(fetchProgress(target('/one/',withSummary({code:{...latest.summary.code,total:latest.summary.code.total+1}}))),/Inconsistent map/);
 let attempts=0;
@@ -50,8 +56,8 @@ globalThis.fetch=async()=>({ok:++attempts>1,json:async()=>map});
 const retry=target('/retry/');
 await assert.rejects(fetchProgress(retry),/unavailable/);
 await fetchProgress(retry);assert.equal(attempts,2);
-// A new measurement never reuses the previous revision's payload.
-await fetchProgress(target('/retry/',{...latest,source:{...latest.source,revision:'d'.repeat(40)}}));assert.equal(attempts,3);
+// A new measurement, or a corrected file, never reuses the previous payload: its digest differs.
+await fetchProgress(target('/retry/',{...latest,digests:{...latest.digests,'map.json':'dddddddddddddddd'}}));assert.equal(attempts,3);
 // A map corrected after publication: the browser's cached copy is invalid, the server's is not.
 // The page refetches once past the cache instead of showing "Map unavailable".
 const seen=[];

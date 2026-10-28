@@ -329,6 +329,69 @@ class HistoryTests(unittest.TestCase):
             publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
         self.assertEqual(path.read_text(), '[{"revision": ')
 
+    def test_latest_names_its_files_by_digest_and_a_correction_needs_a_reseal(self):
+        publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
+        directory = self.tree / 'data/game/GAME01-rev0'
+        current = self.current()
+        self.assertEqual(set(current['digests']), {'map.json', 'history.json'})
+        self.assertEqual(current['digests']['map.json'], publish.digest(directory / 'map.json'))
+        # An older commit measured late appends a history row and leaves latest's measurement
+        # alone; the history digest in latest.json follows the file.
+        publish.write_target(self.tree, self.game, latest(REV[1], '2025-12-31T00:00:00Z', '2026-01-02T00:05:00Z'), self.map)
+        after = self.current()
+        self.assertEqual((after['source'], after['summary']), (current['source'], current['summary']))
+        self.assertNotEqual(after['digests']['history.json'], current['digests']['history.json'])
+        self.assertEqual(after['digests']['history.json'], publish.digest(directory / 'history.json'))
+        self.assertEqual(publish.check_tree(self.tree), 1)
+        # A hand correction of map.json is refused until resealed; then the digest moves.
+        path = directory / 'map.json'
+        document = json.loads(path.read_text())
+        document['files'][0]['name'] = 'game/unit.cpp'
+        publish.write_json(path, document, compact=True)
+        with self.assertRaisesRegex(publish.ContractError, 'game/GAME01-rev0: map.json: digest differs'):
+            publish.check_tree(self.tree)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: map.json'])
+        self.assertEqual(publish.reseal_tree(self.tree), [])
+        self.assertEqual(self.current()['digests']['map.json'], publish.digest(path))
+        # Data published before the digests existed is accepted as it is, and a reseal adds them.
+        legacy = self.current()
+        del legacy['digests']
+        publish.write_json(directory / 'latest.json', legacy)
+        self.assertEqual(publish.check_tree(self.tree), 1)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: history.json', 'game/GAME01-rev0: map.json'])
+        self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json'})
+        # A module renamed in latest.json must be digested under its new name: no silent fallback.
+        renamed = self.current()
+        renamed['modules']['map'] = 'tiles.json'
+        (directory / 'map.json').rename(directory / 'tiles.json')
+        publish.write_json(directory / 'latest.json', renamed)
+        with self.assertRaisesRegex(publish.ContractError, 'tiles.json has no digest'):
+            publish.check_tree(self.tree)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: map.json', 'game/GAME01-rev0: tiles.json'])
+        self.assertEqual(set(self.current()['digests']), {'tiles.json', 'history.json'})
+        # A reseal never gives a valid digest to a file the checker refuses.
+        document = json.loads((directory / 'tiles.json').read_text())
+        document['files'][0]['children'][0]['matched'] = 0
+        publish.write_json(directory / 'tiles.json', document, compact=True)
+        with self.assertRaises(publish.ContractError):
+            publish.reseal_tree(self.tree)
+        # Files are written with LF whatever the platform, so the digest is over what Git commits.
+        self.assertNotIn(b'\r', (directory / 'latest.json').read_bytes())
+
+    def test_a_file_removed_from_the_target_drops_out_of_the_digests(self):
+        credits = {'authors': [(2, 'alice')], 'owner': (1, 'owner'), 'overrides': {}}
+        publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map, credits)
+        directory = self.tree / 'data/game/GAME01-rev0'
+        self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json', 'contributors.json'})
+        # The owner switches credits off and removes the file: a correction, resealed.
+        (directory / 'contributors.json').unlink()
+        current = self.current()
+        current['modules']['contributors'] = None
+        publish.write_json(directory / 'latest.json', current)
+        self.assertEqual(publish.reseal_tree(self.tree), ['game/GAME01-rev0: contributors.json'])
+        self.assertEqual(set(self.current()['digests']), {'map.json', 'history.json'})
+        self.assertEqual(publish.check_tree(self.tree), 1)
+
     def test_tree_check_catches_history_mismatch(self):
         publish.write_target(self.tree, self.game, latest(REV[0], '2026-01-01T00:00:00Z', '2026-01-01T00:01:00Z'), self.map)
         rows = self.rows()
@@ -468,6 +531,16 @@ class CommandTests(unittest.TestCase):
             self.assertEqual(checked.returncode, 0, checked.stderr)
             self.assertIn('checked 1 target(s)', checked.stdout)
             self.assertIsNone(json.loads((temp / 'check/data/game/GAME01-rev0/latest.json').read_text())['modules']['contributors'])
+            # The correction procedure: edit, reseal, check.
+            path = out / 'data/game/GAME01-rev0/map.json'
+            path.write_text(path.read_text().replace('"game/unit"', '"game/unit.cpp"', 1))
+            script = str(ROOT / '.github/actions/publish/publish.py')
+            refused = subprocess.run([sys.executable, script, 'check', str(out)], capture_output=True, text=True)
+            self.assertIn('map.json: digest differs from latest.json; run publish.py reseal', refused.stderr)
+            resealed = subprocess.run([sys.executable, script, 'reseal', str(out)], capture_output=True, text=True)
+            self.assertEqual(resealed.stdout.splitlines()[0], 'resealed game/GAME01-rev0: map.json', resealed.stderr)
+            self.assertIn('next: python3 tools/check_data_tree.py', resealed.stdout)  # the page's reader is the other half
+            self.assertEqual(subprocess.run([sys.executable, script, 'check', str(out)], capture_output=True, text=True).returncode, 0)
 
 
 if __name__ == '__main__':

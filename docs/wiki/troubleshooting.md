@@ -55,6 +55,7 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | `<unit>: <function> lies outside the code sections .init, .text` | The platform's code sections are named differently; pass `code-sections` to the action. |
 | `<unit>: data sections do not add up to total_data` | A unit's `total_data` disagrees with its section sizes; usually the same objdiff version problem. |
 | `history: duplicate revision`, `history: rows out of order`, `<slug>/<id>: history lacks the latest revision` | The data repository's existing files are inconsistent; someone edited them by hand. Revert that commit in the data repository. |
+| `map.json: digest differs from latest.json; run publish.py reseal` | A file was corrected by hand without the reseal step ([Publishing](/wiki/publishing/), "Correcting published data"). Reseal and check in a data-repository pull request. |
 | `push failed (attempt N), retrying` then `push failed after 5 attempts` | Five consecutive lost races or a rejected push. Re-run the job; if it persists, check the App's permission and branch rules on the data repository. |
 | `<slug>/<id> <sha> already published` | Not an error: the revision was published before (a re-run). The first measurement of a revision wins. |
 
@@ -63,7 +64,8 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 | Symptom | Cause and fix |
 | --- | --- |
 | The data repository has the commit but the page is old | The data repository's `Deploy` workflow takes about a minute and queues bursts; wait, then reload. If `Deploy` did not run, the Pages source is not set to GitHub Actions. |
-| A target shows "unavailable" | Its `latest.json` does not load or parse. A `map.json` or `history.json` that fails the page's checks hides only its own section ("Progress history unavailable"). Run `publish.py check` on a clone of the data repository to find the file. |
+| A target shows "unavailable" | Its `latest.json` does not load or parse. A `map.json` or `history.json` that fails the page's checks hides only its own section ("Progress history unavailable"). Run `python3 tools/check_data_tree.py` from the site repository on a clone of the data repository to find the file with both readers. |
+| The page shows a map that was corrected in the data repository as it was before | The correction was committed without `publish.py reseal`, so its URL did not change and browsers keep the cached copy. Reseal ([Publishing](/wiki/publishing/)); the page refetches on its own only when the cached copy fails validation. |
 | The game is missing from the hub | Its slug is not in `index.json`; the first publish adds it. Check that the publish step ran on `main` (the condition is `github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')`). |
 | `/games/<slug>/` returns 404 with the application shell | Normal for a game added since the last site deploy; the page still renders. The next site deploy stages a real file. |
 | No cover | Both halves are needed: `data/<slug>/cover.webp` in the data repository and `artwork` in `config/site.json` followed by a publish. |
@@ -82,4 +84,4 @@ Every message from `publish.py` is prefixed `publish:` and fails the step; nothi
 
 ## Recovery
 
-A bad publish is a `git revert` in the data repository; the next publish appends on top. A bad image digest is a revert of the `validate.yml` change. Never edit measurement files in the data repository by hand, and never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.
+A bad publish is a `git revert` in the data repository followed by `publish.py reseal`; the next publish appends on top. A wrong published file is corrected the same way, by a resealed data-repository pull request ([Publishing](/wiki/publishing/), "Correcting published data"), never by re-running the measurement, which keeps what was published first. A bad image digest is a revert of the `validate.yml` change. Never loosen a check, change a count or alter the build image to make a contribution pass; report the problem in an issue for the owner.

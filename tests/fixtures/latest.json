@@ -1,4 +1,9 @@
 {
+ "digests": {
+  "contributors.json": "3333333333333333",
+  "history.json": "2222222222222222",
+  "map.json": "1111111111111111"
+ },
  "game": "game",
  "measuredAt": "2000-01-02T00:00:00Z",
  "modules": {

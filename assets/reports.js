@@ -11,9 +11,12 @@ function summaryView(project){
     target_sha1:project.targetSha1,revision:report.source.revision,built_at:report.measuredAt,
     measures,functions:s.functions,file_counts:s.files};
 }
-// A target's files change with each measurement; keying them by revision makes each URL immutable.
-function asset(project,path){return project.reportBase+path+'?v='+project.report.source.revision.slice(0,12);}
-// Revisioned asset URLs are immutable; retain a bounded set of parsed payloads across routes.
+// A target's files change with each measurement, and a published file may be corrected in place.
+// latest.json, which is always revalidated, names each file by its content digest, and that keys
+// the URL, so every URL is immutable and a correction is a new URL. Data published before the
+// digests existed falls back to the revision.
+function asset(project,path){const key=project.report.digests?.[path]||project.report.source.revision.slice(0,12);return project.reportBase+path+'?v='+key;}
+// Digest-keyed asset URLs are immutable; retain a bounded set of parsed payloads across routes.
 const payloads = new Map(), maps = new Map();
 function cached(cache, key, load, limit = 8) {
   if (cache.has(key)) {
@@ -77,8 +80,9 @@ function workerRequest(message, fallback) {
 function loadMap(url, measures) {
   const attempt = reload => workerRequest({url:new URL(url, import.meta.url).href, measures, reload},
     () => read(url, undefined, true, reload).then(map => validateMap(map, measures)));
-  // A revisioned map is cached as immutable, but a published map can be corrected in place. A copy
-  // that fails validation is fetched once more past the cache before the page gives up on it.
+  // A map is cached as immutable under its digest; data without digests is keyed by revision, and
+  // a correction of it stays in the cache. A copy that fails validation is fetched once more past
+  // the cache before the page gives up on it.
   return attempt(false).catch(error => error.message === 'Report unavailable' ? Promise.reject(error) : attempt(true));
 }
 export async function fetchBoundaryGraph(layout) {
