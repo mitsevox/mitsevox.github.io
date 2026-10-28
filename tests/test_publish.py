@@ -1,6 +1,8 @@
 """The publisher: objdiff report -> contract files, history append rules and the tree check."""
 import copy
+import functools
 import json
+import operator
 import os
 from pathlib import Path
 import subprocess
@@ -144,6 +146,33 @@ class ConversionTests(unittest.TestCase):
         m = publish.map_document(report(), SECTIONS)
         m['files'][0]['children'][0]['matched'] = 0
         with self.assertRaises(publish.ContractError):
+            publish.check_map(m, s)
+
+    def test_sums_round_as_the_page_sums(self):
+        # The page adds children left to right; Python's sum() compensates float error since
+        # 3.12. A group holding the exact sum of children whose naive sum lands 1e-6 away is
+        # refused by the page, so the check must add as the page does and refuse it too: one
+        # 2^40-byte exact function and a hundred 1-byte functions at 10 percent.
+        r = report()
+        unit, auto = r['units']
+        big, base = 2 ** 40, 2147483648
+        unit['sections'][0]['size'] = str(big + 100)
+        unit['sections'][1]['metadata']['virtual_address'] = str(2147500000 + big)
+        unit['functions'] = [{'name': 'Exact', 'size': str(big), 'fuzzy_match_percent': 100, 'metadata': {'virtual_address': str(base)}}]
+        unit['functions'] += [{'name': 'f%d' % i, 'size': '1', 'fuzzy_match_percent': 10,
+                               'metadata': {'virtual_address': str(base + big + i)}} for i in range(100)]
+        unit['measures'].update(total_code=str(big + 100), matched_code=str(big))
+        auto['sections'][0]['metadata']['virtual_address'] = str(base + big + 100)
+        auto['functions'][0]['metadata']['virtual_address'] = str(base + big + 100)
+        r['measures'].update(total_code=str(big + 116), matched_code=str(big), complete_code=str(big + 100), total_functions=102)
+        s = publish.summary(r, SECTIONS)
+        m = publish.map_document(r, SECTIONS)
+        group = m['files'][0]
+        self.assertEqual(group['fuzzy'], big + 10)  # the exact sum
+        naive = functools.reduce(operator.add, (c['fuzzy'] for c in group['children']), 0)
+        self.assertGreater(abs(naive - group['fuzzy']), 1e-6)
+        self.assertTrue(self.page_rejects(m, s))
+        with self.assertRaisesRegex(publish.ContractError, 'do not add up'):
             publish.check_map(m, s)
 
     def page_rejects(self, map_doc, s):

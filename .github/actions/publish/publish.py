@@ -15,8 +15,10 @@ before it is pushed, and the site only renders it. Standard library only.
 import argparse
 import base64
 import datetime
+import functools
 import json
 import math
+import operator
 import os
 import re
 import shutil
@@ -399,8 +401,9 @@ def check_map(document, s):
         return abs(a - b) <= 1e-6
 
     def total(values):
-        # Summed left to right, as the page sums them, so that both see the same rounding.
-        return sum(values)
+        # Added left to right, as the page adds them (reduce((a, b) => a + b, 0)), so that both
+        # see the same rounding. Not sum(): since Python 3.12 it compensates float error.
+        return functools.reduce(operator.add, values, 0)
 
     def node_extents(item):
         if 'mapped_extents' in item:
