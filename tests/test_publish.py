@@ -100,6 +100,25 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaisesRegex(publish.ContractError, 'does not fit'):
             publish.summary(r, SECTIONS)
 
+    def test_padding_a_report_does_not_count_gets_no_tile(self):
+        # dtk-template's objdiff report: a unit's total_code is its functions' sum, and the
+        # alignment padding between them is in the section but not counted. No tile for it, or
+        # the map's code would outgrow the summary (tw2004 and mvp2005 after site #48).
+        r = report()
+        unit = r['units'][0]
+        unit['functions'][1]['size'] = '8'  # 8 bytes of .text after Fuzzy, not counted
+        unit['measures']['total_code'] = '24'
+        r['measures'].update(total_code='40', complete_code='24')
+        s = publish.summary(r, SECTIONS)
+        m = publish.map_document(r, SECTIONS)
+        publish.check_map(m, s)
+        self.assertFalse([c for f in m['files'] for c in f.get('children', []) if c['name'].endswith('(other code)')])
+        self.assertEqual(sum(f['size'] for f in m['sections'] if f['kind'] == 'code'), 40)
+        # Counted bytes outside the functions that the sections do not leave: refused, named.
+        unit['measures']['total_code'] = '28'
+        with self.assertRaisesRegex(publish.ContractError, 'counts 4 bytes outside its functions, its code sections leave 8'):
+            publish.map_document(r, SECTIONS)
+
     def test_function_outside_code_sections_is_named(self):
         with self.assertRaisesRegex(publish.ContractError, 'outside the code sections'):
             publish.map_document(report(), ('.init',))

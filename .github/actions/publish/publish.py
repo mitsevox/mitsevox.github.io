@@ -123,7 +123,7 @@ def other_code(unit, code_sections):
     producer does not split into functions), as [(section, start, end, matched)] in address order.
     objdiff counts every byte of a code section in matched_code; the matched bytes that no exact
     function accounts for are given to these pieces in address order, so the map and the summary
-    agree. dtk-template reports have none."""
+    agree. A dtk-template report counts no such bytes (see below), so it gets none."""
     sections = sorted((s['name'], int(s['metadata']['virtual_address']), num(s.get('size')))
                       for s in unit.get('sections', []) if s['name'] in code_sections and num(s.get('size')))
     covered = merged((int(f['metadata']['virtual_address']), int(f['metadata']['virtual_address']) + num(f.get('size')))
@@ -141,9 +141,18 @@ def other_code(unit, code_sections):
             pieces.append([name, cursor, end])
     if not pieces:
         return []
+    # Whether the uncovered bytes are code the report counts: dtk-template's objdiff report counts
+    # a unit's functions only (total_code is their sum, alignment padding between them is not
+    # counted), a producer that counts every byte of its code sections counts all of them. Tiles
+    # for bytes total_code leaves out would make the map's code larger than the summary's.
+    total = sum(end - start for _, start, end in pieces)
+    counted = num(unit.get('measures', {}).get('total_code')) - sum(num(f.get('size')) for f in unit.get('functions', []))
+    if counted <= 0:
+        return []
+    require(counted == total, '%s: total_code counts %d bytes outside its functions, its code sections leave %d'
+            % (unit['name'], counted, total))
     exact = sum(num(f.get('size')) for f in unit.get('functions', []) if f.get('fuzzy_match_percent', 0) >= 100)
     rest = num(unit.get('measures', {}).get('matched_code')) - exact
-    total = sum(end - start for _, start, end in pieces)
     require(0 <= rest <= total, '%s: matched_code does not fit its functions and other code' % unit['name'])
     result = []
     for name, start, end in pieces:
