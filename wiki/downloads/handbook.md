@@ -751,32 +751,21 @@ The first step runs the project's tests (add yours under `tests/test_*.py`) and 
 
 ### Validate `<target id>`
 
-<<<<<<< HEAD
 One job per selected target, `fail-fast: false`, so one target's failure does not cancel another's build or publish. It runs inside the private image, named once at the top of the file. GitHub does not make the `env` context available to `container.image`, so the plan job passes the value on as its `image` output:
-=======
-One job per selected target, `fail-fast: false`, so one target's failure does not cancel another's build or publish. It runs inside the private image, named once at the top of the file:
->>>>>>> origin/claude/general-discussion-o6243s
 
 ```yaml
 env:
   BUILD_IMAGE: ghcr.io/owner/game-build@sha256:<digest>     # PARAMETER 1
 ...
-<<<<<<< HEAD
   plan:
     outputs:
       image: ${{ env.BUILD_IMAGE }}
 ...
-=======
->>>>>>> origin/claude/general-discussion-o6243s
     permissions:
       contents: read
       packages: read
     container:
-<<<<<<< HEAD
       image: ${{ needs.plan.outputs.image }}
-=======
-      image: ${{ env.BUILD_IMAGE }}
->>>>>>> origin/claude/general-discussion-o6243s
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
