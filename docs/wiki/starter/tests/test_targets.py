@@ -82,7 +82,30 @@ class Targets(unittest.TestCase):
             self.assertEqual((root/'config'/first/'evidence.tsv').read_text(),'\t'.join(COLUMNS)+'\n')
             self.assertIn('hash: '+select(first)['sha1'],(root/'config'/first/'config.yml').read_text())
             with self.assertRaises(ValueError):scaffold('no-such-target',root)
+            # Its own files are adopted; a file with other content is never overwritten.
+            self.assertTrue(all(line.startswith('adopted ') for line in scaffold(first,root)))
+            (root/'config'/first/'evidence.tsv').write_text('\t'.join(COLUMNS)+'\nname\t-\t-\tx\tinferred\t-\t-\te\n')
             with self.assertRaises(SystemExit):scaffold(first,root)
+
+    def test_new_target_adopts_the_placeholder_of_a_target_listed_but_not_built(self):
+        # A planned or archived target holds config/<id>/README.md (prose) and orig/<id>/.gitkeep
+        # before it is scaffolded; both are kept, and the rest is written beside them.
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);(root/'config').mkdir();shutil.copy(ROOT/'config/targets.json',root/'config/targets.json')
+            later=[t['id'] for t in registry()['targets'] if t['status']!='active']
+            if not later:self.skipTest('the registry lists no planned or archived target')
+            tid=later[0];folder=root/'config'/tid;folder.mkdir()
+            (folder/'README.md').write_text('# %s\n\nKnown identity only; no verified build.\n'%tid)
+            (root/'orig'/tid).mkdir(parents=True);(root/'orig'/tid/'.gitkeep').write_bytes(b'')
+            lines=scaffold(tid,root)
+            self.assertEqual(lines[1:],['wrote config/%s/config.yml'%tid,'wrote config/%s/evidence.tsv'%tid,'adopted orig/%s/.gitkeep'%tid])
+            self.assertTrue(lines[0].startswith('adopted config/%s/README.md (a placeholder'%tid),lines[0])
+            self.assertIn('rewrite it',lines[0])
+            self.assertIn('Known identity only',(folder/'README.md').read_text())
+            # With anything else beside it, the README is real content: refused unless it is the stub.
+            other=root/'config'/(tid+'-x');shutil.rmtree(folder);folder.mkdir()
+            (folder/'README.md').write_text('# prose\n');(folder/'splits.txt').write_text('')
+            with self.assertRaises(SystemExit):scaffold(tid,root)
 
     def test_versions_view_diff_and_check(self):
         value=registry();ids=[t['id'] for t in value['targets']];first=define(ids[0])
@@ -103,6 +126,80 @@ class Targets(unittest.TestCase):
             self.assertTrue(any('mixed with other macros' in e for e in errors))
             self.assertTrue(any('BUILD_VERSION' in e for e in errors))
             self.assertTrue(any('not-a-target' in e for e in errors))
+
+    def test_broad_version_conditions_warn_with_two_targets_and_fail_from_the_third(self):
+        # A branch a target listed later would take: a condition that holds with every version
+        # token false, or the #else of a chain none of whose conditions does.
+        def root_with(tmp,count):
+            root=Path(tmp);(root/'config').mkdir();(root/'include').mkdir();(root/'src').mkdir()
+            targets=[{'id':'GAME01-rev%d'%n,'platform':'gamecube','label':'GAME01','region':'USA','revision':str(n),
+                      'sha1':'%040x'%(n+1),'status':'active' if n==0 else 'planned'} for n in range(count)]
+            (root/'config/targets.json').write_text(json.dumps({'schema':1,'defaultTarget':'GAME01-rev0','targets':targets}))
+            (root/'include/version.h').write_text('#define NOT_FIRST (!VERSION_GAME01_REV0)\n#define BOTH (VERSION_GAME01_REV0 || VERSION_GAME01_REV1)\n')
+            (root/'src/a.c').write_text(
+                '#if VERSION_GAME01_REV0\nint a;\n#else\nint b;\n#endif\n'                      # 3: the else is broad
+                '#if !VERSION_GAME01_REV0\nint c;\n#else\nint d;\n#endif\n'                     # 6: the condition is broad, its else is not
+                '#if VERSION_GAME01_REV0\nint d2;\n#elif VERSION_GAME01_REV1\nint e;\n#endif\n'  # explicit chain: not broad
+                '#if VERSION_GAME01_REV0 && !VERSION_GAME01_REV1\nint f;\n#endif\n'             # false with every token false: not broad
+                '#if !NOT_FIRST\nint g;\n#endif\n'                                              # double negation: not broad
+                '#if BOTH\nint h;\n#else\nint i;\n#endif\n')                                     # 24: the else is broad
+            return root
+        with tempfile.TemporaryDirectory() as tmp:
+            versions=Versions(root_with(tmp,2))
+            self.assertEqual(versions.check(),[])
+            self.assertEqual([w.split(':')[1] for w in versions.warnings],['3','6','24'],versions.warnings)
+            self.assertEqual(versions.view(Path(tmp)/'src/a.c','GAME01-rev1'),['int b;','int c;','int e;','int h;'])
+        with tempfile.TemporaryDirectory() as tmp:
+            versions=Versions(root_with(tmp,3))
+            errors=versions.check()
+            self.assertEqual([e.split(':')[1] for e in errors],['3','6','24'],errors)
+            self.assertTrue(all('covers every target not named' in e for e in errors))
+            self.assertEqual(versions.warnings,[])
+            # The errors are check's alone: view and diff still resolve every branch.
+            self.assertEqual(versions.view(Path(tmp)/'src/a.c','GAME01-rev2'),['int b;','int c;','int i;'])
+            self.assertEqual(versions.view(Path(tmp)/'src/a.c','GAME01-rev0'),['int a;','int d;','int d2;','int f;','int g;','int h;'])
+
+    def test_matching_scope_pins_unconditional_matching_to_the_proven_targets(self):
+        from tools.matching_scope import pin,scopes,other_uses,run
+        text=('Matching = True  # Object matches and should be linked\nNonMatching = False\nEquivalent = config.non_matching\n'
+              'def MatchingFor(*versions):\n    return config.version in versions\nx = []\n'
+              'objects = [\n    Object(Matching, "a.c"),\n    Object(NonMatching, "b.c"),  # Matching soon\n'
+              '    Object(MatchingFor("GAME01-rev0"), "c.c"),\n    Object(Equivalent, "d.c"),\n    Object( Matching , "e.c", cflags=x),\n'
+              '    Object(Matching, "f# Matching.c"), Object(Matching, "g.c"),\n]\n')
+        self.assertEqual([(u,s) for _,u,s in scopes(text)],[('a.c','all'),('b.c','none'),('c.c',['GAME01-rev0']),('d.c','none'),('e.c','all'),('f# Matching.c','all'),('g.c','all')])
+        self.assertEqual(other_uses(text),[])  # the comment, the string and the first arguments are not other uses
+        new,count=pin(text,['GAME01-rev0'])
+        self.assertEqual(count,4)
+        self.assertEqual([s for _,_,s in scopes(new)],[['GAME01-rev0'],'none',['GAME01-rev0'],'none',['GAME01-rev0'],['GAME01-rev0'],['GAME01-rev0']])
+        self.assertEqual(pin(new,['GAME01-rev0'])[1],0)
+        # What each target's configure sees: unchanged for the proven target, nothing linked for a new one.
+        def flags(source,version):
+            seen={};scope={'config':type('C',(),{'version':version,'non_matching':False})(),
+                           'Object':lambda flag,name,**kw:seen.__setitem__(name,bool(flag))}
+            exec(source,scope);return seen
+        self.assertEqual(flags(text,'GAME01-rev0'),flags(new,'GAME01-rev0'))
+        self.assertEqual(set(flags(new,'GAME01-rev1').values()),{False})
+        # Other uses and unclassified calls are found through the tokens, not the text.
+        self.assertEqual(other_uses(text+'flag = Matching if fast else NonMatching\n'),['15: flag = Matching if fast else NonMatching'])
+        self.assertEqual(other_uses(text+'Linked = Matching\n'),['15: Linked = Matching'])
+        self.assertEqual(other_uses(text+'Object(NonMatching, "h.c", flag=Matching)\n'),['15: Object(NonMatching, "h.c", flag=Matching)'])
+        self.assertEqual([(u,s) for _,u,s in scopes(text+'Object(True, "z.c")\nObject(Linked, "w.c")\n')[-2:]],[('z.c','unclassified'),('w.c','unclassified')])
+        with tempfile.TemporaryDirectory() as tmp:
+            root=scratch(tmp);(root/'configure.py').write_text(text)
+            with self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev1'])  # listed, not active
+            with self.assertRaises(SystemExit):run(root,'pin',[])
+            self.assertTrue(run(root,'pin',['GAME01-rev0'])[0].startswith('pinned 4 '))
+            self.assertIn('a.c: GAME01-rev0',run(root,'show'))
+            for tail in ('flag = Matching\n','Object(True, "z.c")\n','Linked = Matching\nObject(Linked, "w.c")\n'):
+                (root/'configure.py').write_text(text+tail)
+                with self.subTest(tail=tail),self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev0'])
+            # Every active target must be named: a subset would drop the others' claims.
+            registry_text=(root/'config/targets.json').read_text().replace('"status": "planned"','"status": "active"',1)
+            (root/'config/targets.json').write_text(registry_text)
+            (root/'configure.py').write_text(text)
+            if len(build_targets(registry(root/'config/targets.json')))>1:
+                with self.assertRaises(SystemExit):run(root,'pin',['GAME01-rev0'])
+                self.assertTrue(run(root,'pin',build_targets(registry(root/'config/targets.json')))[0].startswith('pinned 4 '))
 
     def test_tier_floor_follows_what_the_diff_touches(self):
         self.assertEqual(declared('## Scope\n\nTier (A, B or C), task\n\nTier B, import of x.c'),'B')

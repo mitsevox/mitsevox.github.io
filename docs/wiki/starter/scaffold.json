@@ -6,7 +6,7 @@
     "config/targets.json", "config/site.json", "config/ci-targets.json", "config/README.md",
     "include/version.h",
     "tools/__init__.py", "tools/targets.py", "tools/ci_targets.py", "tools/measuring_tools.py",
-    "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/tier.py", "tools/credits.py",
+    "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/matching_scope.py", "tools/tier.py", "tools/credits.py",
     "tests/test_targets.py",
     ".github/workflows/validate.yml", ".github/pull_request_template.md"
   ],
@@ -33,7 +33,7 @@
     "## Targets", "## Building", "## CI and the progress site", "## Contributing", "## Layout", "## Credits and licenses"
   ],
   "byteIdentical": [
-    "tools/targets.py", "tools/ci_targets.py", "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/tier.py", "tools/credits.py",
+    "tools/targets.py", "tools/ci_targets.py", "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/matching_scope.py", "tools/tier.py", "tools/credits.py",
     "tests/test_targets.py", "config/README.md"
   ],
   "outline": {
