@@ -1,9 +1,10 @@
-import {createCommitLine} from './components/ui/commit-line.js';
-import {mountTargetPicker} from './targets.js';
-import {fetchSummary} from './reports.js';
-import {consoleIcon} from './console-icon.js';
-import {pageScope} from './lifecycle.js';
-export function mountIdentity(root,project){
+import {createCommitLine} from '../components/ui/commit-line.js';
+import {mountTargetPicker} from '../targets.js';
+import {fetchSummary} from '../reports.js';
+import {consoleIcon} from '../console-icon.js';
+import {pageScope} from '../lifecycle.js';
+// The game heading: title, platform, target picker and latest commit.
+export function mount(root,{project}){
   const scope=pageScope();
   const identity=document.createElement('div');identity.className='game-identity';
   const heading=root.querySelector('h1');heading.className='game-identity-title';heading.textContent='';

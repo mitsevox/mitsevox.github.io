@@ -1,18 +1,15 @@
-import {createProgressBar} from './components/ui/progress-bar.js';
-import {createCountSummary} from './components/ui/count-summary.js';
-import {createSearchField} from './components/ui/search-field.js';
-import {createSegmentedControl} from './components/ui/segmented-control.js';
-import {createAction} from './components/ui/action.js';
-import {createTooltip} from './components/ui/tooltip.js';
-import {pageScope} from './lifecycle.js';
-import {fetchProgress, fetchSummary, fetchBoundaryGraph} from './reports.js';
-import {validMeasure} from './report-map-validation.js';
-import {mapLabel, showMapDetails} from './map-evidence.js';
-export function mountProgress(root, project, buildLink) {
+// The project map: every function and data block as a tile, by file and by section.
+import {createSearchField} from '../components/ui/search-field.js';
+import {createSegmentedControl} from '../components/ui/segmented-control.js';
+import {createAction} from '../components/ui/action.js';
+import {pageScope} from '../lifecycle.js';
+import {fetchProgress, fetchBoundaryGraph} from '../reports.js';
+import {mapLabel, showMapDetails} from '../map-evidence.js';
+
+export function mount(root, {project, tooltip: tooltipUI}) {
 const scope = pageScope();
 const {signal, listen, frame, cancelFrame, animate} = scope;
-const mapEnabled = project.modules?.map !== false;
-const mapListen = mapEnabled ? listen : () => {};
+const mapListen = listen;
 let sections=[];
 const canvas=root.querySelector('#canvas');
 const projectMap = root.querySelector('#project-map');
@@ -22,7 +19,7 @@ const mapLift = document.createElement('div');
 mapLift.className = 'map-lift';
 mapLift.setAttribute('aria-hidden', 'true');
 mapLift.hidden = true;
-if (mapEnabled) canvas.parentElement.append(mapLift);
+canvas.parentElement.append(mapLift);
 const similarity = item => (item.fuzzy ?? item.matched) / item.size;
 const partialColorStrength = .65;
 function color(item) {
@@ -33,10 +30,6 @@ function color(item) {
 // Preserve report order so neighboring files and functions stay together.
 // Balanced area partitioning keeps byte proportions exact across viewport sizes.
 function partition(items,x,y,w,h,out){if(!items.length)return;if(items.length===1){out.push({...items[0],x,y,w,h});return;}let total=items.reduce((s,a)=>s+a.size,0),sum=0,split=1;for(let i=0;i<items.length-1;i++){sum+=items[i].size;split=i+1;if(sum>=total/2)break;}const ratio=sum/total;if(w>=h){partition(items.slice(0,split),x,y,w*ratio,h,out);partition(items.slice(split),x+w*ratio,y,w*(1-ratio),h,out);}else{partition(items.slice(0,split),x,y,w,h*ratio,out);partition(items.slice(split),x,y+h*ratio,w,h*(1-ratio),out);}}
-const tooltipUI=createTooltip({id:'map-tooltip',scope,onHide(){cancelMapHover();clearMapLift();}});
-root.querySelector('[data-ui="map-tooltip"]').replaceWith(tooltipUI.node);
-const tooltip=tooltipUI.node;
-const progressBars=Object.fromEntries(['code','data'].map(kind=>{const bar=createProgressBar({kind,scope,tooltip:tooltipUI});root.querySelector('.progress').append(bar.node);return [kind,bar];}));
 const back=createAction({id:'map-back',icon:'back',hidden:true,ariaLabel:'Back to files'});
 root.querySelector('[data-ui="map-back"]').replaceWith(back);
 const closeDetails=createAction({icon:'close',ariaLabel:'Close map details'});
@@ -48,13 +41,6 @@ const kindControl=createSegmentedControl({id:'map-kind',label:'Map type',value:'
   options:[{value:'code',label:'Code',icon:'code'},{value:'data',label:'Data',icon:'data'}],
   onChange(value,event,button){mapKind=value;projectMap.dataset.kind=value;path.length=0;render('switch',clickOrigin(event,button));}});
 root.querySelector('[data-ui="map-kind"]').replaceWith(kindControl.node);
-const countPanels={};
-for(const placeholder of root.querySelectorAll('[data-stats]')){
-  const panel=createCountSummary({kind:placeholder.dataset.stats,scope});
-  countPanels[placeholder.dataset.stats]=panel;placeholder.replaceWith(panel.node);
-}
-
-if (!mapEnabled) { root.append(tooltip); projectMap.remove(); }
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 let mapFrame = null;
 let activePulses = [];
@@ -276,7 +262,7 @@ function showTooltip(block, item, x, y) {
 }
 function showTooltipText(block, text, x, y, value = '') {
   if (!value) clearMapLift();
-  tooltipUI.show({anchor:block,label:text,value,x,y});
+  tooltipUI.show({anchor:block,label:text,value,x,y,onHide(){cancelMapHover();clearMapLift();}});
 }
 let palette = null;
 function colorValue(item) {
@@ -445,7 +431,6 @@ mapListen(canvas, 'pointerleave', () => {
 });
 async function render(direction = null, origin = null) {
   const version = ++renderVersion;
-  if (!mapEnabled) return;
   if (!sections.length) return;
   const continuing = activePulses.filter(pulse => performance.now() - pulse.start < pulse.duration)
     .map(pulse => ({origin: {x: pulse.origin.x / pulse.width * canvas.clientWidth,
@@ -527,38 +512,9 @@ mapListen(window, 'scroll', () => {
     if (item && rect.bottom > 0 && rect.top < window.innerHeight) showTooltip(focused, item, rect.left, rect.top);
   });
 }, {passive: true});
-function renderCounts(functions, type, basis) {
-  if (!root.querySelector('[data-stats="' + type + '"]')) return;
-  const available = functions && functions.total > 0;
-  if (functions && (!Number.isSafeInteger(functions.total) || functions.total < 0 ||
-      !['exact', 'named'].every(field => Number.isSafeInteger(functions[field]) && functions[field] >= 0 && functions[field] <= functions.total))) {
-    throw new Error('Invalid function progress');
-  }
-  countPanels[type].update(available ? functions : null);
-}
-
-function renderSummary(data) {
-if(data.schema!==1||data.target!==project.target||data.target_sha1!==project.targetSha1||data.baseline!=='verified'||!(/^[a-f0-9]{40}$/).test(data.revision)||!validMeasure(data.measures?.code)||!validMeasure(data.measures?.data))throw new Error('Invalid progress');
-renderCounts(data.functions, 'function', 'provisional-analysis');renderCounts(data.file_counts, 'file', 'mapped-file-inventory');
-for(const kind of ['code','data'])progressBars[kind].update(data.measures[kind]);
-const link=buildLink;link.href=project.preview?project.repo:project.repo+'/commit/'+data.revision;link.textContent=project.preview?'View repository':'Verified report · '+data.revision.slice(0,7);link.title=project.preview?'View project on GitHub':'Measured '+(project.report?.measuredAt||data.built_at)+'; published '+data.built_at;
-}
-async function loadProgress() {
-  try {
-    const summary = await fetchSummary(project, signal);
-    if (signal.aborted) return;
-    renderSummary(summary);
-  } catch {
-    if (signal.aborted) return;
-    renderCounts(null, 'function', 'provisional-analysis');renderCounts(null, 'file', 'mapped-file-inventory');
-    buildLink.textContent='Progress unavailable';
-    for(const bar of Object.values(progressBars))bar.unavailable();
-    if (mapEnabled) canvas.textContent='Progress unavailable';
-    return;
-  }
-  if (!mapEnabled) return;
+async function load() {
   canvas.setAttribute('aria-busy','true');
-  const loading=document.createElement('span');loading.className='map-loading';loading.textContent='Loading map…';canvas.append(loading);
+  const loading=document.createElement('span');loading.className='map-loading';loading.textContent='Loading map…';canvas.replaceChildren(loading);
   try {
     const data = await fetchProgress(project, signal);
     if (signal.aborted) return;
@@ -571,14 +527,13 @@ async function loadProgress() {
   }
 }
 let resizeFrame = null, previousSize = '';
-const observer = mapEnabled ? new ResizeObserver(() => {
+const observer = new ResizeObserver(() => {
   const size = canvas.clientWidth + ':' + canvas.clientHeight;
   if (size === previousSize) return;previousSize = size;
   if (resizeFrame !== null) cancelFrame(resizeFrame);
   resizeFrame = frame(() => {resizeFrame = null;if (!signal.aborted) render();});
-}) : null;
-observer?.observe(canvas);
-const ready = loadProgress();
-return {ready, destroy() { observer?.disconnect(); ++renderVersion; clearMapMotion(); scope.destroy(); }};
-
+});
+observer.observe(canvas);
+const ready = load();
+return {ready, destroy() { observer.disconnect(); ++renderVersion; clearMapMotion(); scope.destroy(); }};
 }

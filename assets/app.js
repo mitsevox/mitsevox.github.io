@@ -1,13 +1,7 @@
-import {createContributionLink} from './components/ui/contribution-link.js';
 import {createAction} from './components/ui/action.js';
 import {selectTarget} from './targets.js';
 import {projects} from './projects.js';
 import {createHeader,createFooter} from './shell.js?v=3';
-import {mountHub} from './hub.js';
-import {mountProgress} from './progress.js';
-import {mountActivity} from './activity.js';
-import {mountIdentity} from './identity.js';
-import {mountWiki} from './wiki.js?v=4';
 import {wikiChapters} from './wiki-chapters.js';
 import {createScrollState, pushRoute} from './scroll-state.js';
 
@@ -61,7 +55,9 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
   const version=++generation;
   navigationLabel.textContent='Loading '+(match.wiki?'wiki':match.project?.title||'projects');navigationStatus.hidden=false;content.setAttribute('aria-busy','true');
   try{
-    const html=await template(templateFor(match));
+    // Each route's code loads with its template, so startup only carries the shell.
+    const [html,page]=await Promise.all([template(templateFor(match)),
+      match.wiki?import('./wiki.js?v=4'):match.project?import('./pages/game.js'):import('./hub.js')]);
     if(version!==generation)return;
     saveScroll();restoring=true;
     const wikiController=match.wiki&&controllers.find(controller=>controller.update&&controller.main?.classList.contains('wiki-layout'));
@@ -74,22 +70,14 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
     const project=match.project;
     if(project){
       document.body.dataset.project=project.slug;
-      main.querySelector('h1').textContent=project.title+' decompilation progress';
-      main.querySelector('.lower h3').textContent=project.contributionHeading||'Want to join the effort?';
-      main.querySelector('[data-ui="contribution-link"]').replaceWith(createContributionLink({href:project.contributeUrl,variant:'callout'}));
-      if(!project.contributionsEnabled)main.querySelector('.lower').remove();
-      const optional = {functionCounts:'[data-stats="function"]',fileCounts:'[data-stats="file"]',timeline:'.history-section',contributors:'.people-section'};
-      for(const [key,selector] of Object.entries(optional))if(project.modules?.[key]===false)main.querySelector(selector)?.remove();
-      if(!main.querySelector('.function-stats'))main.querySelector('.stats-grid').remove();
-      if(project.available===false){for(const section of main.querySelectorAll('section,.stats-grid'))section.remove();}
-
+      page.prepare(main,project);
     }else delete document.body.dataset.project;
     if(wikiController){wikiController.update(main);main=wikiController.main;content.querySelector('.route-error')?.remove();}
     else content.replaceChildren(main);
     header.update(project,{wiki:!!match.wiki});footer.update(project);
     document.title=match.wiki?main.querySelector('h1').textContent+' · Wiki · mitsevox':project?project.title+' · mitsevox':'mitsevox · Decompilations';
-    if(project)controllers=project.available===false?[mountIdentity(main,project)]:[mountIdentity(main,project),mountProgress(main,project,footer.buildLink),mountActivity(main,project)];
-    else controllers=[wikiController||(match.wiki?mountWiki(main):mountHub(main))];
+    if(project)controllers=[page.mount(main,{project,buildLink:footer.buildLink})];
+    else controllers=[wikiController||(match.wiki?page.mountWiki(main):page.mountHub(main))];
     navigationStatus.hidden=true;content.removeAttribute('aria-busy');
     if(focus&&focusedInContent)main.focus({preventScroll:true});
     window.scrollTo({top:0,behavior:'instant'});

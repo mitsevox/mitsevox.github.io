@@ -15,7 +15,7 @@ class ReportLoadingTests(unittest.TestCase):
     def test_shared_immutable_payloads_do_not_block_summaries_or_other_subscribers(self):
         self.run_js(r'''
 import assert from 'node:assert/strict';
-import {fetchSummary,fetchProgress,fetchActivity} from './assets/reports.js';
+import {fetchSummary,fetchProgress,fetchHistory,fetchContributors} from './assets/reports.js';
 import {map,latest,version,project as target,withSummary} from './tests/fixtures/project.mjs';
 const project=target('/one/');
 let release, calls=[];
@@ -39,9 +39,10 @@ await fetchProgress(project);
 assert.equal(calls.filter(c=>c.url==='/one/map.json'+version).length,1);
 assert.equal(calls[0].options.cache,'force-cache');
 assert.equal(calls[0].options.signal,undefined);
-const result=await fetchActivity(project);
-assert.equal(result.snapshots[0].revision,'c'.repeat(40));assert.equal(result.snapshots[0].built_at,'2000-01-02T00:00:00Z');assert.equal(result.contributors[0].login,'credit');
-await fetchActivity(project);assert.equal(calls.length,3);
+const result=await fetchHistory(project);
+assert.equal(result.snapshots[0].revision,'c'.repeat(40));assert.equal(result.snapshots[0].built_at,'2000-01-02T00:00:00Z');
+assert.equal((await fetchContributors(project))[0].login,'credit');
+await fetchHistory(project);await fetchContributors(project);assert.equal(calls.length,3);
 // The cache cannot hide a schema/measurement disagreement or a failed response.
 await assert.rejects(fetchProgress(target('/one/',withSummary({code:{...latest.summary.code,total:latest.summary.code.total+1}}))),/Inconsistent map/);
 let attempts=0;
@@ -51,12 +52,12 @@ await assert.rejects(fetchProgress(retry),/unavailable/);
 await fetchProgress(retry);assert.equal(attempts,2);
 // A new measurement never reuses the previous revision's payload.
 await fetchProgress(target('/retry/',{...latest,source:{...latest.source,revision:'d'.repeat(40)}}));assert.equal(attempts,3);
-// Both activity requests start even while one remains unresolved.
-let finishHistory;const history=new Promise(resolve=>finishHistory=resolve), started=[];
-globalThis.fetch=async(url)=>{started.push(url);if(url.includes('history.json'))await history;return {ok:true,json:async()=>url.includes('history.json')?[]:{contributors:[]}};};
-const activity=fetchActivity(target('/parallel/'));
-await new Promise(resolve=>setTimeout(resolve,0));assert.equal(started.length,2);
-finishHistory();await activity;
+// History and contributors load independently: a slow history never holds up the rankings.
+let finishHistory;const history=new Promise(resolve=>finishHistory=resolve);
+globalThis.fetch=async(url)=>{if(url.includes('history.json'))await history;return {ok:true,json:async()=>url.includes('history.json')?[]:{contributors:[{login:'fast'}]}};};
+const slow=fetchHistory(target('/parallel/'));
+assert.equal((await fetchContributors(target('/parallel/')))[0].login,'fast');
+finishHistory();await slow;
 ''')
 
     def test_worker_parses_validates_and_builds_the_same_boundary_graph(self):
