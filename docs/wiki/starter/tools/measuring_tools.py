@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 """Print the tools that measure each report, one name=identity per line, for the site's provenance:
-the digest-pinned build image named in validate.yml and the tool tags pinned in configure.py.
-validate.yml passes this output to the publish action's `tools` input."""
+the digest-pinned build image from the BUILD_IMAGE environment variable (validate.yml exports the
+image it runs in) and the tool tags pinned in configure.py. validate.yml passes this output to the
+publish action's `tools` input."""
+import os
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / '.github/workflows/validate.yml'
 CONFIGURE = ROOT / 'configure.py'
+IMAGE = re.compile(r'ghcr\.io/[^@\s]+@sha256:[0-9a-f]{64}')
 # PARAMETER: the `config.<name> = "<version>"` lines of configure.py to report, as name=version.
 TAGS = {'dtk': 'dtk_tag', 'objdiff': 'objdiff_tag'}
 
 
-def tools():
-    image = re.findall(r'^\s*image: (ghcr\.io/[^@\s]+@sha256:[0-9a-f]{64})$', WORKFLOW.read_text(), re.M)
-    if len(image) != 1:
-        raise SystemExit('measuring_tools: validate.yml names no single pinned build image')
-    configure = CONFIGURE.read_text()
-    result = [('build-environment', image[0])]
+def tools(image=None, configure=None):
+    image = image if image is not None else os.environ.get('BUILD_IMAGE', '')
+    if not IMAGE.fullmatch(image):
+        raise SystemExit('measuring_tools: BUILD_IMAGE is not a digest-pinned image reference')
+    configure = configure if configure is not None else CONFIGURE.read_text()
+    result = [('build-environment', image)]
     for name, tag in TAGS.items():
         m = re.search(r'^config\.%s = "([^"]+)"$' % tag, configure, re.M)
         if not m:

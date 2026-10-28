@@ -30,8 +30,8 @@ RUN git clone --branch v1.8.3 https://github.com/encounter/decomp-toolkit /src \
 
 FROM ${ALPINE}
 # PARAMETER: one COPY and one checksum per active target. The file lands at
-# /orig/<target id>/<original path>; validate.yml copies it to orig/<target id>/<original path>
-# and tools/verify_target.py checks the SHA-1 against config/targets.json.
+# /orig/<target id>/<original path>; validate.yml copies it to orig/<target id>/<original path>,
+# where the toolkit checks its hash against config/<target id>/config.yml.
 COPY orig/GAME01-rev0/main.dol /orig/GAME01-rev0/sys/main.dol
 RUN echo "0000000000000000000000000000000000000000  /orig/GAME01-rev0/sys/main.dol" | sha1sum -c -
 COPY --from=dependencies /binutils /binutils
