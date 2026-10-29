@@ -33,7 +33,7 @@ For a field or signature, cite the actual loads and stores and the relevant call
 | Competing behavioral interpretations | A bounded debugger or emulator trace with known inputs and conditions |
 | Candidate SDK or library reuse | Fingerprints followed by calls, globals, types and boundary checks |
 
-Record the tested revision, tool version and settings, inputs, conclusion and remaining uncertainty. Check decompiler output against instructions. Runtime observations establish what happened under those conditions, not the original source text. Keep bulk experiments private; retain concise reproducible evidence publicly.
+[Tools](/wiki/tools/) names a tool for each of these questions. Record the tested revision, tool version and settings, inputs, conclusion and remaining uncertainty. Check decompiler output against instructions. Runtime observations establish what happened under those conditions, not the original source text. Keep bulk experiments private; retain concise reproducible evidence publicly.
 
 ## The evidence record
 
