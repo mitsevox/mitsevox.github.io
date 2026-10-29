@@ -28,6 +28,19 @@ Keep the dtk and objdiff versions the same across a project's targets and say wh
 
 A trial script built this way is worth writing early in any project, because it tries a variant without rebuilding the whole report.
 
+## An objdiff 100% isn't proof of exact
+
+objdiff can score a function 100% while its source loads the wrong constant. How strictly it compares relocations is set by `functionRelocDiffs`: `none`, `name_address` (the viewer's default), `data_value`, or `all` (name or address, and data value). The progress report uses `none`, which does not compare relocation targets at all. A load of a float or double from a literal pool (`.sdata2`, `.rodata`) is the same instruction whichever literal it points at, so `1.59155f` where the original holds 5/π, or `221.0f / 30.0f` one unit in the last place off, still scores 100%. Two loads of different literals in swapped order pass too.
+
+The build does not catch it. In a dtk-template project, a unit that is not yet `Matching` links the original assembly, so the wrong source is never compiled into the checked executable: CI stays green and the report counts the function as exact. The error only shows when the whole unit is switched to `Matching`. Any project that tracks progress per function in partly matched units is exposed, which is most GameCube and Wii projects.
+
+- Treat a function's 100% as provisional until its unit links as `Matching`.
+- Write float constants at full precision, or as the expression the original likely used (`5.0f / PI`), never as a rounded decimal.
+- When checking a match by hand, set `functionRelocDiffs` to `data_value` or `all`, which compare the literal each relocation points at.
+- Best: a CI check that, for every function claimed exact, compares each relocation's target value and the order of the loads with the original, and fails on a mismatch.
+
+The Scooby-Doo! Night of 100 Frights project found this in October 2026: review caught three wrong float literals in a HUD unit that objdiff scored 100%, and a sweep found six merged player functions loading two constants in swapped order.
+
 ## Get a first C draft
 
 **m2c** ([matt-kempster/m2c](https://github.com/matt-kempster/m2c)). Turns a function's assembly into C. Targets are written platform-compiler-language, for example `ppc-mwcc-c`; `--context` takes a header file for types (dtk-template's `decompctx.py` makes one), and `--valid-syntax` aims for output that compiles without edits, using macros from m2c's own `m2c_macros.h` that do not belong in committed source. GPL-3.0.
