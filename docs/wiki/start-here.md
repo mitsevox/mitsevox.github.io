@@ -63,7 +63,7 @@ The examples are for a GameCube target built with decomp-toolkit and dtk-templat
 8. [Repository settings](/wiki/repository-settings/): apply the settings standard to both repositories.
 9. [The site](/wiki/site/): check the page, commit cover art to the data repository.
 
-[Multiple targets](/wiki/multi-target/) is the procedure for a second original, once the first is published. [Data contract](/wiki/data-contract/) describes what the publish action writes; [Troubleshooting](/wiki/troubleshooting/) lists the failure messages; [Starter kit](/wiki/starter-kit/) is the download with every copyable file and the scaffold spec.
+[Multiple targets](/wiki/multi-target/) is the procedure for a second original, once the first is published. [Tools](/wiki/tools/) recommends tools for matching and research, each with the check to run before relying on it. [Data contract](/wiki/data-contract/) describes what the publish action writes; [Troubleshooting](/wiki/troubleshooting/) lists the failure messages; [Starter kit](/wiki/starter-kit/) is the download with every copyable file and the scaffold spec.
 
 ## What done looks like
 

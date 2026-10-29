@@ -36,6 +36,12 @@
     "group": "Reconstruction"
   },
   {
+    "slug": "tools",
+    "title": "Tools",
+    "summary": "Tools worth knowing, grouped by the question each one answers, and the check each needs before a project relies on it.",
+    "group": "Reconstruction"
+  },
+  {
     "slug": "multi-target",
     "title": "Multiple targets",
     "summary": "Activating a second original safely, sharing one source tree, carrying a map across, validating on every target, and a target's life.",
