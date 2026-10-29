@@ -11,7 +11,7 @@ Each tool card says which toolchain the tool suits: CodeWarrior (`mwcc`, most Ga
 These are the tools every project in this standard already uses. [Build, verify, measure](/wiki/build-verify-measure/) covers how they fit together; this section says what each is for.
 
 - **decomp-toolkit (dtk).** Splits the original executable into objects, names functions it recognises by signature, writes the linker script and explains why a relinked file differs (`dol diff`). Also reads DWARF 1.1 from an ELF (`dwarf dump`) and extracts files from a disc image. MIT or Apache-2.0.
-- **objdiff.** Compares each compiled object with the original, produces the progress report and lists regressions between two reports. MIT or Apache-2.0.
+- **objdiff.** Compares each compiled object with the original, produces the progress report and lists the changes, regressions included, between two reports. MIT or Apache-2.0.
 - **The compiler pack.** The compiler binaries the project's `configure.py` pins; dtk-template downloads the decomp.dev pack. See [Risks and licences](#risks-and-licences).
 - **wibo.** Runs those Windows compilers on Linux and macOS. MIT.
 - **ninja.** Runs the build.
@@ -34,7 +34,7 @@ A trial script built this way is worth writing early in any project, because it 
 
 - **For:** many small and medium functions at the start of a project, or a function too long to write by hand from nothing. Run it over the unmatched functions under a size limit, compile each draft, keep the ones that match, and hand-fix the near misses.
 - **Toolchain:** CodeWarrior is supported directly. Its GCC-specific heuristics are MIPS patterns; `ppc-gcc` is accepted, but output for ProDG is untested.
-- **Agent fit:** good. `--deterministic-vars` keeps temporary names stable between runs, so drafts diff cleanly.
+- **Agent fit:** good. `--deterministic-vars` names temporaries after their place in the assembly, so they do not shift when other temporaries change and drafts diff cleanly.
 - **Limits:** a draft is m2c's form, not the original's: it invents temporaries and casts. In our use it has also added call arguments that were not there and let functions fall off their end. A matching draft is still a draft: it needs the project's names, types and style before it is committed.
 - **Check before relying on it:** on ten functions the project has already matched, how many m2c drafts compile and how close they come.
 
@@ -56,7 +56,7 @@ A trial script built this way is worth writing early in any project, because it 
 - **Setup:** the compile wrapper has to pass the flags through to `cc1` and keep the dump files. Keep dumps private; they contain the game's code.
 - **Check before relying on it:** that the project's `cc1` writes the dump files for one known function.
 
-**Compiler probe.** A method worth a script in any project: compile a piece of source the original certainly contains under every candidate compiler version and flag set, and search the original executable for each result, with relocation fields masked (unlinked output never appears byte for byte). The version whose output appears is the one used for that library, not for the whole game: SDK and runtime libraries were often built with another compiler than the game code. Probe the game's own code with source the project has already matched, and record each result per library as evidence for that library's profile.
+**Compiler probe.** A method worth a script in any project: compile a piece of source the original certainly contains under every candidate compiler version and flag set, and search the original executable for each result, with relocation fields masked (relocated fields differ until link time). Each version whose output appears stays a candidate for that library; versions that compile the probe identically are not told apart by it, so probe with several functions until one candidate remains. A hit says nothing about other libraries: SDK and runtime libraries were often built with another compiler than the game code. Probe the game's own code with source the project has already matched, and record each result per library as evidence for that library's profile.
 
 ## Search for a near-miss fix
 
@@ -65,32 +65,32 @@ A trial script built this way is worth writing early in any project, because it 
 - **For:** late in a function, when only register allocation differs.
 - **Toolchain:** any it can compile; set up per function (a directory with the function, the original object, a compile script and a settings file).
 - **Agent fit:** runs headless, but it is a random search: many cores, minutes to hours, and output that needs sorting.
-- **Limits:** its own README warns that it "often finds lots of nonsensical changes that improve regalloc by accident". Most of what it finds is a fake match. Use its result as a hint and rewrite the idea by hand in plausible C: a moved declaration, a value read once into a local, two statements swapped. Never commit its output.
+- **Limits:** its own README warns that it "often finds lots of nonsensical changes that improve regalloc 'by accident'". Most of what it finds is a fake match. Use its result as a hint and rewrite the idea by hand in plausible C: a moved declaration, a value read once into a local, two statements swapped. Never commit its output.
 - **Check before relying on it:** on a few near misses, how many of its hits survive being rewritten as plain C.
 
-**Declaration-order search.** A narrower, deterministic search: try the orders of a function's local declarations and keep the one that matches. On CodeWarrior, the order of local declarations often changes which register each local gets, because the allocator's priority depends on how the variables are numbered. Permute only declarations without initializers, or with initializers that have no side effects and do not read each other, so the reorder cannot change what the code does. Any project can script it on top of its trial script.
+**Declaration-order search.** A narrower, deterministic search: try the orders of a function's local declarations and keep the one that matches. On CodeWarrior, the order of local declarations often changes which register each local gets, because the allocator's priority depends on how the variables are numbered. Permute only declarations of types with trivial construction and destruction (scalars, pointers, plain structs and arrays) that have no initializer or an initializer with no side effects that reads none of the other permuted locals, so the reorder cannot change what the code does. In C++, a constructor or destructor makes the order part of the behaviour. Any project can script it on top of its trial script.
 
 ## Find the same functions in another build
 
-These answer "which functions here are the same as functions there": a sequel or sibling game on the same engine, a library shared between games, or a cross-check of a second revision of the same game. For a new target of the same game, the transfer follows [Multiple targets](/wiki/multi-target/#carrying-a-map-to-a-new-target); these tools only cross-check it, because a similarity threshold breaks ties that procedure leaves open. Results suggest names; they are `related` evidence, never proof. Record each run as one evidence row: the tool and its version, the inputs and their revisions, and the report's path ([Evidence](/wiki/evidence/#what-earns-a-row)).
+These answer "which functions here are the same as functions there": a sequel or sibling game on the same engine, a library shared between games, or a cross-check of a second revision of the same game. For a new target of the same game, the transfer follows [Multiple targets](/wiki/multi-target/#carrying-a-map-to-a-new-target); these tools only cross-check it, because a similarity threshold breaks ties that procedure leaves open. Results suggest names; they are `related` evidence, never proof. Record each run as one evidence row: the tool and its version, the inputs and their revisions, and the report's path ([Evidence](/wiki/evidence/#what-earns-a-row)). The report (function pairs and scores, no code) is committed; the database stays private.
 
 **coddog** ([ethteck/coddog](https://github.com/ethteck/coddog)). Finds identical and similar functions within one binary (`cluster`), between a function and a binary (`match`, `submatch`), between projects (`compare2`, `compare-n`, marked experimental) and between a raw binary and projects (`compare-raw`). MIT or Apache-2.0.
 
 - **Toolchain:** any. **Agent fit:** command line, text output.
-- **Limits:** every subcommand reads a project description file (`decomp.yaml`) that dtk-template projects do not have. Its code lists a GameCube/Wii platform, but its documentation shows no PowerPC example.
+- **Limits:** every subcommand reads a project description file (`decomp.yaml`) that dtk-template projects do not have; with more than one version in it, `match`, `submatch` and `cluster` stop at an interactive prompt. Its code lists a GameCube/Wii platform, but its documentation shows no PowerPC example.
 - **Check before relying on it:** a known answer. Run it between two revisions of the same game where a byte-identical relink already ties each function to its sibling, and count how many pairs it finds and how many it gets wrong.
 
-**Ghidra BSim.** Part of Ghidra (Apache-2.0). Compares functions by what Ghidra's decompiler makes of them rather than by bytes, so it can pair functions that differ slightly in code. It needs Ghidra and a GameCube loader ([Cuyler36/Ghidra-GameCube-Loader](https://github.com/Cuyler36/Ghidra-GameCube-Loader), Apache-2.0, built from source against the Ghidra version in use).
+**Ghidra BSim.** Part of Ghidra (Apache-2.0). Compares functions by what Ghidra's decompiler makes of them rather than by bytes, so it can pair functions that differ slightly in code. It needs Ghidra and a GameCube loader ([Cuyler36/Ghidra-GameCube-Loader](https://github.com/Cuyler36/Ghidra-GameCube-Loader), Apache-2.0, built from source against the Ghidra version in use; its README installs the zip through Ghidra's window, so for headless use unpack it into the install's `Extensions` directory).
 
 - **For:** the same job as coddog where the builds are further apart: another compiler version, another platform, small source changes.
-- **Toolchain:** any. **Agent fit:** the `bsim` command runs from the shell with a local database and no server, but slowly: a full Ghidra analysis of each binary first.
+- **Toolchain:** any. **Agent fit:** headless, but slow. `analyzeHeadless` imports and analyses each binary; the `bsim` command in Ghidra's `support` directory creates a local database (a `file:` URL, no server) and generates and commits signatures; the comparison itself runs as a BSim script under `analyzeHeadless` (for example `CompareExecutablesScript` or `QueryFunction`).
 - **Check before relying on it:** the same known-answer test as coddog.
 
 ## What does this code do in the game?
 
 **Ghidra** (Apache-2.0, with the loader above). Its decompiler and cross-references answer what a function does, who calls it and what data it touches. dtk and objdiff already give a project its split, its symbols and its assembly, so Ghidra is for understanding, not for matching. **Toolchain:** any. **Agent fit:** headless analysis and scripts; the decompiler output is text. Keep Ghidra projects private; they contain the game.
 
-**Dolphin.** The GameCube emulator (mostly GPL-2.0 or later); `dolphin-emu-nogui` runs without a window. A bounded trace answers what only running the game shows: a value at run time, which branch runs, what a function is for. **Toolchain:** any. **Agent fit:** limited; it needs the owner's own disc image on the machine and is not for CI. Record what was traced, on which build, and what stays uncertain ([Evidence](/wiki/evidence/)).
+**Dolphin.** The GameCube emulator (mostly GPL-2.0 or later); `dolphin-emu-nogui -p headless` runs without a window. A bounded trace answers what only running the game shows: a value at run time, which branch runs, what a function is for. **Toolchain:** any. **Agent fit:** limited; it needs the owner's own disc image on the machine and is not for CI. Record what was traced, on which build, and what stays uncertain ([Evidence](/wiki/evidence/)).
 
 ## Risks and licences
 
