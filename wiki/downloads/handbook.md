@@ -451,7 +451,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     ninja -f build/GAME01-rev0/build.ninja
     ```
 
-    The generated build downloads dtk, objdiff and the compilers at their pinned tags unless `--dtk`, `--objdiff` and `--compilers` point at local copies. The build fails unless the linked executable's SHA-1 equals `config/<target id>/build.sha1`, which must equal the original's hash from `targets.json`.
+    The generated build downloads dtk, objdiff and the compilers at their pinned tags unless `--dtk`, `--objdiff` and `--compilers` point at local copies. A project that also sets ninja's `builddir` to the target's folder (`n.variable("builddir", ...)` in `tools/project.py`) gives each target its own `.ninja_log`, and then a second target's first build downloads the same tools again. To keep them, `tools/download_tool.py` writes the tag beside each tool (`<tool>.tag`) and skips a tool that exists at that tag, and the `download_tool` rule sets `restat=True`; a tool downloaded before the change has no tag and downloads once more ([n100f#168](https://github.com/mitsevox/n100f/pull/168)). The build fails unless the linked executable's SHA-1 equals `config/<target id>/build.sha1`, which must equal the original's hash from `targets.json`.
 
 6. Measure:
 
