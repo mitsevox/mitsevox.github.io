@@ -115,6 +115,24 @@ class ScaffoldCheckTests(unittest.TestCase):
         workflow.write_text(workflow.read_text().replace(environment, 'name: publish'))
         self.assertTrue(any('publish environment' in m for m in messages(root, '.github/workflows/validate.yml')))
 
+    def test_constant_check_is_required_for_dtk_projects_only(self):
+        root = self.broken()
+        workflow = root / '.github/workflows/validate.yml'
+        step = '''      - name: Check exact functions' constants
+        # dtk-template projects.'''
+        self.assertIn(step, workflow.read_text())
+        workflow.write_text(workflow.read_text().replace("- name: Check exact functions' constants", '- name: Removed'))
+        (root / 'tools/literal_check.py').unlink()
+        self.assertTrue(any('"Check exact functions\' constants" is missing' in m for m in messages(root, '.github/workflows/validate.yml')))
+        self.assertTrue(messages(root, 'tools/literal_check.py'))
+        # A project with its own build (no dtk-template tools/project.py) needs neither.
+        (root / 'tools/project.py').unlink()
+        (root / 'configure.py').rename(root / 'build.py')
+        workflow.write_text(workflow.read_text().replace('- name: Removed', "- name: Check exact functions' constants"))
+        self.assertFalse(messages(root, 'tools/literal_check.py'))
+        workflow.write_text(workflow.read_text().replace("- name: Check exact functions' constants", '- name: Removed'))
+        self.assertFalse(any('constants' in m for m in messages(root, '.github/workflows/validate.yml')))
+
     def test_forbidden_paths_references_and_gitignore(self):
         root = self.broken()
         (root / 'docs/dtk').mkdir(parents=True)

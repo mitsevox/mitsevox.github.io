@@ -6,9 +6,10 @@
 #   3. the configure and build commands of the project's toolchain;
 #   4. the names of the repository variable and the `publish` environment secret that hold the
 #      GitHub App credential.
-# One step is optional: "Project checks", whose command the repository supplies. Everything else
-# is fixed (the job and step names, the planner, the tests, the scaffold check and the publish
-# step); the scaffold check compares this file's job and step names with the kit.
+# One step is optional: "Project checks", whose command the repository supplies. "Check exact
+# functions' constants" is for dtk-template projects; a project with its own build deletes it.
+# Everything else is fixed (the job and step names, the planner, the tests, the scaffold check and
+# the publish step); the scaffold check compares this file's job and step names with the kit.
 name: Validate
 
 on:
@@ -138,6 +139,12 @@ jobs:
         with:
           target: ${{ matrix.target }}
           report: build/${{ matrix.target }}/report.json
+      - name: Check exact functions' constants
+        # dtk-template projects. The report pairs a relocation without comparing where it lands, so a
+        # function can load a wrong constant, or two values in swapped order, and still count as
+        # exact while its unit links the original object. Every relocation of every exact function
+        # must reach the original's address or hold the original's bytes (Tools chapter).
+        run: python3 tools/literal_check.py --target "$TARGET_ID"
       # OPTIONAL: the one step a repository may add, for its own checks that need the build or
       # the toolchain. Keep the name; supply the command. Delete the step if there is nothing to run.
       # - name: Project checks

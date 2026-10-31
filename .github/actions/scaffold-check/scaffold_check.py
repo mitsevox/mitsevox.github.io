@@ -66,8 +66,12 @@ class Check:
 
     # Paths
 
+    def dtk(self):
+        """A dtk-template project: its build is configure.py with dtk-template's tools/project.py."""
+        return (self.repo / 'configure.py').is_file() and (self.repo / 'tools/project.py').is_file()
+
     def required(self):
-        for path in self.spec['required']:
+        for path in self.spec['required'] + (self.spec['requiredWithDtk'] if self.dtk() else []):
             if not (self.repo / path).is_file():
                 self.warn(path, 'required file is missing')
         if not any((self.repo / p).is_file() for p in self.spec['buildEntry']):
@@ -89,7 +93,7 @@ class Check:
     def per_target(self):
         if not self.targets:
             return
-        dtk = (self.repo / 'configure.py').is_file() and (self.repo / 'tools/project.py').is_file()
+        dtk = self.dtk()
         for target in self.targets['targets']:
             wanted = list(self.spec['perTarget']['every'])
             if target['status'] == 'active':
@@ -191,10 +195,10 @@ class Check:
         for name in spec['jobs']:
             if name not in names:
                 self.warn(spec['path'], 'job %r is missing' % name)
-        for name in spec['steps']:
+        for name in spec['steps'] + (spec['dtkSteps'] if self.dtk() else []):
             if name not in names:
                 self.warn(spec['path'], 'step %r is missing' % name)
-        known = set(spec['jobs']) | set(spec['steps']) | set(spec['optionalSteps'])
+        known = set(spec['jobs']) | set(spec['steps']) | set(spec['dtkSteps']) | set(spec['optionalSteps'])
         for name in names:
             if name not in known:
                 self.warn(spec['path'], 'step or job %r is not in the skeleton; only %s may be added' % (name, ', '.join(spec['optionalSteps'])))
