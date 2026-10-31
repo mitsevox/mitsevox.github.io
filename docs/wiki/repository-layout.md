@@ -25,6 +25,7 @@ game/
       splits.txt, symbols.txt    toolkit inputs
       build.sha1                 expected hash of the built executable
       evidence.tsv               curated claims
+      literal_exceptions.tsv     exact functions the constant check cannot compare, with reasons (when needed)
       README.md                  the target in one paragraph
   src/                           reconstructed source, shared by every target
   include/

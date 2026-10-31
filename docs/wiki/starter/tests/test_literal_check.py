@@ -210,6 +210,19 @@ class Repository(unittest.TestCase):
         elsewhere={'units':[{'name':'module1/game/unit','functions':[{'name':'Check','fuzzy_match_percent':100.0}]}]}
         self.assertEqual(self.run_main([],report=elsewhere),0)
 
+    def test_every_exact_function_in_the_report_is_compared_or_listed(self):
+        self.base(0.0)
+        fn=lambda name:{'name':name,'fuzzy_match_percent':100.0}
+        report={'units':[{'name':'main/game/unit','functions':[fn('Check'),fn('Other')]}]}
+        self.assertEqual(self.run_main([self.unit()],report=report),1)
+        exceptions=self.root/'config/GAME01-rev0/literal_exceptions.tsv'
+        exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\ta relocation the split object lacks\n')
+        self.assertEqual(self.run_main([self.unit()],report=report),0)
+        exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\tlimit\nmain/game/unit\tCheck\tcompared now\n')
+        self.assertEqual(self.run_main([self.unit()],report=report),1)
+        exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\t\n')
+        self.assertEqual(self.run_main([self.unit()],report=report),1)
+
     def test_a_root_objdiff_json_for_another_target_fails(self):
         self.base(0.0)
         (self.build/'config.json').write_text(json.dumps({'name':'main'}))

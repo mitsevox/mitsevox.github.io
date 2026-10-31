@@ -133,6 +133,7 @@ game/
       splits.txt, symbols.txt    toolkit inputs
       build.sha1                 expected hash of the built executable
       evidence.tsv               curated claims
+      literal_exceptions.tsv     exact functions the constant check cannot compare, with reasons (when needed)
       README.md                  the target in one paragraph
   src/                           reconstructed source, shared by every target
   include/
@@ -676,7 +677,7 @@ python3 tools/literal_check.py --target GAME01-rev0
 python3 tools/literal_check.py --target GAME01-rev0 --unit main/game/unit
 ```
 
-It reads `objdiff.json` (under `build/<target id>/`, or at the root for a project that keeps dtk-template's stock paths) and the objects it lists, `symbols.txt`, `splits.txt` and the original that `config.yml` names in `object_base` and `object`. It fails when an exact function disagrees, when `objdiff.json` names an object the build did not write, when no unit belongs to the main executable, or when it checks no function while the target's `report.json` counts some as exact. Functions that are not exact are skipped and counted, and so are units of REL modules: it reads the main executable only. A project whose report counts nothing exact yet checks nothing and passes.
+It reads `objdiff.json` (under `build/<target id>/`, or at the root for a project that keeps dtk-template's stock paths) and the objects it lists, `symbols.txt`, `splits.txt` and the original that `config.yml` names in `object_base` and `object`. It fails when an exact function disagrees, when `objdiff.json` names an object the build did not write, when no unit belongs to the main executable, or when the target's `report.json` counts a function as exact that it did not compare. A function it cannot compare (a limit of the check, not of the source) goes in `config/<target id>/literal_exceptions.tsv` with the reason, and the row is reviewed like an evidence row; a listed function that is compared again, or no longer exact, fails until its row is removed. Functions that are not exact are skipped and counted, and so are units of REL modules: it reads the main executable only. A project whose report counts nothing exact yet checks nothing and passes.
 
 ## Get a first C draft
 

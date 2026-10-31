@@ -48,3 +48,12 @@ signature claims. A local absolute path or an unexplained score is insufficient.
 These records describe evidence, not matching progress or approval. Changes to executable symbols and unit
 splits require corresponding evidence and the contribution review passes. Review findings, tested revisions
 and the owner's acceptance remain in the PR.
+
+## Constant check exceptions
+
+`tools/literal_check.py` compares every function the progress report counts as exact. A function it
+cannot compare, because of a limit of the check rather than of the source, is listed in
+`config/<target id>/literal_exceptions.tsv`: a header line `unit`, `function`, `reason`, then one
+tab-separated row per function, none empty. Reviewers treat a row like an evidence row. The check fails
+on a listed function that it compares again or that is no longer exact, so the file only holds current
+limits.

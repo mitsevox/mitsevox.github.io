@@ -26,9 +26,12 @@ keeps dtk-template's stock paths) for the units, their compiled objects and thei
 (the build writes both), config/<target id>/symbols.txt and splits.txt, and the original that
 config/<target id>/config.yml names in `object_base` and `object`. It fails when an exact function
 disagrees, when objdiff.json names an object the build did not write, when no unit belongs to the
-main executable, or when it checks no function while the target's report counts some as exact.
-Functions that are not exact are counted and skipped: a partial function is not a review failure,
-and its relocations do not line up with the target's. Units of REL modules are skipped and counted too: the check reads
+main executable, or when the target's report counts a function as exact that it did not compare.
+A function it cannot compare (a tool limit) is listed, with the reason, in
+config/<target id>/literal_exceptions.tsv (header unit, function, reason; tab-separated); a listed
+function that is compared again, or no longer exact, fails until its row is removed. Functions
+that are not exact are counted and skipped: a partial function is not a review failure, and its
+relocations do not line up with the target's. Units of REL modules are skipped and counted too: the check reads
 the main executable only."""
 import argparse
 import json
@@ -379,13 +382,32 @@ def original(config_yml,target):
 
 
 def exact_in_report(report,main_module):
-    """How many of the main executable's functions the target's report counts as exact (None
+    """{(unit, function)} the target's report counts as exact in the main executable (None
     without a report)."""
     if not report.is_file():
         return None
     units=json.loads(report.read_text()).get('units',[])
-    return sum(1 for u in units if not main_module or u.get('name','').split('/',1)[0]==main_module
-               for f in u.get('functions',[]) if f.get('fuzzy_match_percent',0)>=100)
+    return {(u['name'],f['name']) for u in units if not main_module or u.get('name','').split('/',1)[0]==main_module
+            for f in u.get('functions',[]) if f.get('fuzzy_match_percent',0)>=100}
+
+
+def read_exceptions(path):
+    """{(unit, function): reason} from config/<target id>/literal_exceptions.tsv: the exact
+    functions this check cannot compare, each with the reason. Raises on a malformed row."""
+    found={}
+    if not path.is_file():
+        return found
+    lines=path.read_text().splitlines()
+    if not lines or lines[0].split('\t')!=['unit','function','reason']:
+        raise ValueError(f'{path.name}: the first line must be the header unit<TAB>function<TAB>reason')
+    for number,line in enumerate(lines[1:],2):
+        if not line.strip():
+            continue
+        fields=line.split('\t')
+        if len(fields)!=3 or not all(f.strip() for f in fields):
+            raise ValueError(f'{path.name}:{number}: a row is unit, function and reason, tab-separated, none empty')
+        found[(fields[0],fields[1])]=fields[2]
+    return found
 
 
 def main():
@@ -436,7 +458,12 @@ def main():
         return 1
     targets={u['name']:Elf(ROOT/u['target_path']) for u in units if u.get('target_path')}
     exports=exported(targets,symbols,splits)
-    checked=skipped=failed=0
+    try:
+        exceptions=read_exceptions(config/'literal_exceptions.tsv')
+    except ValueError as error:
+        print(f'{args.target}: {error}')
+        return 1
+    checked=skipped=failed=0;compared=set()
     for unit in units:
         if args.unit and unit['name'] not in args.unit:
             continue
@@ -454,7 +481,7 @@ def main():
                 if args.verbose:
                     print(f'skip {unit["name"]}: {name} (not exact)')
             else:
-                checked+=1
+                checked+=1;compared.add((unit['name'],name))
         for (name,off),finding in check.uninitialized().items():
             results[name].append(f'+0x{off:X}: {finding}')
         for name,findings in results.items():
@@ -468,14 +495,24 @@ def main():
     if args.unit and not checked:
         print(f'{args.target}: no exact function was checked in the units named; a unit name or the build is wrong')
         return 1
-    # Checking nothing passes only for a project whose report counts nothing exact yet.
-    expected=exact_in_report(build/'report.json',main_module) if not args.unit else None
-    if expected is None and not args.unit:
+    # Every function the report counts as exact must have been compared, or be a listed exception.
+    expected=exact_in_report(build/'report.json',main_module)
+    if expected is None:
         print(f'{args.target}: no build/{args.target}/report.json; build the progress report to compare against it')
-    if expected and not checked:
-        print(f'{args.target}: the report counts {expected} exact functions but none was checked; the build or this check is wrong')
-        return 1
-    return 1 if failed else 0
+        return 1 if failed else 0
+    if args.unit:
+        expected={e for e in expected if e[0] in args.unit}
+        exceptions={e:r for e,r in exceptions.items() if e[0] in args.unit}
+    unchecked=sorted(expected-compared-set(exceptions))
+    stale=sorted(set(exceptions)-(expected-compared))
+    for unit,name in unchecked:
+        print(f'UNCHECKED {unit}: {name} (the report counts it as exact but this check did not compare it; '
+              f'fix the check, or list it with the reason in config/{args.target}/literal_exceptions.tsv)')
+    for unit,name in stale:
+        print(f'STALE {unit}: {name} (listed in literal_exceptions.tsv, but it is compared now or no longer exact; remove the row)')
+    if exceptions:
+        print(f'{args.target}: {len(exceptions)-len(stale)} exact functions not compared, by the listed exceptions')
+    return 1 if failed or unchecked or stale else 0
 
 
 if __name__=='__main__':
