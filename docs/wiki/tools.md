@@ -37,9 +37,22 @@ The build does not catch it. In a dtk-template project, a unit that is not yet `
 - Treat a function's 100% as provisional until its unit links as `Matching`.
 - Write float constants at full precision, or as the expression the original likely used (`5.0f / PI`), never as a rounded decimal.
 - When checking a match by hand, set `functionRelocDiffs` to `data_value` or `all`, which compare the literal each relocation points at. dtk-template's `configure.py` carries `--config functionRelocDiffs=data_value` in `progress_report_args`, commented out; enabling it makes the progress report strict too.
-- Best: a CI check that, for every function claimed exact, compares each relocation's target value and the order of the loads with the original, and fails on a mismatch.
+- Best: a CI check that, for every function claimed exact, compares each relocation's target value and the order of the loads with the original, and fails on a mismatch. The kit ships one ([below](#the-constant-check)).
 
-The Scooby-Doo! Night of 100 Frights project found this in October 2026, when review caught wrong float literals in a HUD unit that objdiff scored 100%, and built that check: [`tools/literal_check.py`](https://github.com/mitsevox/n100f/blob/main/tools/literal_check.py) ([mitsevox/n100f#191](https://github.com/mitsevox/n100f/pull/191)). For every function whose code equals the original's with the relocated fields masked, it compares where each relocation lands: a name `symbols.txt` gives must have the original's address, and an anonymous literal or table must hold the original executable's bytes there. It reads only `objdiff.json` and the objects it lists, `symbols.txt`, `splits.txt` and the original, and CI runs it per target after the build. Its first run checked 2,813 exact functions on one target and found 13 that disagreed: loads and stores in swapped order, a jump table with two cases swapped (a behaviour bug in the reconstruction), and calls through `fn_` placeholders that `symbols.txt` had since named, which would fail to link once their units went `Matching`.
+### The constant check
+
+The [starter kit](/wiki/starter-kit/) ships `tools/literal_check.py`, and the kit's `validate.yml` runs it for every target after the build, in the step `Check exact functions' constants`. Every dtk-template project runs it. It reads dtk-template's layout (`config.json`, `config.yml`, `splits.txt`), so a project with its own build leaves it out.
+
+For every function whose code equals the original's with the relocated fields masked, it checks where each relocation lands. A symbol that `symbols.txt` names must have the original's address. An anonymous literal, jump table or local static must hold the original executable's bytes at that address, with the pointers inside it resolved through `symbols.txt`. A local variable without data must map to one address of the original, and no two to the same one.
+
+Besides wrong values, this catches loads and stores in swapped order, swapped jump-table cases (a behaviour bug in the reconstruction, not only a scoring one), and calls through `fn_` placeholders that `symbols.txt` has since named, which would stop linking once the unit goes `Matching`.
+
+```sh
+python3 tools/literal_check.py --target GAME01-rev0
+python3 tools/literal_check.py --target GAME01-rev0 --unit main/game/unit
+```
+
+It reads `objdiff.json` (under `build/<target id>/`, or at the root for a project that keeps dtk-template's stock paths) and the objects it lists, `symbols.txt`, `splits.txt` and the original that `config.yml` names in `object_base` and `object`. It fails when an exact function disagrees, when `objdiff.json` names an object the build did not write, when no unit belongs to the main executable, or when the target's `report.json` counts a function as exact that it did not compare. A function it cannot compare (a limit of the check, not of the source) goes in `config/<target id>/literal_exceptions.tsv` with the reason, and the row is reviewed like an evidence row; a listed function that is compared again, or no longer exact, fails until its row is removed. Functions that are not exact are skipped and counted, and so are units of REL modules: it reads the main executable only. A project whose report counts nothing exact yet checks nothing and passes. Without `build/<target id>/report.json` (a local run before the progress report is built) it prints a note and checks only the functions it can compare.
 
 ## Get a first C draft
 

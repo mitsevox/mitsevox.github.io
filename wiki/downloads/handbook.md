@@ -133,6 +133,7 @@ game/
       splits.txt, symbols.txt    toolkit inputs
       build.sha1                 expected hash of the built executable
       evidence.tsv               curated claims
+      literal_exceptions.tsv     exact functions the constant check cannot compare, with reasons (when needed)
       README.md                  the target in one paragraph
   src/                           reconstructed source, shared by every target
   include/
@@ -148,9 +149,11 @@ game/
     measuring_tools.py           lists tool versions for provenance, verifies them (starter)
     tier.py                      the review tier a diff needs, checked in CI    (starter)
     credits.py                   the credits a merge will publish, checked in CI (starter)
+    literal_check.py             exact functions' constants against the original (starter, dtk-template)
     project.py, ninja_syntax.py, download_tool.py, ...   dtk-template
   tests/
     test_targets.py                                                             (starter)
+    test_literal_check.py                                                       (starter, dtk-template)
   docs/                          durable project knowledge
   references/                    text only, regenerable by a named tool, no file over 4 MB
   licenses/                      license texts of imported source
@@ -451,7 +454,7 @@ The commands below are for decomp-toolkit and dtk-template, which the reference 
     ninja -f build/GAME01-rev0/build.ninja
     ```
 
-    The generated build downloads dtk, objdiff and the compilers at their pinned tags unless `--dtk`, `--objdiff` and `--compilers` point at local copies. A project that also sets ninja's `builddir` to the target's folder (`n.variable("builddir", ...)` in `tools/project.py`) gives each target its own `.ninja_log`, and then a second target's first build downloads the same tools again. To keep them, `tools/download_tool.py` writes the tag beside each tool (`<tool>.tag`) and skips a tool that exists at that tag, and the `download_tool` rule sets `restat=True`; a tool downloaded before the change has no tag and downloads once more ([n100f#168](https://github.com/mitsevox/n100f/pull/168)). The build fails unless the linked executable's SHA-1 equals `config/<target id>/build.sha1`, which must equal the original's hash from `targets.json`.
+    The generated build downloads dtk, objdiff and the compilers at their pinned tags unless `--dtk`, `--objdiff` and `--compilers` point at local copies. A project that also sets ninja's `builddir` to the target's folder (`n.variable("builddir", ...)` in `tools/project.py`) gives each target its own `.ninja_log`, and then a second target's first build downloads the same tools again. To keep them, `tools/download_tool.py` writes the tag beside each tool (`<tool>.tag`) and skips a tool that exists at that tag, and the `download_tool` rule sets `restat=True`; a tool downloaded before the change has no tag and downloads once more. The build fails unless the linked executable's SHA-1 equals `config/<target id>/build.sha1`, which must equal the original's hash from `targets.json`.
 
 6. Measure:
 
@@ -659,9 +662,22 @@ The build does not catch it. In a dtk-template project, a unit that is not yet `
 - Treat a function's 100% as provisional until its unit links as `Matching`.
 - Write float constants at full precision, or as the expression the original likely used (`5.0f / PI`), never as a rounded decimal.
 - When checking a match by hand, set `functionRelocDiffs` to `data_value` or `all`, which compare the literal each relocation points at. dtk-template's `configure.py` carries `--config functionRelocDiffs=data_value` in `progress_report_args`, commented out; enabling it makes the progress report strict too.
-- Best: a CI check that, for every function claimed exact, compares each relocation's target value and the order of the loads with the original, and fails on a mismatch.
+- Best: a CI check that, for every function claimed exact, compares each relocation's target value and the order of the loads with the original, and fails on a mismatch. The kit ships one ([below](#the-constant-check)).
 
-The Scooby-Doo! Night of 100 Frights project found this in October 2026, when review caught wrong float literals in a HUD unit that objdiff scored 100%, and built that check: [`tools/literal_check.py`](https://github.com/mitsevox/n100f/blob/main/tools/literal_check.py) ([mitsevox/n100f#191](https://github.com/mitsevox/n100f/pull/191)). For every function whose code equals the original's with the relocated fields masked, it compares where each relocation lands: a name `symbols.txt` gives must have the original's address, and an anonymous literal or table must hold the original executable's bytes there. It reads only `objdiff.json` and the objects it lists, `symbols.txt`, `splits.txt` and the original, and CI runs it per target after the build. Its first run checked 2,813 exact functions on one target and found 13 that disagreed: loads and stores in swapped order, a jump table with two cases swapped (a behaviour bug in the reconstruction), and calls through `fn_` placeholders that `symbols.txt` had since named, which would fail to link once their units went `Matching`.
+### The constant check
+
+The [starter kit](/wiki/starter-kit/) ships `tools/literal_check.py`, and the kit's `validate.yml` runs it for every target after the build, in the step `Check exact functions' constants`. Every dtk-template project runs it. It reads dtk-template's layout (`config.json`, `config.yml`, `splits.txt`), so a project with its own build leaves it out.
+
+For every function whose code equals the original's with the relocated fields masked, it checks where each relocation lands. A symbol that `symbols.txt` names must have the original's address. An anonymous literal, jump table or local static must hold the original executable's bytes at that address, with the pointers inside it resolved through `symbols.txt`. A local variable without data must map to one address of the original, and no two to the same one.
+
+Besides wrong values, this catches loads and stores in swapped order, swapped jump-table cases (a behaviour bug in the reconstruction, not only a scoring one), and calls through `fn_` placeholders that `symbols.txt` has since named, which would stop linking once the unit goes `Matching`.
+
+```sh
+python3 tools/literal_check.py --target GAME01-rev0
+python3 tools/literal_check.py --target GAME01-rev0 --unit main/game/unit
+```
+
+It reads `objdiff.json` (under `build/<target id>/`, or at the root for a project that keeps dtk-template's stock paths) and the objects it lists, `symbols.txt`, `splits.txt` and the original that `config.yml` names in `object_base` and `object`. It fails when an exact function disagrees, when `objdiff.json` names an object the build did not write, when no unit belongs to the main executable, or when the target's `report.json` counts a function as exact that it did not compare. A function it cannot compare (a limit of the check, not of the source) goes in `config/<target id>/literal_exceptions.tsv` with the reason, and the row is reviewed like an evidence row; a listed function that is compared again, or no longer exact, fails until its row is removed. Functions that are not exact are skipped and counted, and so are units of REL modules: it reads the main executable only. A project whose report counts nothing exact yet checks nothing and passes. Without `build/<target id>/report.json` (a local run before the progress report is built) it prints a note and checks only the functions it can compare.
 
 ## Get a first C draft
 
@@ -1011,6 +1027,7 @@ The job references a deployment environment: `publish` on a push or manual run o
 | `Configure target` | `python3 configure.py --version "$TARGET_ID" --dtk /usr/local/bin/dtk --binutils /binutils --compilers /compilers`. PARAMETER 3. |
 | `Build, verify complete executable and measure progress` (`id: measure`) | `ninja -f "build/$TARGET_ID/build.ninja" progress "build/$TARGET_ID/report.json"`, then writes the output `measured-at` as the current UTC time in `%Y-%m-%dT%H:%M:%SZ`. PARAMETER 3. The build fails unless the executable's hash matches. |
 | `Check the report` | `uses: mitsevox/mitsevox.github.io/.github/actions/check-report@main` with `target` and `report`, on every event. It converts the report into the contract files with the same code as the publish step, into an empty tree, and checks them, without a credential and without credits. A report the site would refuse fails the pull request here, not the `main` publish. A repository that passes `code-sections` or `unit-prefix` to the publish step passes the same values here. |
+| `Check exact functions' constants`, dtk-template projects | `python3 tools/literal_check.py --target "$TARGET_ID"`. Every exact function's relocations must reach the original's address or hold the original's bytes, so a wrong constant or two loads in swapped order fail the pull request even while the unit links the original object ([Tools](/wiki/tools/#the-constant-check)). A project with its own build deletes the step. |
 | `Project checks`, optional | The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name. |
 | `List measuring tools` (`id: tools`) | Runs `python3 tools/measuring_tools.py --verify` on every event. The tool reads `BUILD_IMAGE` from the environment and the tool versions the repository pins (the tags in `configure.py`, or the JSON pin files its `PINS` parameter names); `--verify` runs each command its `VERIFY` parameter names inside the image (`dtk --version` in the kit) and fails the job unless the command exits 0 and the pinned version appears in its output as a whole word (`1.8.3` is not found in `1.8.30`), so the provenance published on `main` names what measured the report, and a pull request that bumps the image digest without the pin, or the pin without the image, fails here. The lines are captured in the output `lines` with a random heredoc delimiter. |
 | `Publish to the site`, `main` only | `uses: mitsevox/mitsevox.github.io/.github/actions/publish@main` with `target`, `report: build/<target>/report.json`, `tools`, `measured-at`, `app-client-id` and `app-private-key`. PARAMETER 4 names the repository variable and the `publish` environment's secret. |
@@ -1556,8 +1573,8 @@ Download the [repository starter archive](/wiki/downloads/repository-starter.zip
 | `.github/workflows/validate.yml.template` | `.github/workflows/validate.yml` | [CI](/wiki/ci/) |
 | `config/targets.json`, `config/site.json`, `config/ci-targets.json`, `config/README.md` | `config/` | [Targets](/wiki/targets/), [Evidence](/wiki/evidence/) |
 | `include/version.h` | `include/` | [Build, verify, measure](/wiki/build-verify-measure/) |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/), [Contribution workflow](/wiki/contribution-workflow/), [Publishing](/wiki/publishing/) |
-| `tests/test_targets.py` | `tests/` | [CI](/wiki/ci/) |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py`, `tools/literal_check.py` (dtk-template projects) | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/), [Contribution workflow](/wiki/contribution-workflow/), [Publishing](/wiki/publishing/) |
+| `tests/test_targets.py`, `tests/test_literal_check.py` (dtk-template projects) | `tests/` | [CI](/wiki/ci/), [Tools](/wiki/tools/#the-constant-check) |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the private repository | [Build environment](/wiki/build-environment/) |
 | `scaffold.json` | nowhere; the scaffold check reads it | this one |
 | `contract/README.md` | reference only | [Data contract](/wiki/data-contract/) |
@@ -1592,11 +1609,11 @@ Every project-specific value, and where it goes:
 
 | Class | Files | Checked |
 | --- | --- | --- |
-| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/tier.py`, `tools/credits.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
+| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/tier.py`, `tools/credits.py`, `tools/literal_check.py`, `tests/test_targets.py`, `tests/test_literal_check.py`, `config/README.md` | Equal to the kit at the action's revision |
 | Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish, report-check and scaffold-check actions, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
-The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
+The other checks: every required path present (for a dtk-template project also `tools/literal_check.py`, its test and the `Check exact functions' constants` step), a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). The scaffold check has no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
 
 ## Acceptance checklist
 

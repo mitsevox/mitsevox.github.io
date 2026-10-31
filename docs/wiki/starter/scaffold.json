@@ -10,6 +10,7 @@
     "tests/test_targets.py",
     ".github/workflows/validate.yml", ".github/pull_request_template.md"
   ],
+  "requiredWithDtk": ["tools/literal_check.py", "tests/test_literal_check.py"],
   "buildEntry": ["configure.py", "Makefile", "build.py"],
   "perTarget": {
     "every": ["orig/<id>/.gitkeep", "config/<id>/README.md"],
@@ -34,7 +35,7 @@
   ],
   "byteIdentical": [
     "tools/targets.py", "tools/ci_targets.py", "tools/versions.py", "tools/evidence.py", "tools/new_target.py", "tools/matching_scope.py", "tools/tier.py", "tools/credits.py",
-    "tests/test_targets.py", "config/README.md"
+    "tools/literal_check.py", "tests/test_targets.py", "tests/test_literal_check.py", "config/README.md"
   ],
   "outline": {
     "README.md": "readmeHeadings",
@@ -53,6 +54,7 @@
       "Build, verify complete executable and measure progress", "Check the report", "List measuring tools", "Publish to the site",
       "Require all selected target validations"
     ],
+    "dtkSteps": ["Check exact functions' constants"],
     "optionalSteps": ["Project checks"],
     "publishAction": "mitsevox/mitsevox.github.io/.github/actions/publish@main",
     "checkAction": "mitsevox/mitsevox.github.io/.github/actions/check-report@main",

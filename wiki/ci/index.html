@@ -86,6 +86,10 @@ uses: mitsevox/mitsevox.github.io/.github/actions/scaffold-check@main
 <td><code>uses: mitsevox/mitsevox.github.io/.github/actions/check-report@main</code> with <code>target</code> and <code>report</code>, on every event. It converts the report into the contract files with the same code as the publish step, into an empty tree, and checks them, without a credential and without credits. A report the site would refuse fails the pull request here, not the <code>main</code> publish. A repository that passes <code>code-sections</code> or <code>unit-prefix</code> to the publish step passes the same values here.</td>
 </tr>
 <tr>
+<td><code>Check exact functions' constants</code>, dtk-template projects</td>
+<td><code>python3 tools/literal_check.py --target "$TARGET_ID"</code>. Every exact function's relocations must reach the original's address or hold the original's bytes, so a wrong constant or two loads in swapped order fail the pull request even while the unit links the original object (<a href="/wiki/tools/#the-constant-check">Tools</a>). A project with its own build deletes the step.</td>
+</tr>
+<tr>
 <td><code>Project checks</code>, optional</td>
 <td>The one step a repository may add: its own checks that need the build or the toolchain, with a command of its choice. The template shows it commented out; keep the name.</td>
 </tr>

@@ -26,6 +26,7 @@
       splits.txt, symbols.txt    toolkit inputs
       build.sha1                 expected hash of the built executable
       evidence.tsv               curated claims
+      literal_exceptions.tsv     exact functions the constant check cannot compare, with reasons (when needed)
       README.md                  the target in one paragraph
   src/                           reconstructed source, shared by every target
   include/
@@ -41,9 +42,11 @@
     measuring_tools.py           lists tool versions for provenance, verifies them (starter)
     tier.py                      the review tier a diff needs, checked in CI    (starter)
     credits.py                   the credits a merge will publish, checked in CI (starter)
+    literal_check.py             exact functions' constants against the original (starter, dtk-template)
     project.py, ninja_syntax.py, download_tool.py, ...   dtk-template
   tests/
     test_targets.py                                                             (starter)
+    test_literal_check.py                                                       (starter, dtk-template)
   docs/                          durable project knowledge
   references/                    text only, regenerable by a named tool, no file over 4 MB
   licenses/                      license texts of imported source

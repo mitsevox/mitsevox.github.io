@@ -94,7 +94,7 @@ class Targets(unittest.TestCase):
             git('switch','-q','--detach',new);git('merge','-q','--no-ff','-m','test merge','pr');on_new=git('rev-parse','HEAD')
             changed=lambda b,h:git('diff','--name-only',b,h).split()
             pr=lambda base:{'base':{'sha':base},'head':{'sha':tip}}
-            # base.sha one commit behind a merge built on the branch tip (n100f#114's case).
+            # base.sha one commit behind a merge built on the branch tip.
             self.assertEqual(pr_base(pr(old),on_new,tmp),new)
             self.assertEqual(changed(pr_base(pr(old),on_new,tmp),on_new),['docs/b.md'])
             self.assertIn('config/GAME01-rev0/evidence.tsv',changed(old,on_new))  # what the old diff saw

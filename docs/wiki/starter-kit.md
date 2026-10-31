@@ -14,8 +14,8 @@ Download the [repository starter archive](/wiki/downloads/repository-starter.zip
 | `.github/workflows/validate.yml.template` | `.github/workflows/validate.yml` | [CI](/wiki/ci/) |
 | `config/targets.json`, `config/site.json`, `config/ci-targets.json`, `config/README.md` | `config/` | [Targets](/wiki/targets/), [Evidence](/wiki/evidence/) |
 | `include/version.h` | `include/` | [Build, verify, measure](/wiki/build-verify-measure/) |
-| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py` | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/), [Contribution workflow](/wiki/contribution-workflow/), [Publishing](/wiki/publishing/) |
-| `tests/test_targets.py` | `tests/` | [CI](/wiki/ci/) |
+| `tools/__init__.py`, `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/measuring_tools.py`, `tools/tier.py`, `tools/credits.py`, `tools/literal_check.py` (dtk-template projects) | `tools/` | [Targets](/wiki/targets/), [Build, verify, measure](/wiki/build-verify-measure/), [CI](/wiki/ci/), [Contribution workflow](/wiki/contribution-workflow/), [Publishing](/wiki/publishing/) |
+| `tests/test_targets.py`, `tests/test_literal_check.py` (dtk-template projects) | `tests/` | [CI](/wiki/ci/), [Tools](/wiki/tools/#the-constant-check) |
 | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml`, `build-image/README.md` | the root of the private repository | [Build environment](/wiki/build-environment/) |
 | `scaffold.json` | nowhere; the scaffold check reads it | this one |
 | `contract/README.md` | reference only | [Data contract](/wiki/data-contract/) |
@@ -50,11 +50,11 @@ Every project-specific value, and where it goes:
 
 | Class | Files | Checked |
 | --- | --- | --- |
-| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/tier.py`, `tools/credits.py`, `tests/test_targets.py`, `config/README.md` | Equal to the kit at the action's revision |
+| Byte-identical | `tools/targets.py`, `tools/ci_targets.py`, `tools/versions.py`, `tools/evidence.py`, `tools/new_target.py`, `tools/matching_scope.py`, `tools/tier.py`, `tools/credits.py`, `tools/literal_check.py`, `tests/test_targets.py`, `tests/test_literal_check.py`, `config/README.md` | Equal to the kit at the action's revision |
 | Outline | `README.md` (the seven headings in order), `CONTRIBUTING.md` (the section headings), `AGENTS.md` (the kit header verbatim, then `## Project`), `.github/pull_request_template.md` (contains `## Targets`), `validate.yml` (job names, step names, the publish, report-check and scaffold-check actions, `BUILD_IMAGE` by digest, the target job's environment line) | Headings or the fixed part; the body is free |
 | Free | Everything else | Nothing |
 
-The other checks: every required path present, a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). There is no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
+The other checks: every required path present (for a dtk-template project also `tools/literal_check.py`, its test and the `Check exact functions' constants` step), a build entry point present, the root allowlist, the per-target files for each status, the three hashes agreeing per target, every `MatchingFor` argument and `VERSION_` token known, `ci-targets.json` without a `targets` key, `evidence.tsv` well formed, no `docs/dtk/` or `config.example.yml`, no file in `references/` over 4 MB, `.gitignore` covering `orig/*/*`, `build/`, `*.dol` and `*.elf`, no second workflow, and the readable half of the [settings standard](/wiki/repository-settings/). The scaffold check has no exception file: a process that needs one is a process the allowlist was wrong about, and project material goes under `docs/`, `tools/` or `references/`.
 
 ## Acceptance checklist
 
