@@ -222,6 +222,19 @@ class Repository(unittest.TestCase):
         self.assertEqual(self.run_main([self.unit()],report=report),1)
         exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\t\n')
         self.assertEqual(self.run_main([self.unit()],report=report),1)
+        exceptions.write_text('unit\tfunction\treason\r\nmain/game/unit\tOther\tlimit\r\n')
+        self.assertEqual(self.run_main([self.unit()],report=report),0)
+        exceptions.write_text('function\tunit\treason\nmain/game/unit\tOther\tlimit\n')
+        self.assertEqual(self.run_main([self.unit()],report=report),1)
+        exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\tlimit\nmain/game/unit\tOther\tagain\n')
+        self.assertEqual(self.run_main([self.unit()],report=report),1)
+        # A listed function the report no longer counts as exact is stale.
+        exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\tlimit\n')
+        only={'units':[{'name':'main/game/unit','functions':[fn('Check')]}]}
+        self.assertEqual(self.run_main([self.unit()],report=only),1)
+        # --unit leaves other units' rows alone.
+        exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\tlimit\nmain/game/other\tX\tlimit\n')
+        self.assertEqual(self.run_main([self.unit()],'--unit','main/game/unit',report=report),0)
 
     def test_an_unchecked_function_says_why(self):
         self.base(0.0)

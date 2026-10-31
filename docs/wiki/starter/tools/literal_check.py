@@ -405,7 +405,7 @@ def read_exceptions(path):
     found={}
     if not path.is_file():
         return found
-    lines=path.read_text().splitlines()
+    lines=path.read_text(encoding='utf-8').splitlines()
     if not lines or lines[0].split('\t')!=['unit','function','reason']:
         raise ValueError(f'{path.name}: the first line must be the header unit<TAB>function<TAB>reason')
     for number,line in enumerate(lines[1:],2):
@@ -414,6 +414,8 @@ def read_exceptions(path):
         fields=line.split('\t')
         if len(fields)!=3 or not all(f.strip() for f in fields):
             raise ValueError(f'{path.name}:{number}: a row is unit, function and reason, tab-separated, none empty')
+        if (fields[0],fields[1]) in found:
+            raise ValueError(f'{path.name}:{number}: {fields[0]} {fields[1]} is listed twice')
         found[(fields[0],fields[1])]=fields[2]
     return found
 
@@ -471,12 +473,13 @@ def main():
     except ValueError as error:
         print(f'{args.target}: {error}')
         return 1
-    checked=skipped=failed=0;compared=set();why={}
+    checked=skipped=failed=0;compared=set();why={};opened=set()
     for unit in units:
         if args.unit and unit['name'] not in args.unit:
             continue
         if unit['name'] not in targets or not unit.get('base_path'):
             continue
+        opened.add(unit['name'])
         check=Unit(Elf(ROOT/unit['base_path']),targets[unit['name']],symbols,dol,exports,
                    splits.get(unit['name'].split('/',1)[-1]))
         results={}
@@ -517,7 +520,8 @@ def main():
     unchecked=sorted(expected-compared-set(exceptions))
     stale=sorted(set(exceptions)-(expected-compared))
     for unit,name in unchecked:
-        reason=why.get((unit,name)) or 'no function of that name in either object'
+        reason=why.get((unit,name)) or ('no function of that name in either object' if unit in opened else
+                                         'the unit was not compared (no compiled or target object in objdiff.json)')
         print(f'UNCHECKED {unit}: {name}: {reason} (the report counts it as exact but this check did not '
               f'compare it; fix the check, or list it with the reason in config/{args.target}/literal_exceptions.tsv)')
     for unit,name in stale:
