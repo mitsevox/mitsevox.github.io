@@ -223,6 +223,19 @@ class Repository(unittest.TestCase):
         exceptions.write_text('unit\tfunction\treason\nmain/game/unit\tOther\t\n')
         self.assertEqual(self.run_main([self.unit()],report=report),1)
 
+    def test_an_unchecked_function_says_why(self):
+        self.base(0.0)
+        report={'units':[{'name':'main/game/unit','functions':[{'name':'Other','fuzzy_match_percent':100.0}]}]}
+        (self.build/'objdiff.json').write_text(json.dumps({'units':[self.unit()]}))
+        (self.build/'config.json').write_text(json.dumps({'name':'main'}))
+        (self.build/'report.json').write_text(json.dumps(report))
+        out=io.StringIO()
+        with mock.patch.object(literal_check,'ROOT',self.root),\
+             mock.patch.object(sys,'argv',['literal_check.py','--target','GAME01-rev0']),\
+             contextlib.redirect_stdout(out):
+            self.assertEqual(literal_check.main(),1)
+        self.assertIn('UNCHECKED main/game/unit: Other: no function of that name in either object',out.getvalue())
+
     def test_a_root_objdiff_json_for_another_target_fails(self):
         self.base(0.0)
         (self.build/'config.json').write_text(json.dumps({'name':'main'}))

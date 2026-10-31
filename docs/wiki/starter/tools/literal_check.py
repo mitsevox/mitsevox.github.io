@@ -202,7 +202,10 @@ class Unit:
         base=self.base;target=self.target
         bsec,boff,size=base.functions[name]
         tsec,toff,tsize=target.functions[name]
+        # Why a function was not compared, for a function the report still counts as exact.
+        self.why=None
         if size!=tsize:
+            self.why=f'size 0x{size:X} here, 0x{tsize:X} in the target object'
             return None
         bcode=base.section_bytes(bsec)[boff:boff+size];tcode=target.section_bytes(tsec)[toff:toff+size]
         brel={(o-boff)&~3:(o-boff,t,s,a) for o,t,s,a in base.relocs.get(bsec,[]) if boff<=o<boff+size}
@@ -212,6 +215,7 @@ class Unit:
             b=brel.get(word);t=trel.get(word)
             if b and t:
                 if b[1]!=t[1]:
+                    self.why=f'+0x{word:X}: relocation type {b[1]} here, {t[1]} in the target object'
                     return None
                 shift=16 if b[1] in (3,4,5,6) and b[0]&3==0 else 0
                 masks[word]=MASK.get(b[1],0xFFFFFFFF)<<shift&0xFFFFFFFF
@@ -222,6 +226,8 @@ class Unit:
                 other=tcode if b else bcode
                 sym=elf.symbols[sym]
                 if typ not in (R_PPC_REL24,R_PPC_REL14) or sym['shndx']!=(bsec if b else tsec):
+                    self.why=(f'+0x{word:X}: a relocation (type {typ}) only in the '
+                              f'{"compiled" if b else "target"} object')
                     return None
                 insn,=struct.unpack_from('>I',other,word)
                 if typ==R_PPC_REL24:
@@ -229,11 +235,13 @@ class Unit:
                 else:
                     disp=(insn&0xFFFC)-((insn&0x8000)<<1)
                 if sym['value']+addend-(start+word)!=disp:
+                    self.why=f'+0x{word:X}: a local branch reaches another offset'
                     return None
                 masks[word]=MASK[typ]
         for i in range(0,size,4):
             b,=struct.unpack_from('>I',bcode,i);t,=struct.unpack_from('>I',tcode,i)
             if (b^t)&~masks.get(i,0)&0xFFFFFFFF:
+                self.why=f'+0x{i:X}: the code differs (0x{b:08X} here, 0x{t:08X} in the target object)'
                 return None
         pairs=[(brel[w],trel[w]) for w in sorted(brel) if w in trel]
         findings=[]
@@ -463,7 +471,7 @@ def main():
     except ValueError as error:
         print(f'{args.target}: {error}')
         return 1
-    checked=skipped=failed=0;compared=set()
+    checked=skipped=failed=0;compared=set();why={}
     for unit in units:
         if args.unit and unit['name'] not in args.unit:
             continue
@@ -472,11 +480,14 @@ def main():
         check=Unit(Elf(ROOT/unit['base_path']),targets[unit['name']],symbols,dol,exports,
                    splits.get(unit['name'].split('/',1)[-1]))
         results={}
-        for name in sorted(check.base.functions):
-            if name not in check.target.functions:
+        for name in sorted(set(check.base.functions)|set(check.target.functions)):
+            if name not in check.target.functions or name not in check.base.functions:
+                side='target' if name not in check.target.functions else 'compiled'
+                why[(unit['name'],name)]=f'no function of that name in the {side} object'
                 continue
             results[name]=check.compare(name)
             if results[name] is None:
+                why[(unit['name'],name)]=check.why
                 skipped+=1
                 if args.verbose:
                     print(f'skip {unit["name"]}: {name} (not exact)')
@@ -506,8 +517,9 @@ def main():
     unchecked=sorted(expected-compared-set(exceptions))
     stale=sorted(set(exceptions)-(expected-compared))
     for unit,name in unchecked:
-        print(f'UNCHECKED {unit}: {name} (the report counts it as exact but this check did not compare it; '
-              f'fix the check, or list it with the reason in config/{args.target}/literal_exceptions.tsv)')
+        reason=why.get((unit,name)) or 'no function of that name in either object'
+        print(f'UNCHECKED {unit}: {name}: {reason} (the report counts it as exact but this check did not '
+              f'compare it; fix the check, or list it with the reason in config/{args.target}/literal_exceptions.tsv)')
     for unit,name in stale:
         print(f'STALE {unit}: {name} (listed in literal_exceptions.tsv, but it is compared now or no longer exact; remove the row)')
     if exceptions:
