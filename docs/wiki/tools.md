@@ -38,9 +38,10 @@ The build does not catch it. In a dtk-template project, a unit that is not yet `
 - Write float constants at full precision, or as the expression the original likely used (`5.0f / PI`), never as a rounded decimal.
 - When checking a match by hand, set `functionRelocDiffs` to `data_value` or `all`, which compare the literal each relocation points at. dtk-template's `configure.py` carries `--config functionRelocDiffs=data_value` in `progress_report_args`, commented out; enabling it makes the progress report strict too.
 - Best: a CI check that, for every function claimed exact, compares each relocation's target value and the order of the loads with the original, and fails on a mismatch. The kit ships one ([below](#the-constant-check)).
+
 ### The constant check
 
-The [starter kit](/wiki/starter-kit/) ships `tools/literal_check.py`, and the kit's `validate.yml` runs it for every target after the build, in the step `Check exact functions' constants`. Every dtk-template project runs it; a project with its own build has no objdiff units to check and leaves it out.
+The [starter kit](/wiki/starter-kit/) ships `tools/literal_check.py`, and the kit's `validate.yml` runs it for every target after the build, in the step `Check exact functions' constants`. Every dtk-template project runs it. It reads dtk-template's layout (`config.json`, `config.yml`, `splits.txt`), so a project with its own build leaves it out.
 
 For every function whose code equals the original's with the relocated fields masked, it checks where each relocation lands. A symbol that `symbols.txt` names must have the original's address. An anonymous literal, jump table or local static must hold the original executable's bytes at that address, with the pointers inside it resolved through `symbols.txt`. A local variable without data must map to one address of the original, and no two to the same one.
 
@@ -51,7 +52,7 @@ python3 tools/literal_check.py --target GAME01-rev0
 python3 tools/literal_check.py --target GAME01-rev0 --unit main/game/unit
 ```
 
-It reads `objdiff.json` (under `build/<target id>/`, or at the root for a project that keeps dtk-template's stock paths) and the objects it lists, `symbols.txt`, `splits.txt` and the original that `config.yml` names. It fails when an exact function disagrees, or when `objdiff.json` names an object the build did not write. Functions that are not exact are skipped and counted, and so are units of REL modules: it reads the main executable only. A project with no exact function yet checks nothing and passes.
+It reads `objdiff.json` (under `build/<target id>/`, or at the root for a project that keeps dtk-template's stock paths) and the objects it lists, `symbols.txt`, `splits.txt` and the original that `config.yml` names in `object_base` and `object`. It fails when an exact function disagrees, when `objdiff.json` names an object the build did not write, when no unit belongs to the main executable, or when it checks no function while the target's `report.json` counts some as exact. Functions that are not exact are skipped and counted, and so are units of REL modules: it reads the main executable only. A project whose report counts nothing exact yet checks nothing and passes.
 
 ## Get a first C draft
 

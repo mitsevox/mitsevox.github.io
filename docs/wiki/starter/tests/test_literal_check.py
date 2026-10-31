@@ -128,15 +128,15 @@ class Branches(unittest.TestCase):
 class Names(unittest.TestCase):
     def test_stem_drops_numbering_and_address_suffixes(self):
         self.assertEqual(stem('init$349'),'init')
-        self.assertEqual(stem('vectorModule_8025F7B8'),'vectorModule')
-        self.assertEqual(stem('surfSlickTimer'),'surfSlickTimer')
+        self.assertEqual(stem('timer_80300100'),'timer')
+        self.assertEqual(stem('playerTimer'),'playerTimer')
 
     def test_splits_give_each_units_section_starts(self):
         tmp=Path(tempfile.mkdtemp())/'splits.txt'
         tmp.write_text('Sections:\n\t.text       type:code align:4\n\ngame/unit.cpp:\n'
-                       '\t.text       start:0x80005C74 end:0x80006CC4\n'
-                       '\t.sdata2     start:0x8025F8C8 end:0x8025F900\n')
-        self.assertEqual(read_splits(tmp),{'game/unit':{'.text':0x80005C74,'.sdata2':0x8025F8C8}})
+                       '\t.text       start:0x80010000 end:0x80010010\n'
+                       '\t.sdata2     start:0x80300000 end:0x80300008\n')
+        self.assertEqual(read_splits(tmp),{'game/unit':{'.text':0x80010000,'.sdata2':0x80300000}})
 
 
 class Repository(unittest.TestCase):
@@ -147,7 +147,7 @@ class Repository(unittest.TestCase):
         cfg=root/'config/GAME01-rev0';cfg.mkdir(parents=True)
         build=root/'build/GAME01-rev0';build.mkdir(parents=True)
         (root/'disc').mkdir()
-        (cfg/'config.yml').write_text('object: disc/main.dol # the original\nhash: 0\n')
+        (cfg/'config.yml').write_text('object_base: disc\nobject: main.dol # the original\nhash: 0\n')
         dol(root/'disc/main.dol',[(0x80300000,struct.pack('>ff',1.5,0.0))])
         (cfg/'symbols.txt').write_text('Check = .text:0x80010000; // type:function size:0x10\n'
                                        'lbl_80300004 = .sdata2:0x80300004; // type:object size:0x4 data:float\n')
@@ -163,8 +163,10 @@ class Repository(unittest.TestCase):
         elf(self.build/'base.o',[('.text',1,self.text),('.sdata2',1,struct.pack('>f',literal))],
             [('Check',0,16,1,2,1),('@12',0,4,0,1,2)],{1:[(0,SDA21,2,0)]})
 
-    def run_main(self,units,*args):
+    def run_main(self,units,*args,report=None):
         (self.build/'objdiff.json').write_text(json.dumps({'units':units}))
+        if report is not None:
+            (self.build/'report.json').write_text(json.dumps(report))
         (self.build/'config.json').write_text(json.dumps({'name':'main'}))
         with mock.patch.object(literal_check,'ROOT',self.root),\
              mock.patch.object(sys,'argv',['literal_check.py','--target','GAME01-rev0',*args]),\
@@ -176,6 +178,8 @@ class Repository(unittest.TestCase):
 
     def test_original_comes_from_config_yml(self):
         self.assertEqual(original(self.root/'config/GAME01-rev0/config.yml','GAME01-rev0'),'disc/main.dol')
+        plain=self.root/'plain.yml';plain.write_text('object: "disc/main.dol"\n')
+        self.assertEqual(original(plain,'GAME01-rev0'),'disc/main.dol')
         self.assertEqual(original(self.root/'missing.yml','GAME01-rev0'),'orig/GAME01-rev0/sys/main.dol')
 
     def test_right_value_passes_and_wrong_value_fails(self):
@@ -185,12 +189,34 @@ class Repository(unittest.TestCase):
         self.assertEqual(self.run_main([self.unit()]),1)
 
     def test_rel_module_units_are_skipped(self):
-        self.base(1.5)
-        self.assertEqual(self.run_main([self.unit('module1/game/unit')]),0)
+        self.base(0.0)
+        elf(self.build/'module.o',[('.text',1,self.text),('.sdata2',1,struct.pack('>f',1.5))],
+            [('Check',0,16,1,2,1),('@12',0,4,0,1,2)],{1:[(0,SDA21,2,0)]})
+        rel={'name':'module1/game/unit','target_path':'build/GAME01-rev0/target.o','base_path':'build/GAME01-rev0/module.o'}
+        self.assertEqual(self.run_main([self.unit(),rel]),0)
+        self.assertEqual(self.run_main([self.unit(),rel],'--unit','module1/game/unit'),1)
 
-    def test_nothing_exact_passes_unless_a_unit_was_named(self):
+    def test_no_unit_of_the_main_executable_fails(self):
+        self.base(1.5)
+        self.assertEqual(self.run_main([self.unit('Main/game/unit')]),1)
+
+    def test_nothing_exact_passes_only_when_the_report_agrees(self):
         self.assertEqual(self.run_main([]),0)
         self.assertEqual(self.run_main([],'--unit','main/game/unit'),1)
+        nothing={'units':[{'name':'main/game/unit','functions':[{'name':'Check','fuzzy_match_percent':50.0}]}]}
+        self.assertEqual(self.run_main([],report=nothing),0)
+        exact={'units':[{'name':'main/game/unit','functions':[{'name':'Check','fuzzy_match_percent':100.0}]}]}
+        self.assertEqual(self.run_main([],report=exact),1)
+
+    def test_a_root_objdiff_json_for_another_target_fails(self):
+        self.base(0.0)
+        (self.build/'config.json').write_text(json.dumps({'name':'main'}))
+        unit={'name':'main/game/unit','target_path':'build/GAME01-rev1/target.o','base_path':'build/GAME01-rev1/base.o'}
+        (self.root/'objdiff.json').write_text(json.dumps({'units':[unit]}))
+        with mock.patch.object(literal_check,'ROOT',self.root),\
+             mock.patch.object(sys,'argv',['literal_check.py','--target','GAME01-rev0']),\
+             contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(literal_check.main(),1)
 
     def test_an_object_the_build_did_not_write_fails(self):
         self.assertEqual(self.run_main([self.unit()]),1)

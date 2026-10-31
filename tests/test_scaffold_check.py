@@ -125,11 +125,14 @@ class ScaffoldCheckTests(unittest.TestCase):
         (root / 'tools/literal_check.py').unlink()
         self.assertTrue(any('"Check exact functions\' constants" is missing' in m for m in messages(root, '.github/workflows/validate.yml')))
         self.assertTrue(messages(root, 'tools/literal_check.py'))
+        (root / 'tests/test_literal_check.py').unlink()
+        self.assertTrue(messages(root, 'tests/test_literal_check.py'))
         # A project with its own build (no dtk-template tools/project.py) needs neither.
         (root / 'tools/project.py').unlink()
         (root / 'configure.py').rename(root / 'build.py')
         workflow.write_text(workflow.read_text().replace('- name: Removed', "- name: Check exact functions' constants"))
         self.assertFalse(messages(root, 'tools/literal_check.py'))
+        self.assertFalse(messages(root, 'tests/test_literal_check.py'))
         workflow.write_text(workflow.read_text().replace("- name: Check exact functions' constants", '- name: Removed'))
         self.assertFalse(any('constants' in m for m in messages(root, '.github/workflows/validate.yml')))
 

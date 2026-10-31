@@ -15,16 +15,18 @@ functions objdiff calls exact), each relocation is compared with the target's at
   - a compiled symbol it does not name (a pool literal, a jump table, a function's local static)
     must hold the bytes the original executable holds at that address, with the pointers inside
     it resolved through symbols.txt;
-  - a compiled local static without data (.bss) must carry the target symbol's name, apart from
-    the $<n> numbering suffix, which moves with the order the compiler met them.
+  - a compiled variable without data (.bss) must carry the target symbol's name (apart from the
+    $<n> numbering suffix, which moves with the order the compiler met them), or else map to one
+    target address across the unit's exact functions, and no two of them to the same one.
 
     python3 tools/literal_check.py --target GAME01-rev0 [--unit <name>] [--verbose]
 
 It reads objdiff.json (build/<target id>/objdiff.json, or the repository root's for a project that
 keeps dtk-template's stock paths) for the units, their compiled objects and their target objects
 (the build writes both), config/<target id>/symbols.txt and splits.txt, and the original that
-config/<target id>/config.yml names in its `object` line. It fails when an exact function
-disagrees, or when objdiff.json names an object the build did not write. Functions that are not
+config/<target id>/config.yml names in `object_base` and `object`. It fails when an exact function
+disagrees, when objdiff.json names an object the build did not write, when no unit belongs to the
+main executable, or when it checks no function while the target's report counts some as exact. Functions that are not
 exact are counted and skipped: a partial function is not a review failure, and its relocations do
 not line up with the target's. Units of REL modules are skipped and counted too: the check reads
 the main executable only."""
@@ -363,13 +365,27 @@ def fmt(data):
 
 
 def original(config_yml,target):
-    """The original executable's path from config.yml's `object` line; the kit's layout otherwise."""
+    """The original executable's path from config.yml (`object`, under `object_base` when it is
+    set); the kit's layout when there is no config.yml."""
+    keys={}
     if config_yml.is_file():
         for line in config_yml.read_text().splitlines():
-            m=re.match(r'^object:\s*["\']?([^"\'#]+?)["\']?\s*(?:#.*)?$',line)
+            m=re.match(r'^(object_base|object):\s*["\']?([^"\'#]+?)["\']?\s*(?:#.*)?$',line)
             if m:
-                return m.group(1)
-    return f'orig/{target}/sys/main.dol'
+                keys.setdefault(m.group(1),m.group(2))
+    if 'object' not in keys:
+        return f'orig/{target}/sys/main.dol'
+    return str(Path(keys['object_base'])/keys['object']) if 'object_base' in keys else keys['object']
+
+
+def exact_in_report(report,main_module):
+    """How many of the main executable's functions the target's report counts as exact (None
+    without a report)."""
+    if not report.is_file():
+        return None
+    units=json.loads(report.read_text()).get('units',[])
+    return sum(1 for u in units if not main_module or u.get('name','').split('/',1)[0]==main_module
+               for f in u.get('functions',[]) if f.get('fuzzy_match_percent')==100)
 
 
 def main():
@@ -383,6 +399,11 @@ def main():
     if not objdiff.is_file():
         objdiff=ROOT/'objdiff.json'
     units=json.loads(objdiff.read_text())['units']
+    # A root objdiff.json is the last configured target's; refuse one written for another target.
+    if objdiff.parent==ROOT and any(not str(u.get('target_path','build/'+args.target)).startswith(f'build/{args.target}/')
+                                   for u in units):
+        print(f'{args.target}: objdiff.json at the root belongs to another target; configure {args.target} first')
+        return 1
     symbols=Symbols(config/'symbols.txt')
     dol=Dol(ROOT/original(config/'config.yml',args.target))
     splits=read_splits(config/'splits.txt')
@@ -393,6 +414,13 @@ def main():
     modules=0
     if main_module:
         kept=[u for u in units if u['name'].split('/',1)[0]==main_module]
+        if units and not kept:
+            print(f'{args.target}: no objdiff unit belongs to the main executable {main_module!r}')
+            return 1
+        rel=[n for n in args.unit or [] if n.split('/',1)[0]!=main_module]
+        if rel:
+            print(f'{args.target}: REL module units are not checked: '+', '.join(rel))
+            return 1
         modules=len(units)-len(kept);units=kept
     # A unit objdiff.json lists whose object the build did not write would pass unchecked.
     missing=[p for u in units for p in (u.get('target_path'),u.get('base_path')) if p and not (ROOT/p).exists()]
@@ -433,8 +461,12 @@ def main():
     print(f'{args.target}: {checked} exact functions checked, {failed} disagree; {skipped} not exact, skipped'
           +(f'; {modules} REL module units skipped' if modules else ''))
     if args.unit and not checked:
-        # Without --unit, a project with no exact function yet checks nothing and passes.
         print(f'{args.target}: no exact function was checked in the units named; a unit name or the build is wrong')
+        return 1
+    # Checking nothing passes only for a project whose report counts nothing exact yet.
+    expected=exact_in_report(build/'report.json',main_module) if not args.unit else None
+    if expected and not checked:
+        print(f'{args.target}: the report counts {expected} exact functions but none was checked; the build or this check is wrong')
         return 1
     return 1 if failed else 0
 
