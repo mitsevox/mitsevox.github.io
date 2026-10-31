@@ -737,6 +737,30 @@ These answer "which functions here are the same as functions there": a sequel or
 - **Toolchain:** any. **Agent fit:** headless, but slow. `analyzeHeadless` imports and analyses each binary; the `bsim` command in Ghidra's `support` directory creates a local database (a `file:` URL, no server) and generates and commits signatures; the comparison itself runs as a script under `analyzeHeadless`. Ghidra's `QueryWithFiltersScript` prints function pairs with similarity and significance, but its example filters (architecture, compiler, a self-significance floor, skipping functions whose names came from Ghidra's analyzers, and keeping only matches in the queried executable) would leave a GameCube comparison empty or one-sided. A project's script starts from it with every example filter removed, sets its own similarity threshold and match limit, and takes the database URL as an argument.
 - **Check before relying on it:** the same known-answer test as coddog.
 
+## Recover unit splits from a sibling build
+
+A method worth a script when a related build of the same game keeps its debug information: another platform's release, a prototype or a debug build. The debug information names each compile unit and the functions in it, so the sibling says which functions belong together and in what order, even though its addresses, its compiler and some of its code differ. The script proposes the target's unit boundaries (`splits.txt`); it does not establish them.
+
+**Inputs.** The target executable; the sibling's executable and a text export of its debug information (kept private like the originals, the export under `references/` when the project allows it); `symbols.txt`; `evidence.tsv`; and the objects of a dtk split, for the target's relocations.
+
+**Method.**
+
+1. **Anchors.** A *name anchor* is a function whose body `evidence.tsv` establishes exactly, pinned to the sibling function of the same mangled name when exactly one has it. Positional names do not count: a name read off an earlier alignment would only repeat it. A *fingerprint anchor* pairs functions by what they load and call: string literals, float constants, and calls to anchored functions. Only unique, mutual-best matches count, and a match on calls alone needs two shared callees, since one fits any wrapper.
+2. **Link order.** Find the order the target linked its units in; it is often the compile-unit names in a fixed order (alphabetical, for example), which the anchors confirm by lying in one increasing run. The sibling's own addresses are not a template: a different linker orders differently.
+3. **Alignment.** Align the sibling's functions, in that order, to the target's by size, with the anchors pinned. Allow for the platforms' known differences, such as a call in tail position that one compiler turns into a jump and the other wraps in a stack frame.
+4. **Text edges.** Move each cut within a small window and score it by the data references that would cross it. Break ties by calls, and leave an edge `open` when nothing decides it. A name anchor never moves.
+5. **Data edges.** Every data section follows the unit order. Cut between consecutive units' unit-local items at an aligned symbol boundary, with the fewest crossing references.
+6. **Emission.** Write a unit only when its function count is close to the sibling's (an anchor allows a wider ratio), and record each edge's class: decided by data, by calls, by alignment only, or open.
+7. **Checks.** On CodeWarrior, `.sdata2` literals are pooled per unit, so a function that loads a literal inside another unit's `.sdata2` range marks a wrong edge, and the script fails.
+
+**Hand corrections.** A person who knows better than the alignment records it as a `unit` row in `evidence.tsv` that claims the unit's `.text` extent, with `exact` or `provisional` edges and evidence that shows what the run could not. The script honours the claim on every run: it writes a unit the size rule would reject when the claim gives exactly its extent, and it lets a claim take functions no written unit holds, or the end of a weak unit. A claim must cover whole functions and contain the unit's current extent, and it cannot take functions from a written unit or an earlier claim; a claim that breaks a rule is reported and skipped. So the correction lives in the evidence, not in a hand edit of `splits.txt` that the next run would overwrite.
+
+**In CI.** Commit the script's outputs: the unit part of `splits.txt`, a table of the units and a table of every edge with its class and crossing count. A CI step after the build re-runs the script into a scratch directory and fails when the committed files differ, with one command (`--write`) to bring them up to date. The output changes when an exact-body `function` row lands, because it adds a name anchor, so the PR that adds the row re-runs the script.
+
+**Evidence.** Each unit's extent is an `inferred` `unit` row with `provisional` or `open` edges; each source path from the sibling is a separate `related` row. A byte-identical relink only shows that the toolkit and the linker accept the cuts, not where the original objects began and ended.
+
+**Check before relying on it:** a known answer. Remove the claims and run it on units that are already established (exact units, or boundaries a reviewed `unit` row proves) and count how many it reproduces, how many edges are "alignment only", and what it gets wrong.
+
 ## What does this code do in the game?
 
 **Ghidra** (Apache-2.0, with the loader above). Its decompiler and cross-references answer what a function does, who calls it and what data it touches. dtk and objdiff already give a project its split, its symbols and its assembly, so Ghidra is for understanding, not for matching. **Toolchain:** any. **Agent fit:** headless analysis and scripts; the decompiler output is text. Keep Ghidra projects private; they contain the game.
