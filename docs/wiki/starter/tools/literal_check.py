@@ -26,9 +26,9 @@ keeps dtk-template's stock paths) for the units, their compiled objects and thei
 (the build writes both), config/<target id>/symbols.txt and splits.txt, and the original that
 config/<target id>/config.yml names in `object_base` and `object`. It fails when an exact function
 disagrees, when objdiff.json names an object the build did not write, when no unit belongs to the
-main executable, or when it checks no function while the target's report counts some as exact. Functions that are not
-exact are counted and skipped: a partial function is not a review failure, and its relocations do
-not line up with the target's. Units of REL modules are skipped and counted too: the check reads
+main executable, or when it checks no function while the target's report counts some as exact.
+Functions that are not exact are counted and skipped: a partial function is not a review failure,
+and its relocations do not line up with the target's. Units of REL modules are skipped and counted too: the check reads
 the main executable only."""
 import argparse
 import json
@@ -385,7 +385,7 @@ def exact_in_report(report,main_module):
         return None
     units=json.loads(report.read_text()).get('units',[])
     return sum(1 for u in units if not main_module or u.get('name','').split('/',1)[0]==main_module
-               for f in u.get('functions',[]) if f.get('fuzzy_match_percent')==100)
+               for f in u.get('functions',[]) if f.get('fuzzy_match_percent',0)>=100)
 
 
 def main():
@@ -405,7 +405,12 @@ def main():
         print(f'{args.target}: objdiff.json at the root belongs to another target; configure {args.target} first')
         return 1
     symbols=Symbols(config/'symbols.txt')
-    dol=Dol(ROOT/original(config/'config.yml',args.target))
+    path=ROOT/original(config/'config.yml',args.target)
+    if not path.is_file():
+        print(f'{args.target}: the original {path.relative_to(ROOT)} is missing; config.yml must name the '
+              'extracted main.dol (a disc-image path needs extract_objects)')
+        return 1
+    dol=Dol(path)
     splits=read_splits(config/'splits.txt')
     # dtk names the main executable's units after the build's own name; the rest are REL modules.
     main_module=None
@@ -465,6 +470,8 @@ def main():
         return 1
     # Checking nothing passes only for a project whose report counts nothing exact yet.
     expected=exact_in_report(build/'report.json',main_module) if not args.unit else None
+    if expected is None and not args.unit:
+        print(f'{args.target}: no build/{args.target}/report.json; build the progress report to compare against it')
     if expected and not checked:
         print(f'{args.target}: the report counts {expected} exact functions but none was checked; the build or this check is wrong')
         return 1

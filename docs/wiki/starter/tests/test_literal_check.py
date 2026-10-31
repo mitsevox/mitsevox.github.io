@@ -207,6 +207,8 @@ class Repository(unittest.TestCase):
         self.assertEqual(self.run_main([],report=nothing),0)
         exact={'units':[{'name':'main/game/unit','functions':[{'name':'Check','fuzzy_match_percent':100.0}]}]}
         self.assertEqual(self.run_main([],report=exact),1)
+        elsewhere={'units':[{'name':'module1/game/unit','functions':[{'name':'Check','fuzzy_match_percent':100.0}]}]}
+        self.assertEqual(self.run_main([],report=elsewhere),0)
 
     def test_a_root_objdiff_json_for_another_target_fails(self):
         self.base(0.0)
