@@ -23,6 +23,9 @@ report validation remain in their existing feature modules.
 
 | Component | Interface | Consumers and preserved variants |
 | --- | --- | --- |
+| `game-dossier.js` | `createGameDossier({project, editorial, identity, scope?, writeText?})` → `show`, `hide`, `expanded`, `destroy` | Cover-led game header and About/Gecko panels. Bios are plain text with `*emphasis*`; empty bios are omitted. The Gecko tab stays visible with a zero count and a quiet empty state when no entries exist. Code copy writes the full INI while the expanded view shows only code lines. |
+| `game-facts.js` | `createGameFacts({facts})` → definition list | Six evenly distributed game facts; Console uses a controller and Genre uses a tag. The bio separator exists only when a bio does. |
+| `expandable-region.js` | `createExpandableRegion({id, label, duration?, scope?})` → `node`, `content`, `setExpanded`, `resize`, `expanded`, `destroy` | Interruptible layout expansion/collapse, natural settled height, hidden/inert closed content and reduced-motion support. |
 | `dropdown.js` | `createDropdown(DropdownProps)` → `node`, `trigger`, `menu`, `setValue`, `open`, `close`, `destroy` | Header project picker, hub filter/sort, game-ID and disc-revision pickers. One option/checkmark and interruptible opening/closing implementation. |
 | `progress-bar.js` | `createProgressBar({kind, variant, ariaLabel?, tooltip, scope?})` → `node`, `track`, `update(measure)`, `unavailable()`, `matched`, `destroy` | Code and Data, on both the hub and game pages. `page` keeps the colored legend, animated number and keyboard tooltip. `compact` keeps the hub layout **without** a legend or an extra tab stop inside its card link. |
 | `count-summary.js` | `createCountSummary({kind, scope?})` → `node`, `update(counts)`, `destroy` | Functions and Files inventories. Shared Exact/Named rows, count animation, total and accessible progress values. |
@@ -40,6 +43,14 @@ new values invalidate queued old fills, including a transition to unavailable. T
 to components is rendered as text, not interpreted as markup.
 
 ## Report and feature ownership
+
+`assets/game-editorial.js` owns the site's authored bios and developer/publisher/genre facts.
+Release year, console, artwork and region come from the current project/selected target.
+Only n100f and tw2004 currently have bios; every current game has six facts and zero Gecko
+codes. New games render without an editorial entry. Future code entries belong to an explicit
+target ID in `codes`, so changing game ID or revision cannot show another target's codes.
+Do not put placeholder bios or illustrative codes into production content. Editorial updates
+do not change producer schemas, report capabilities, measured values or publication policy.
 
 The primitives do not fetch reports, authorize producers, validate packages, choose targets,
 calculate map geometry, truncate timelines or decide contribution policy. `hub.js`,

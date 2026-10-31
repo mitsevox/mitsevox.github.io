@@ -57,7 +57,7 @@ async function navigate(url,{push=false,scrollY=0,focus=false}={}){
   try{
     // Each route's code loads with its template, so startup only carries the shell.
     const [html,page]=await Promise.all([template(templateFor(match)),
-      match.wiki?import('./wiki.js?v=4'):match.project?import('./pages/game.js'):import('./hub.js')]);
+      match.wiki?import('./wiki.js?v=4'):match.project?import('./pages/game.js?v=2'):import('./hub.js')]);
     if(version!==generation)return;
     saveScroll();restoring=true;
     const wikiController=match.wiki&&controllers.find(controller=>controller.update&&controller.main?.classList.contains('wiki-layout'));

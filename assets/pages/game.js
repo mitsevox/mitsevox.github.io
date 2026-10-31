@@ -7,7 +7,7 @@ import {pageScope} from '../lifecycle.js';
 
 const FEATURES = [
   // The heading has no section of its own: it builds the identity block at the top of the page.
-  {section:null, available:() => true, load:() => import('../features/identity.js')},
+  {section:null, available:() => true, load:() => import('../features/identity.js?v=2')},
   {section:'.progress', available:project => project.available, load:() => import('../features/summary.js')},
   // The map is the heaviest payload on the page, so it loads only as it nears the viewport.
   {section:'#project-map', available:project => project.modules.map, load:() => import('../features/map.js'), deferred:true},
