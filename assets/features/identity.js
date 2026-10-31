@@ -3,6 +3,8 @@ import {mountTargetPicker} from '../targets.js';
 import {fetchSummary} from '../reports.js';
 import {consoleIcon} from '../console-icon.js';
 import {pageScope} from '../lifecycle.js';
+import {createGameDossier} from '../components/ui/game-dossier.js';
+import {gameEditorial} from '../game-editorial.js';
 // The game heading: title, platform, target picker and latest commit.
 export function mount(root,{project}){
   const scope=pageScope();
@@ -19,10 +21,11 @@ export function mount(root,{project}){
   const picker=mountTargetPicker(headingRow,project);
   identity.append(commit);
   if(project.available===false){commit.remove();const message=document.createElement('p');message.className='target-unavailable';message.textContent=project.selectedTarget?.status==='archived'?'Archived revision · No validated report available.':'No validated report available.';if(project.unknownTarget){message.textContent='Unknown target. ';const recovery=document.createElement('a');recovery.href=project.href;recovery.textContent='Open the default target';message.append(recovery);}identity.append(message);}
+  const dossier=createGameDossier({project,editorial:gameEditorial(project),identity,scope});
   const ready=project.available===false?Promise.resolve():fetchSummary(project, scope.signal).then(data=>{
     if(scope.signal.aborted)return;
     const latest=data.latest_commit;if(!latest?.title)throw Error();
     commitLine.update(latest);
   }).catch(()=>{if(!scope.signal.aborted)commitLine.update(null);});
-  return {ready,destroy(){picker.destroy();scope.destroy();}};
+  return {ready,destroy(){dossier.destroy();picker.destroy();scope.destroy();}};
 }
