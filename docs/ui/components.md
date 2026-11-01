@@ -46,9 +46,10 @@ to components is rendered as text, not interpreted as markup.
 
 `assets/game-editorial.js` owns the site's authored bios and developer/publisher/genre facts.
 Release year, console, artwork and region come from the current project/selected target.
-Only n100f and tw2004 currently have bios; every current game has six facts and zero Gecko
-codes. New games render without an editorial entry. Future code entries belong to an explicit
-target ID in `codes`, so changing game ID or revision cannot show another target's codes.
+Only n100f and tw2004 currently have bios; every current game has six facts. Authored Gecko
+entries live in `assets/gecko-codes.js`, keyed by game slug and explicit target ID. n100f's
+GIHE78-rev0 has four entries; other targets retain their zero-count tab. New games render
+without an editorial entry. Changing game ID or revision cannot show another target's codes.
 Do not put placeholder bios or illustrative codes into production content. Editorial updates
 do not change producer schemas, report capabilities, measured values or publication policy.
 

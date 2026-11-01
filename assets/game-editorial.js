@@ -1,5 +1,6 @@
 // Site-owned editorial content. Measurements, target identity and artwork remain in decomp-data.
 // Bios support plain text with *emphasis* only. Codes are opt-in per explicit target.
+import {geckoCodes} from './gecko-codes.js';
 const games = {
   n100f: {
     developer:'Heavy Iron Studios', publisher:'THQ', genre:'Action adventure',
@@ -33,6 +34,6 @@ export function gameEditorial(project) {
     paragraphs:content.paragraphs||[],
     facts:[['Developer',content.developer],['Publisher',content.publisher],['Released',project.year],
       ['Genre',content.genre],['Console',project.console],['Region',project.selectedTarget?.region]].filter(([,value])=>value),
-    codes:content.codes?.[project.selectedTarget?.id]||[],
+    codes:geckoCodes[project.slug]?.[project.selectedTarget?.id]||[],
   };
 }

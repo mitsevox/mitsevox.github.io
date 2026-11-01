@@ -3,8 +3,8 @@ import {mountTargetPicker} from '../targets.js';
 import {fetchSummary} from '../reports.js';
 import {consoleIcon} from '../console-icon.js';
 import {pageScope} from '../lifecycle.js';
-import {createGameDossier} from '../components/ui/game-dossier.js';
-import {gameEditorial} from '../game-editorial.js';
+import {createGameDossier} from '../components/ui/game-dossier.js?v=2';
+import {gameEditorial} from '../game-editorial.js?v=2';
 // The game heading: title, platform, target picker and latest commit.
 export function mount(root,{project}){
   const scope=pageScope();

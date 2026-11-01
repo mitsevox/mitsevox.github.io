@@ -4,6 +4,7 @@ import {gameEditorial} from '../assets/game-editorial.js';
 import {createGameDossier} from '../assets/components/ui/game-dossier.js';
 import {createExpandableRegion} from '../assets/components/ui/expandable-region.js';
 import {pageScope} from '../assets/lifecycle.js';
+import {createHash} from 'node:crypto';
 
 // State/lifetime adapter; actual geometry, glyphs and responsive layout are checked in browser.
 class Element extends EventTarget {
@@ -36,7 +37,7 @@ function fixture(reduced=true) {
 }
 const project={slug:'n100f',title:'Game',console:'GameCube',year:'2002',cover:'/cover.webp',coverWidth:640,coverHeight:908,selectedTarget:{id:'ID-rev0',region:'USA'}};
 
-test('shipping content has exactly two bios, six facts per current game and no Gecko codes',()=>{
+test('shipping content has exactly two bios, six facts per current game and target-scoped codes',()=>{
   for(const slug of ['n100f','tw2004','mvp2005','nflstreet2']){
     const content=gameEditorial({...project,slug});
     assert.equal(content.paragraphs.length,['n100f','tw2004'].includes(slug)?4:0);
@@ -46,6 +47,43 @@ test('shipping content has exactly two bios, six facts per current game and no G
   }
   const unknown=gameEditorial({...project,slug:'new-game',selectedTarget:null});
   assert.deepEqual(unknown.paragraphs,[]);assert.deepEqual(unknown.codes,[]);
+});
+
+test('the four authored codes belong only to n100f GIHE78-rev0',()=>{
+  const selectedTarget={id:'GIHE78-rev0',region:'USA'};
+  const entries=gameEditorial({...project,selectedTarget}).codes;
+  assert.deepEqual(entries.map(entry=>entry.title),['21:9 Ultrawide Fix','Infinite Health','Pickup Reach Fix','Restored Enemy Drops']);
+  for(const slug of ['mvp2005','tw2004','nflstreet2'])assert.deepEqual(gameEditorial({...project,slug,selectedTarget}).codes,[]);
+  for(const id of ['GIHE78-rev1','GIHP78-rev0','GIHE78'])assert.deepEqual(gameEditorial({...project,selectedTarget:{id,region:'USA'}}).codes,[]);
+  assert.deepEqual(gameEditorial({...project,selectedTarget:null}).codes,[]);
+});
+
+test('real code views display every supplied line and copy the credited full INI',async()=>{
+  const f=fixture(),selectedTarget={id:'GIHE78-rev0',region:'USA'};
+  const editorial=gameEditorial({...project,selectedTarget}),copied=[];
+  const dossier=createGameDossier({project,editorial,identity:f.identity,scope:f.scope,writeText:async text=>copied.push(text)});
+  dossier.show('codes');
+  assert.equal(f.identity.querySelector('.dossier-count').textContent,'4');
+  assert.equal(f.identity.querySelector('.dossier-empty'),null);
+  const views=f.identity.querySelectorAll('pre'),buttons=f.identity.querySelectorAll('.dossier-copy');
+  assert.deepEqual(views.map(view=>view.textContent.split('\n').length),[7,1,4,58]);
+  assert.deepEqual(views.map(view=>createHash('sha256').update(view.textContent+'\n').digest('hex')),[
+    '3955ce68649bea5c4e3dd9b9ce825f36e48eea4c10b697552e51a5aff24133f0',
+    '35b5171218f78f9dec4d4f871c35525f1f9d03a0255730ab4278e9ea63c99232',
+    '1cf041dfa301ae01f188c1b7158b7a3b730b60ac7b22b19afbdc4329abbfc548',
+    '7d59640d374abd328ca3b0babb21544d10900d5f6606a17779576f0268d119a1'
+  ]);
+  for(const [index,entry] of editorial.codes.entries()){
+    assert.ok(entry.rawIni.startsWith('[Gecko]\n$'+entry.title+' [mits]\n'));
+    assert.ok(entry.rawIni.endsWith('\n'));
+    assert.ok(views[index].textContent.split('\n').every(line=>/^[0-9a-fA-F]{8} [0-9a-fA-F]{8}$/.test(line)));
+    buttons[index].emit('click');await Promise.resolve();
+    assert.equal(copied[index],entry.rawIni);
+  }
+  assert.match(editorial.codes[0].notes,/Turn off Dolphin's widescreen hack/);
+  assert.match(editorial.codes[0].notes,/aspect ratio to Stretch/);
+  assert.match(editorial.codes[1].notes,/falls still kill you/);
+  dossier.destroy();f.scope.destroy();
 });
 
 test('no bio means no prose or separator; zero codes retains its tab and empty state',()=>{
