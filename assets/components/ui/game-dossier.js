@@ -44,7 +44,7 @@ export function createGameDossier({project,editorial,identity,scope:parent,write
     const row=document.createElement('div');row.className='dossier-code-entry';
     const heading=document.createElement('div');heading.className='dossier-code-heading';
     const toggle=createAction({className:'dossier-code-toggle',ariaLabel:'Show '+entry.title+' code'});toggle.append(icon('code',{className:'dossier-code-icon'}));
-    const label=text('span',entry.title,'dossier-code-name');label.append(text('small',entry.description));
+    const label=text('span',entry.title,'dossier-code-name');if(entry.description)label.append(text('small',entry.description));
     toggle.append(label);toggle.insertAdjacentHTML('beforeend',chevron);toggle.setAttribute('aria-expanded','false');
     const detail=createExpandableRegion({id:'gecko-code-'+entry.id,label:entry.title+' code and description',duration:280,scope});codeRegions.push(detail);toggle.setAttribute('aria-controls',detail.node.id);
     const body=document.createElement('div');body.className='dossier-code-body';
