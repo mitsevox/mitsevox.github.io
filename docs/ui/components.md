@@ -23,6 +23,7 @@ report validation remain in their existing feature modules.
 
 | Component | Interface | Consumers and preserved variants |
 | --- | --- | --- |
+| `gecko-details.js` | `createGeckoDetails({code, description, author?, category?, title})` → detail element | Description on the left, compact code on the right, and centered Author/Category/Length properties. Stacks on narrow screens. Long code scrolls in a focusable bounded block; INI copying stays with the parent. |
 | `game-dossier.js` | `createGameDossier({project, editorial, identity, scope?, writeText?})` → `show`, `hide`, `expanded`, `destroy` | Cover-led game header and About/Gecko panels. Bios are plain text with `*emphasis*`; empty bios are omitted. The Gecko tab stays visible with a zero count and a quiet empty state when no entries exist. Code copy writes the full INI while the expanded view shows only code lines. |
 | `game-facts.js` | `createGameFacts({facts})` → definition list | Six evenly distributed game facts; Console uses a controller and Genre uses a tag. The bio separator exists only when a bio does. |
 | `expandable-region.js` | `createExpandableRegion({id, label, duration?, scope?})` → `node`, `content`, `setExpanded`, `resize`, `expanded`, `destroy` | Interruptible layout expansion/collapse, natural settled height, hidden/inert closed content and reduced-motion support. |
@@ -50,6 +51,10 @@ Only n100f and tw2004 currently have bios; every current game has six facts. Aut
 entries live in `assets/gecko-codes.js`, keyed by game slug and explicit target ID. n100f's
 GIHE78-rev0 has four entries; other targets retain their zero-count tab. New games render
 without an editorial entry. Changing game ID or revision cannot show another target's codes.
+Categories are Graphics (presentation/rendering), Gameplay (mechanics, fixes and restored
+features), and Cheats (deliberate player advantages). Set `category` on each authored entry.
+The author property uses an explicit `author` when provided, otherwise the INI header's
+bracketed credit. Length counts displayed code lines and uses the singular for one line.
 Do not put placeholder bios or illustrative codes into production content. Editorial updates
 do not change producer schemas, report capabilities, measured values or publication policy.
 

@@ -3,6 +3,7 @@ import {test} from 'node:test';
 import {gameEditorial} from '../assets/game-editorial.js';
 import {createGameDossier} from '../assets/components/ui/game-dossier.js';
 import {createExpandableRegion} from '../assets/components/ui/expandable-region.js';
+import {createGeckoDetails} from '../assets/components/ui/gecko-details.js';
 import {pageScope} from '../assets/lifecycle.js';
 import {createHash} from 'node:crypto';
 
@@ -53,6 +54,7 @@ test('the four authored codes belong only to n100f GIHE78-rev0',()=>{
   const selectedTarget={id:'GIHE78-rev0',region:'USA'};
   const entries=gameEditorial({...project,selectedTarget}).codes;
   assert.deepEqual(entries.map(entry=>entry.title),['21:9 Ultrawide Fix','Infinite Health','Pickup Reach Fix','Restored Enemy Drops']);
+  assert.deepEqual(entries.map(entry=>entry.category),['Graphics','Cheats','Gameplay','Gameplay']);
   for(const slug of ['mvp2005','tw2004','nflstreet2'])assert.deepEqual(gameEditorial({...project,slug,selectedTarget}).codes,[]);
   for(const id of ['GIHE78-rev1','GIHP78-rev0','GIHE78'])assert.deepEqual(gameEditorial({...project,selectedTarget:{id,region:'USA'}}).codes,[]);
   assert.deepEqual(gameEditorial({...project,selectedTarget:null}).codes,[]);
@@ -66,6 +68,12 @@ test('real code views display every supplied line and copy the credited full INI
   assert.equal(f.identity.querySelector('.dossier-count').textContent,'4');
   assert.equal(f.identity.querySelector('.dossier-empty'),null);
   const views=f.identity.querySelectorAll('pre'),buttons=f.identity.querySelectorAll('.dossier-copy');
+  const properties=f.identity.querySelectorAll('.gecko-properties');
+  assert.deepEqual(properties.map(node=>node.querySelectorAll('dd').map(value=>value.textContent)),[
+    ['mits','Graphics','7 lines'],['mits','Cheats','1 line'],['mits','Gameplay','4 lines'],['mits','Gameplay','58 lines']
+  ]);
+  assert.ok(f.identity.querySelectorAll('.gecko-detail').every(node=>node.children[0].className==='gecko-narrative'&&node.children[1].tagName==='PRE'));
+  assert.ok(views.every(view=>view.tabIndex===0));
   assert.deepEqual(views.map(view=>view.textContent.split('\n').length),[7,1,4,58]);
   assert.deepEqual(views.map(view=>createHash('sha256').update(view.textContent+'\n').digest('hex')),[
     '3955ce68649bea5c4e3dd9b9ce825f36e48eea4c10b697552e51a5aff24133f0',
@@ -84,6 +92,14 @@ test('real code views display every supplied line and copy the credited full INI
   assert.match(editorial.codes[0].notes,/aspect ratio to Stretch/);
   assert.match(editorial.codes[1].notes,/falls still kill you/);
   dossier.destroy();f.scope.destroy();
+});
+
+test('missing optional code properties do not leave empty columns or placeholder values',()=>{
+  fixture();
+  const detail=createGeckoDetails({code:'04235304 00000000',description:'Description',title:'Example'});
+  assert.deepEqual(detail.querySelectorAll('dt').map(node=>node.textContent),['Length']);
+  assert.deepEqual(detail.querySelectorAll('dd').map(node=>node.textContent),['1 line']);
+  assert.equal(detail.querySelector('.gecko-properties').style.gridTemplateColumns,'repeat(1,minmax(0,1fr))');
 });
 
 test('no bio means no prose or separator; zero codes retains its tab and empty state',()=>{
