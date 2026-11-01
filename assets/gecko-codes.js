@@ -3,7 +3,7 @@ export const geckoCodes = {
   n100f: {
     'GIHE78-rev0': [
       {
-        id:'ultrawide-21-9', title:'21:9 Ultrawide Fix', description:'',
+        id:'ultrawide-21-9', title:'21:9 Ultrawide Fix', category:'Graphics', description:'',
         notes:"Widens the game's 4:3 view to 21:9, so objects at the edges of the screen don't get culled. This code is for 21:9 only; on 16:9, use a 16:9 widescreen code instead. Turn off Dolphin's widescreen hack and set the aspect ratio to Stretch.",
         rawIni:`[Gecko]
 $21:9 Ultrawide Fix [mits]
@@ -17,7 +17,7 @@ fc400818 48003c94
 `
       },
       {
-        id:'infinite-health', title:'Infinite Health', description:'',
+        id:'infinite-health', title:'Infinite Health', category:'Cheats', description:'',
         notes:"Turns on the developers' own invincibility switch, a leftover setting from the game's config file. You won't lose health, and water won't drown you. You still get knocked back, and falls still kill you.",
         rawIni:`[Gecko]
 $Infinite Health [mits]
@@ -25,7 +25,7 @@ $Infinite Health [mits]
 `
       },
       {
-        id:'pickup-reach-fix', title:'Pickup Reach Fix', description:'',
+        id:'pickup-reach-fix', title:'Pickup Reach Fix', category:'Gameplay', description:'',
         notes:"Fixes an original bug where Scooby's head can't collect pickups. The game checks his head at body height, so items above him pass right through it. With the fix, overhead items that were hard to reach, or that he'd phase through, now collect accurately.",
         rawIni:`[Gecko]
 $Pickup Reach Fix [mits]
@@ -36,7 +36,7 @@ EC00302A 00000000
 `
       },
       {
-        id:'restored-enemy-drops', title:'Restored Enemy Drops', description:'',
+        id:'restored-enemy-drops', title:'Restored Enemy Drops', category:'Gameplay', description:'',
         notes:"Restores a cut projectile system that made enemies throw out items when they die. The developers wired gum, soap, food and snacks to enemies but never finished the code, so nothing came out. This code finishes it and replaces the game's random drops.",
         rawIni:`[Gecko]
 $Restored Enemy Drops [mits]

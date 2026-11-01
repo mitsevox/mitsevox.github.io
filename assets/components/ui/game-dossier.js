@@ -1,3 +1,4 @@
+import {createGeckoDetails} from './gecko-details.js';
 import {createAction} from './action.js';
 import {icon} from './icons.js';
 import {componentScope} from './scope.js';
@@ -6,7 +7,7 @@ import {createGameFacts} from './game-facts.js';
 
 /**
  * Editorial content stays independent of reports. Code applicability is explicit.
- * @typedef {{id:string,title:string,description:string,rawIni:string,notes:string}} CodeEntry
+ * @typedef {{id:string,title:string,description:string,rawIni:string,notes:string,author?:string,category?:'Graphics'|'Gameplay'|'Cheats'}} CodeEntry
  * @typedef {Object} DossierProps
  * @property {{title:string,console:string,cover:string,thumb?:string,coverWidth:number,coverHeight:number}} project
  * @property {{paragraphs:string[],facts:[string,string][],codes:CodeEntry[]}} editorial
@@ -47,11 +48,10 @@ export function createGameDossier({project,editorial,identity,scope:parent,write
     const label=text('span',entry.title,'dossier-code-name');if(entry.description)label.append(text('small',entry.description));
     toggle.append(label);toggle.insertAdjacentHTML('beforeend',chevron);toggle.setAttribute('aria-expanded','false');
     const detail=createExpandableRegion({id:'gecko-code-'+entry.id,label:entry.title+' code and description',duration:280,scope});codeRegions.push(detail);toggle.setAttribute('aria-controls',detail.node.id);
-    const body=document.createElement('div');body.className='dossier-code-body';
     const visibleCode=entry.rawIni.split(/\r?\n/).filter(line=>/^[0-9A-Fa-fXx]{8}\s+[0-9A-Fa-fXx]{8}$/.test(line.trim())).join('\n');
-    const code=text('pre',visibleCode);code.setAttribute('aria-label',entry.title+' Gecko code');
     const copy=createAction({ariaLabel:'Copy '+entry.title+' INI',className:'dossier-copy'});copy.innerHTML=copyGlyph;copy.title='Copy INI';heading.append(toggle,copy);
-    body.append(code);if(entry.notes)body.append(text('p',entry.notes,'dossier-code-notes'));detail.content.append(body);
+    const author=entry.author??entry.rawIni.match(/^\$.*\[([^\]]+)\]/m)?.[1];
+    detail.content.append(createGeckoDetails({code:visibleCode,description:entry.notes,author,category:entry.category,title:entry.title}));
     let copyTimer=null;scope.signal.addEventListener('abort',()=>clearTimeout(copyTimer),{once:true});
     scope.listen(copy,'click',async()=>{
       clearTimeout(copyTimer);

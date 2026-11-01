@@ -74,3 +74,34 @@
 .dossier-about.has-bio .dossier-facts { padding-top:22px;border-top:1px solid var(--line); }
 .dossier-hero.without-artwork { grid-template-columns:minmax(0,1fr); }
 @media(max-width:700px) { .dossier-hero.without-artwork .game-heading-row { grid-column:1/-1; } }
+
+/* Shared Gecko details: descriptions and centered properties beside compact code. */
+.dossier-code-body.gecko-detail {
+  grid-template-columns:minmax(0,1fr) minmax(240px,300px);
+  gap:36px;
+  padding-top:15px;
+  padding-bottom:12px;
+}
+.gecko-narrative { display:grid;gap:22px;min-width:0; }
+.gecko-narrative .dossier-code-notes { color:#b8c0cb;font-size:13px;line-height:1.85;max-width:66ch; }
+.gecko-properties { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));padding:13px 0;margin:0;border:1px solid var(--line);border-radius:6px;max-width:470px; }
+.gecko-properties > div { padding:0 16px;border-inline-start:1px solid var(--line);min-width:0;text-align:center; }
+.gecko-properties > div:first-child { border-inline-start:0; }
+.gecko-properties dt { display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:6px;color:var(--muted);font-size:11px;line-height:1.4; }
+.gecko-properties dt span,.gecko-properties svg { display:block;width:14px;height:14px;flex:none; }
+.gecko-properties dd { margin:0;color:var(--ink);font-size:12px;line-height:1.5;font-weight:450; }
+.gecko-detail pre { align-self:start;min-width:0;max-height:280px;overflow:auto;border:1px solid #ffffff05;scrollbar-width:thin;scrollbar-color:#414854 transparent;line-height:1.85; }
+.gecko-detail pre:focus-visible { outline:1px solid var(--accent);outline-offset:3px; }
+@media(max-width:850px) {
+  .dossier-code-body.gecko-detail { grid-template-columns:minmax(0,1fr);gap:18px; }
+  .gecko-properties { max-width:none; }
+  .gecko-detail pre { width:100%;box-sizing:border-box;max-height:250px; }
+}
+@media(max-width:700px) {
+  .dossier-code-body.gecko-detail { padding-top:12px;gap:16px; }
+  .gecko-narrative { gap:17px; }
+  .gecko-properties { padding-block:11px; }
+  .gecko-properties > div { padding-inline:10px; }
+  .gecko-properties dt { gap:5px;font-size:10px; }
+  .gecko-properties dd { font-size:12px; }
+}
