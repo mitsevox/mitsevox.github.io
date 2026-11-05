@@ -65,7 +65,7 @@ Findings: location, evidence and required correction
 Coverage: earlier records carried forward and delta checked
 ```
 
-For an inferred name or edge, 'not enough evidence' alone is not a finding: a rejection names a contradicting observation, an alternative the target supports better, or a row that gives no reason; a reviewer who prefers another name or edge without one records a note, not a `FIX`. The bar is the target's declared evidence regime ([Evidence](/wiki/evidence/#what-counts-as-evidence)).
+For an inferred name or edge, 'not enough evidence' alone is not a finding: a rejection names a contradicting observation, an alternative the target supports better, a row that gives no reason, or an edge graded `exact` that its evidence does not establish; a reviewer who prefers another name or edge without one records a note, not a `FIX`. The bar is the target's declared evidence regime ([Evidence](/wiki/evidence/#what-counts-as-evidence)).
 
 Accepted values: `Accuracy: PASS` or `Accuracy: N/A - <reason>` (the reason is required), and `Hostile: SHIP`, `FIX`, `REDO` or `BLOCKED`. Nothing parses these comments; they are for the owner and the next reviewer to read, and the format exists so that they can be read at a glance.
 

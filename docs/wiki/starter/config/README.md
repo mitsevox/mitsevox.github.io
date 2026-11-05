@@ -7,7 +7,8 @@ Each target's build inputs live in `config/<target id>/`: for a decomp-toolkit p
 recovered names or source boundaries; claims about either belong in `evidence.tsv`. Each target's `README.md`
 declares its evidence regime (A own debug data, B sibling debug data, C the binary only) with the inventory
 that justifies it; reviewers hold `inferred` names and edges to that regime: reasoned in the evidence
-column and uncontradicted by the target. Type and field rows still cite the loads and stores that show
+column and uncontradicted by the target. The regime decides whether an inferred edge is accepted, not its grade:
+an edge is `exact` only when evidence establishes it. Type and field rows still cite the loads and stores that show
 each offset.
 
 ## Evidence records
