@@ -17,7 +17,7 @@
 <tbody>
 <tr>
 <td>A: own debug data</td>
-<td>Symbols, DWARF or a linker map for this build, or for another revision of this game</td>
+<td>Symbols, DWARF or a linker map for this build</td>
 <td>A name, boundary or type read from this build's own debug data</td>
 <td>A name, boundary or type read from another revision's or another build's debug data; its edges stay <code>provisional</code> until this build's own evidence confirms them (<a href="/wiki/multi-target/">Multiple targets</a>)</td>
 <td>Rare: a claim the debug data does not cover</td>
@@ -25,7 +25,7 @@
 </tr>
 <tr>
 <td>B: sibling debug data</td>
-<td>Debug data for related games on the same engine or from the same studio, builds of this game on other platforms, strings in this build</td>
+<td>Debug data for other revisions of this game, its builds on other platforms, or related games on the same engine or from the same studio; strings in this build</td>
 <td>Strings, symbols or bytes present in this build</td>
 <td>A name, size sequence, string copy or file order read from an identified sibling build</td>
 <td>The normal case: a name, type, field or edge read from what the code does</td>
@@ -41,19 +41,19 @@
 </tr>
 </tbody>
 </table></div>
-<p>In every regime, <code>target</code> stays strict: only strings, symbols or bytes in this build earn it. A matching body from another build, however close, is <code>related</code>.</p>
+<p>In every regime, <code>target</code> stays strict: only strings, symbols, debug information or bytes of this build earn it. A matching body from another build, however close, is <code>related</code>.</p>
 <h3 id="reasoned-and-uncontradicted">Reasoned and uncontradicted</h3>
-<p>An <code>inferred</code> row is accepted when:</p>
+<p>An <code>inferred</code> name or edge is accepted when:</p>
 <ol>
 <li>Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling corroborates (cited in its own <code>related</code> row).</li>
 <li>Nothing in the target contradicts it: no load, store, caller, data item or string that the claim cannot explain.</li>
 </ol>
-<p>To reject an inferred claim, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.</p>
+<p>Type and field rows are not eased: they still cite the loads and stores that show each offset, and unknown offsets stay unknown (<a href="#bounded-tasks">Bounded tasks</a>). To reject an inferred name or edge, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.</p>
 <p>In tier A, the accuracy pass still interprets the scoped functions with the proposed names and comments withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.</p>
 <h3 id="why-the-bar-differs">Why the bar differs</h3>
-<p>Decompilation without debug data is not deterministic. The bytes are; the structure around them is an inference, and a project that demands proof for every edge and name stops at address labels. The regime makes the inference explicit and reviewable instead of pretending it is not there. A project in regime B or C can still raise a claim to <code>target</code> later, when the evidence appears, and the row's origin records that change.</p>
+<p>Decompilation without debug data is not deterministic. The bytes are; the structure around them is an inference, and a project that demands proof for every edge and name stops at address labels. The regime makes the inference explicit and reviewable instead of pretending it is not there. A target in regime B or C can still raise a claim to <code>target</code> later, when the evidence appears, and the row's origin records that change.</p>
 <h3 id="declaring-the-regime">Declaring the regime</h3>
-<p><code>config/&lt;target id&gt;/README.md</code> states the regime in one line, with the inventory that justifies it: which debug data exists, for which builds, and where it is under <code>references/</code>. The hostile checklist's Names and Unit boundaries rows read "supported to the project's declared regime". The regime changes what a claim needs, never what a match needs: the <a href="#matching-integrity">matching integrity</a> rules hold in every regime.</p>
+<p><code>config/&lt;target id&gt;/README.md</code> states the regime in one line, with the inventory that justifies it: which debug data exists, for which builds, and where it is under <code>references/</code>. The hostile checklist's Names and Unit boundaries rows read "to the target's declared evidence regime". The regime changes what a claim needs, never what a match needs: the <a href="#matching-integrity">matching integrity</a> rules hold in every regime.</p>
 <h2 id="inventory-before-interpretation">Inventory before interpretation</h2>
 <p>Inventory what the target and its references actually contain: the parsed filesystem, executables, symbols, debug information, linker maps, diagnostic strings, SDK references and related builds. Record hashes or revisions and which files were parsed. A claim that an artifact does not exist must say how thoroughly it was searched; a file-name search or a few strings is not enough.</p>
 <p>Related builds (another platform, another revision, another game on the same engine) suggest names and behavior. They do not prove the target's offsets, field widths, original names or source boundaries. Keep target evidence, reference evidence and inferred meaning separate. A claim is per target, because it carries addresses: a name recovered on one target and carried to a sibling is a <code>related</code> row in the sibling's <code>evidence.tsv</code>, with <code>provisional</code> edges on its unit rows, until the sibling's own name and boundary evidence confirms it; a byte-identical link there is a matching claim only (<a href="/wiki/multi-target/">Multiple targets</a>).</p>
@@ -134,7 +134,7 @@
 </tr>
 </tbody>
 </table></div>
-<p>In every regime, <code>target</code> is strict: strings, symbols or bytes in this build; a matching body from another build is <code>related</code> (<a href="#what-counts-as-evidence">What counts as evidence</a>). Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A <code>name</code> row with origin <code>target</code> needs explicit name evidence in the target; a name supported only by behavior is <code>inferred</code>. Compiler profiles are <code>compiler</code> rows at the unit or library level. The starter <code>config/README.md</code> is the full definition and goes into the repository as is.</p>
+<p>In every regime, <code>target</code> is strict: strings, symbols, debug information or bytes of this build; a matching body from another build is <code>related</code> (<a href="#what-counts-as-evidence">What counts as evidence</a>). Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A <code>name</code> row with origin <code>target</code> needs explicit name evidence in the target; a name supported only by behavior is <code>inferred</code>. Compiler profiles are <code>compiler</code> rows at the unit or library level. The starter <code>config/README.md</code> is the full definition and goes into the repository as is.</p>
 <h2 id="what-earns-a-row">What earns a row</h2>
 <p>A row is a claim a person or agent made that a reviewer must be able to challenge: an <code>inferred</code> name, a <code>unit</code> boundary, a <code>type</code> or <code>field</code> layout read from loads and stores, a <code>compiler</code>, <code>source-form</code> or <code>linker</code> claim. Tool output is not transcribed row by row. Symbol extents from the toolkit, debug names from a related build, signature hits from a library map: these are reproducible from <code>references/</code> plus a tool at a pinned revision, so they get one row per tool run, with kind <code>unit-anchor</code> or <code>name</code>, origin <code>related</code> or <code>signature</code>, a subject that names the tool with its inputs and revision, and the regenerable report's path as the evidence. The table then stays readable in review, and the report is the evidence.</p>
 <p><code>python3 tools/evidence.py check</code> runs in the <code>Tool tests</code> job and in the scaffold check: the header row, eight columns, the address format, the kinds and origins, edges only on the rows that have extents, non-empty subject and evidence. It checks form, not truth; the hostile checklist's <code>Names</code> row is the provenance check, and the publish action counts a function as named only when its symbol is not a tool label, so an unnamed function can never be published as named.</p>
