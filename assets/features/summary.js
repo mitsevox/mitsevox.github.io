@@ -19,7 +19,7 @@ function renderCounts(functions, type, basis) {
   const available = functions && functions.total > 0;
   if (functions && (!Number.isSafeInteger(functions.total) || functions.total < 0 ||
       !['exact', 'named'].every(field => Number.isSafeInteger(functions[field]) && functions[field] >= 0 && functions[field] <= functions.total) ||
-      (functions.closed !== undefined && !(Number.isSafeInteger(functions.closed) && functions.closed >= 0 && functions.closed <= functions.exact)))) {
+      (functions.closed !== undefined && !(type === 'file' && Number.isSafeInteger(functions.closed) && functions.closed >= 0 && functions.closed <= functions.exact)))) {
     throw new Error('Invalid function progress');
   }
   countPanels[type].update(available ? functions : null);

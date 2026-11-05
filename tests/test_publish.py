@@ -100,6 +100,10 @@ class ConversionTests(unittest.TestCase):
         s['functions']['closed'] = 0
         with self.assertRaises(publish.ContractError):
             publish.check_summary(s)
+        del s['functions']['closed']
+        s['files']['closed'] = True
+        with self.assertRaises(publish.ContractError):
+            publish.check_summary(s)
 
     def test_summary_rejects_inconsistent_report(self):
         r = report()

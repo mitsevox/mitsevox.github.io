@@ -26,7 +26,7 @@ export function createCountSummary({kind,scope:parent}) {
     if(scope.signal.aborted)return;
     const available=counts&&counts.basis!=='unavailable'&&counts.total>0;number.textContent=available?counts.total.toLocaleString():'—';
     for(const [field,{row,value,track,fill}] of Object.entries(fields)){
-      if(field==='closed'){row.hidden=!(available&&Number.isSafeInteger(counts.closed));if(row.hidden)continue;}
+      if(field==='closed'){row.hidden=!(available&&Number.isSafeInteger(counts.closed));if(row.hidden){motion.cancelNumber(value);continue;}}
       motion.cancelNumber(value);if(available)motion.number(value,counts[field]);else value.textContent='—';
       motion.fill(fill,available?counts[field]/counts.total*100:0);
       if(available){track.setAttribute('aria-valuenow',counts[field]/counts.total*100);track.setAttribute('aria-valuetext',`${counts[field].toLocaleString()} of ${counts.total.toLocaleString()}`);}

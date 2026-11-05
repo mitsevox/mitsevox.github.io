@@ -371,7 +371,8 @@ def check_counts(c, label):
     for key in ('exact', 'named'):
         require(c.get(key) is None or (isinstance(c[key], int) and 0 <= c[key] <= c['total']), label + ': invalid ' + key)
     if 'closed' in c:
-        require(label == 'files' and isinstance(c['closed'], int) and isinstance(c.get('exact'), int)
+        require(label == 'files' and isinstance(c['closed'], int) and not isinstance(c['closed'], bool)
+                and isinstance(c.get('exact'), int)
                 and 0 <= c['closed'] <= c['exact'], label + ': invalid closed')
 
 
