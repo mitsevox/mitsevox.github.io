@@ -23,7 +23,7 @@ An `inferred` name or edge is accepted when:
 1. Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling corroborates (cited in its own `related` row).
 2. Nothing in the target contradicts it: no load, store, caller, data item or string that the claim cannot explain.
 
-Type and field rows are not eased: they still cite the loads and stores that show each offset, and unknown offsets stay unknown ([Bounded tasks](#bounded-tasks)). To reject an inferred name or edge, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.
+Accepting an inferred edge does not decide its value: whether it is `exact` or `provisional` still follows the edge definitions in the kit's `config/README.md`. Type and field rows are not eased: they still cite the loads and stores that show each offset, and unknown offsets stay unknown ([Bounded tasks](#bounded-tasks)). To reject an inferred name or edge, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.
 
 In tier A, the accuracy pass still interprets the scoped functions with the proposed names and comments withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.
 

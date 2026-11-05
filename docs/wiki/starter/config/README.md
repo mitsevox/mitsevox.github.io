@@ -6,8 +6,9 @@ Each target's build inputs live in `config/<target id>/`: for a decomp-toolkit p
 `config.yml`, `splits.txt`, `symbols.txt` and `build.sha1`. Symbol and split files are toolkit inputs, not
 recovered names or source boundaries; claims about either belong in `evidence.tsv`. Each target's `README.md`
 declares its evidence regime (A own debug data, B sibling debug data, C the binary only) with the inventory
-that justifies it; reviewers hold `inferred` rows to that regime: reasoned in the evidence column and
-uncontradicted by the target.
+that justifies it; reviewers hold `inferred` names and edges to that regime: reasoned in the evidence
+column and uncontradicted by the target. Type and field rows still cite the loads and stores that show
+each offset.
 
 ## Evidence records
 
