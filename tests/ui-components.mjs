@@ -105,6 +105,15 @@ test('segmented selection is synchronized without invoking view callbacks on pro
   control.node.children[0].emit('click');assert.deepEqual(calls,['code']);assert.equal(control.node.dataset.selected,'code');f.scope.destroy();control.node.children[1].emit('click');assert.deepEqual(calls,['code']);
 });
 
+test('the file inventory shows Closed only when the report carries the opt-in count',()=>{
+  const f=fixture(),counts=createCountSummary({kind:'file',scope:f.scope}),closed=counts.node.children.find(row=>row.dataset?.file==='closed');
+  assert.ok(closed);assert.equal(closed.hidden,true);
+  counts.update({total:10,exact:2,named:3});assert.equal(closed.hidden,true);
+  counts.update({total:10,exact:2,named:3,closed:1});assert.equal(closed.hidden,false);assert.equal(closed.querySelector('strong').textContent,'1');
+  counts.update(null);assert.equal(closed.hidden,true);
+  const functions=createCountSummary({kind:'function',scope:f.scope});assert.equal(functions.node.children.some(row=>row.dataset?.function==='closed'),false);f.scope.destroy();
+});
+
 test('count inventories expose unavailable instead of a misleading zero and cancel on cleanup',()=>{
   const f=fixture(),counts=createCountSummary({kind:'file',scope:f.scope});counts.update({total:10,exact:2,named:3});
   assert.equal(counts.node.querySelector('strong').textContent,'2');assert.equal(counts.node.querySelector('.function-track').getAttribute('aria-valuetext'),'2 of 10');
