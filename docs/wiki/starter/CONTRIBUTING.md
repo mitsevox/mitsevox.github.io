@@ -64,9 +64,9 @@ Review all submitted reconstructed functions, including partial ones:
 | Compiler settings | Compiler and flags have evidence at the appropriate scope. Inspect per-function overrides and verify evidence and owner approval for any exception. |
 | Types and layouts | Declarations reflect available evidence, including sizes, offsets, signatures and shared ownership. Unknowns are explicit; no fabricated layouts or match-only substitutes. |
 | Provenance and licence | Imported code names its source repository, pinned commit and licence in `CREDITS.md` ("no licence" is stated, not omitted); a licence that requires its text has it under `licenses/`; copyright and licence notices in imported files are intact. Check the source repository itself, not only the PR's claim. |
-| Names | Provenance supports original-name claims. Inferred names describe what the code establishes without presenting guesses as recovered facts. |
+| Names | Provenance supports original-name claims. Inferred names are reasoned in their evidence rows and uncontradicted by the target, to the project's declared evidence regime; a rejection names the contradicting observation. |
 | Comments | Comments clarify meaning and readability without obvious narration, speculation, compiler explanations or process notes. Absence of an unnecessary comment is not a failure. |
-| Unit boundaries | Splits and code/data ownership have evidence. Provisional boundaries are identified; no artificial fragmentation or grouping to inflate progress. |
+| Unit boundaries | Splits and code/data ownership are supported to the project's declared evidence regime. Provisional boundaries are identified; no artificial fragmentation or grouping to inflate progress; a rejection names the contradicting observation or the better-supported edge. |
 | Comparison integrity | No patched output, excluded comparisons, altered symbol ranges or misleading categories conceal mismatches. Partial and linked results remain distinct. |
 | Validation | Required checks cover the reviewed revision, complete target output, unit code/data and regressions against the base revision. No substituted scores or unverified success claims. |
 
@@ -79,6 +79,8 @@ After fixes, apply the delta recheck rules above. In the final record, cite the 
 ## Review records
 
 Post each pass as a separate PR comment. The first line is `Revision: FULL_COMMIT_SHA`, the second `Targets: <ids checked>`, the third the verdict: `Accuracy: PASS` or `Accuracy: N/A - <reason>` for the accuracy pass, `Hostile: SHIP`, `Hostile: FIX`, `Hostile: REDO` or `Hostile: BLOCKED` for the hostile pass. Each header occurs once, outside quotes and code fences. Then the reviewer's identity and prior involvement, the scope, the evidence used, the findings and their resolution. A record covering one target never reads as covering another. Do not write a successful record before the review happens.
+
+'Not enough evidence' alone is not a finding. A rejection of an inferred name or edge names a contradicting observation, an alternative the target supports better, or a row that gives no reason; a reviewer who prefers another name or edge without one records a note, not a `FIX`.
 
 **Rechecks.** After fixes, the reviewer checks each prior finding, the correction and its affected behavior, declarations, callers, boundaries and evidence, and carries unchanged coverage forward by linking the earlier record and its revision. A replacement reviewer may continue from that record. A full restart needs a concrete reason that invalidates coverage across the PR; a localized defect is not one.
 

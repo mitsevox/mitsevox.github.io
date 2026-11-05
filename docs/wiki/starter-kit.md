@@ -41,6 +41,7 @@ Every project-specific value, and where it goes:
 | Project checks | optional step and its command | `validate.yml.template` |
 | Credential names | `DATA_APP_CLIENT_ID` (repository variable), `DATA_APP_PRIVATE_KEY` (secret of the `publish` environment) | `validate.yml.template` PARAMETER 4 |
 | Reported and verified tool versions | `TAGS` (the `configure.py` lines) or `PINS` (JSON pin files), and `VERIFY` (the command that prints each image-installed tool's version) | `tools/measuring_tools.py` |
+| Evidence regime | A, B or C, with the inventory that justifies it ([Evidence](/wiki/evidence/#what-counts-as-evidence)) | `config/<id>/README.md` (the line `tools/new_target.py` writes) |
 | Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
 

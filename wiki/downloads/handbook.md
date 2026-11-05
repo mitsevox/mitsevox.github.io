@@ -544,6 +544,37 @@ Recover what the target supports, record it, and never manufacture a match.
 
 A byte match proves that the compiler produced the same code from the submitted source; it proves nothing about names, types, intent or where the original source file boundaries were. The project's value is the evidence behind those claims, so the evidence is recorded in the repository next to the configuration it supports and is reviewed with it.
 
+## What counts as evidence
+
+What a claim needs depends on what the project has. Each project declares its evidence regime once, in `config/<target id>/README.md`, and reviewers hold claims to that regime, not to a stricter one.
+
+| Regime | The project has | What `target` means | What `related` means | What `inferred` means | The review bar |
+| --- | --- | --- | --- | --- | --- |
+| A: own debug data | Symbols, DWARF or a linker map for this build, or for another revision of this game | A name, boundary or type read from that data | A sibling build's data | Rare: a claim the debug data does not cover | The claim matches the debug data. A name or edge that disagrees with it is wrong. |
+| B: sibling debug data | Debug data for related games on the same engine or from the same studio, builds of this game on other platforms, strings in this build | Strings, symbols or bytes present in this build | A name, size sequence, string copy or file order read from an identified sibling build | The normal case: a name, type, field or edge read from what the code does | Reasoned and uncontradicted (below). Related rows corroborate; they are never required and never proof. |
+| C: the binary only | Nothing beyond this build | As in B | None | The normal case | Reasoned and uncontradicted. |
+
+In every regime, `target` stays strict: only strings, symbols or bytes in this build earn it. A matching body from another build, however close, is `related`.
+
+### Reasoned and uncontradicted
+
+An `inferred` row is accepted when:
+
+1. Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling suggests.
+2. Nothing in the target contradicts it: no load, store, caller, data item or string that the claim cannot explain.
+
+To reject an inferred claim, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.
+
+The accuracy pass still interprets each function with the proposed names withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.
+
+### Why the bar differs
+
+Decompilation without debug data is not deterministic. The bytes are; the structure around them is an inference, and a project that demands proof for every edge and name stops at address labels. The regime makes the inference explicit and reviewable instead of pretending it is not there. A project in regime B or C can still raise a claim to `target` later, when the evidence appears, and the row's origin records that change.
+
+### Declaring the regime
+
+`config/<target id>/README.md` states the regime in one line, with the inventory that justifies it: which debug data exists, for which builds, and where it is under `references/`. The hostile checklist's Names and Unit boundaries rows read "supported to the project's declared regime". The regime changes what a claim needs, never what a match needs: the [matching integrity](#matching-integrity) rules hold in every regime.
+
 ## Inventory before interpretation
 
 Inventory what the target and its references actually contain: the parsed filesystem, executables, symbols, debug information, linker maps, diagnostic strings, SDK references and related builds. Record hashes or revisions and which files were parsed. A claim that an artifact does not exist must say how thoroughly it was searched; a file-name search or a few strings is not enough.
@@ -592,7 +623,7 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 | `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data`, `unit`, `assembly` and `linker` rows |
 | `evidence` | A reproducible locator and what it establishes and leaves unknown |
 
-Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
+In every regime, `target` is strict: strings, symbols or bytes in this build; a matching body from another build is `related` ([What counts as evidence](#what-counts-as-evidence)). Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
 
 ## What earns a row
 
@@ -934,6 +965,8 @@ Checklist: PASS / FAIL / BLOCKED / justified N/A per category
 Findings: location, evidence and required correction
 Coverage: earlier records carried forward and delta checked
 ```
+
+'Not enough evidence' alone is not a finding. A rejection of an inferred name or edge names a contradicting observation, an alternative the target supports better, or a row that gives no reason; a reviewer who prefers another name or edge without one records a note, not a `FIX`. The bar is the project's declared evidence regime ([Evidence](/wiki/evidence/#what-counts-as-evidence)).
 
 Accepted values: `Accuracy: PASS` or `Accuracy: N/A - <reason>` (the reason is required), and `Hostile: SHIP`, `FIX`, `REDO` or `BLOCKED`. Nothing parses these comments; they are for the owner and the next reviewer to read, and the format exists so that they can be read at a glance.
 
@@ -1624,6 +1657,7 @@ Every project-specific value, and where it goes:
 | Project checks | optional step and its command | `validate.yml.template` |
 | Credential names | `DATA_APP_CLIENT_ID` (repository variable), `DATA_APP_PRIVATE_KEY` (secret of the `publish` environment) | `validate.yml.template` PARAMETER 4 |
 | Reported and verified tool versions | `TAGS` (the `configure.py` lines) or `PINS` (JSON pin files), and `VERIFY` (the command that prints each image-installed tool's version) | `tools/measuring_tools.py` |
+| Evidence regime | A, B or C, with the inventory that justifies it ([Evidence](/wiki/evidence/#what-counts-as-evidence)) | `config/<id>/README.md` (the line `tools/new_target.py` writes) |
 | Project agent rules | the `## Project` section | `AGENTS.md` |
 | Toolchain archives, toolkit tag and commit | | `build-image/Dockerfile`, `build-image/.github/workflows/image.yml` |
 
