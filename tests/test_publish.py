@@ -67,6 +67,44 @@ class ConversionTests(unittest.TestCase):
         self.assertEqual(s['functions'], {'total': 3, 'exact': 1, 'named': 2})
         self.assertEqual(s['files'], {'total': 2, 'exact': 0, 'named': 1})
 
+    def test_closed_files_are_opt_in_and_all_or_none(self):
+        # No unit carries the flag: no closed count, the other counts as before.
+        self.assertNotIn('closed', publish.summary(report(), SECTIONS)['files'])
+        r = report()
+        r['units'][0]['measures']['matched_code'] = '32'
+        r['units'][0]['metadata']['closed'] = True
+        r['units'][1]['metadata']['closed'] = False
+        self.assertEqual(publish.summary(r, SECTIONS)['files'], {'total': 2, 'exact': 1, 'named': 1, 'closed': 1})
+        r['units'][0]['metadata']['closed'] = False
+        self.assertEqual(publish.summary(r, SECTIONS)['files']['closed'], 0)
+        # Some units only, a closed unit that is not fully matched, a closed tool-generated unit.
+        for change in (lambda r: r['units'][1]['metadata'].pop('closed'),
+                       lambda r: r['units'][0]['measures'].update(matched_code='16'),
+                       lambda r: r['units'][1]['metadata'].update(closed=True),
+                       lambda r: r['units'][0]['metadata'].update(closed='yes')):
+            bad = report()
+            bad['units'][0]['measures']['matched_code'] = '32'
+            bad['units'][0]['metadata']['closed'] = True
+            bad['units'][1]['metadata']['closed'] = False
+            change(bad)
+            with self.assertRaises(publish.ContractError):
+                publish.summary(bad, SECTIONS)
+
+    def test_closed_count_is_checked_in_the_tree(self):
+        s = publish.summary(report(), SECTIONS)
+        s['files']['closed'] = 1
+        with self.assertRaises(publish.ContractError):
+            publish.check_summary(s)
+        s['files']['closed'] = 0
+        publish.check_summary(s)
+        s['functions']['closed'] = 0
+        with self.assertRaises(publish.ContractError):
+            publish.check_summary(s)
+        del s['functions']['closed']
+        s['files']['closed'] = True
+        with self.assertRaises(publish.ContractError):
+            publish.check_summary(s)
+
     def test_summary_rejects_inconsistent_report(self):
         r = report()
         r['measures']['matched_functions'] = 2

@@ -186,6 +186,15 @@ def summary(report, code_sections, unnamed=UNNAMED, map_doc=None):
     def complete(u):
         um = u.get('measures', {})
         return all(num(um.get('matched_' + k)) == num(um.get('total_' + k)) for k in ('code', 'data'))
+    # A producer may opt in to a done rule of its own by setting metadata.closed on every unit:
+    # all or none, and a closed unit is also named and fully matched.
+    flagged = [u for u in units if 'closed' in u.get('metadata', {})]
+    require(not flagged or len(flagged) == len(units),
+            'metadata.closed is set on %d of %d units; set it on all or none' % (len(flagged), len(units)))
+    for u in flagged:
+        require(isinstance(u['metadata']['closed'], bool), 'Unit %s: metadata.closed must be true or false' % u.get('name'))
+        require(not u['metadata']['closed'] or (complete(u) and not auto(u)),
+                'Unit %s is closed but not named and fully matched' % u.get('name'))
     result = {
         'code': {'total': total_code, 'linked': num(m.get('complete_code')),
                  'matched': num(m.get('matched_code')), 'fuzzy': fuzzy},
@@ -196,6 +205,8 @@ def summary(report, code_sections, unnamed=UNNAMED, map_doc=None):
         'files': {'total': len(units), 'exact': sum(1 for u in units if complete(u) and not auto(u)),
                   'named': sum(1 for u in units if not auto(u))},
     }
+    if flagged:
+        result['files']['closed'] = sum(1 for u in units if u['metadata']['closed'])
     check_summary(result)
     return result
 
@@ -359,6 +370,10 @@ def check_counts(c, label):
     require(isinstance(c.get('total'), int) and c['total'] >= 0, label + ': invalid total')
     for key in ('exact', 'named'):
         require(c.get(key) is None or (isinstance(c[key], int) and 0 <= c[key] <= c['total']), label + ': invalid ' + key)
+    if 'closed' in c:
+        require(label == 'files' and isinstance(c['closed'], int) and not isinstance(c['closed'], bool)
+                and isinstance(c.get('exact'), int)
+                and 0 <= c['closed'] <= c['exact'], label + ': invalid closed')
 
 
 def check_summary(s):

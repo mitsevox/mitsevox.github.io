@@ -50,7 +50,7 @@ A `(game, target)` pair is the unit of everything; a game with one target has on
 | `tools` | The `tools` input, one object per line |
 | `summary.code`, `summary.data` | Bytes of the original: `total`, `linked` (units that link into the byte-identical executable), `matched` (bytes matching exactly, linked or not), `fuzzy` (size-weighted similarity; may be `null`) |
 | `summary.functions` | `total`, `exact` (100% match) and `named` (symbol is not `fn_<hex>` or `func_<hex>`); may be `null` |
-| `summary.files` | Units: `total`, `named` (not tool-generated) and `exact` (named and fully matched); may be `null` |
+| `summary.files` | Units: `total`, `named` (not tool-generated) and `exact` (named and fully matched); may be `null`. `closed` is present only when the report sets `metadata.closed` on every unit: the units closed by the producer's own done rule, never more than `exact`. A report that sets it on some units only, or closes a unit that is not named and fully matched, is refused |
 | `modules` | `map` names the map file; `contributors` names the optional contributors file or is `null` |
 
 `linked`, `matched` and `fuzzy` overlap and are never added together. `matched <= fuzzy <= total`, exactly: there is no tolerance, in the checker or on the page, so a fuzzy value a rounding step below `matched` is refused, which is why the action holds a data section's fuzzy within those bounds when it converts a percentage back into bytes.

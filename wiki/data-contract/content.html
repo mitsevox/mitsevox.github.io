@@ -70,7 +70,7 @@ data/game/GAME01-rev0/contributors.json   optional
 </tr>
 <tr>
 <td><code>summary.files</code></td>
-<td>Units: <code>total</code>, <code>named</code> (not tool-generated) and <code>exact</code> (named and fully matched); may be <code>null</code></td>
+<td>Units: <code>total</code>, <code>named</code> (not tool-generated) and <code>exact</code> (named and fully matched); may be <code>null</code>. <code>closed</code> is present only when the report sets <code>metadata.closed</code> on every unit: the units closed by the producer's own done rule, never more than <code>exact</code>. A report that sets it on some units only, or closes a unit that is not named and fully matched, is refused</td>
 </tr>
 <tr>
 <td><code>modules</code></td>

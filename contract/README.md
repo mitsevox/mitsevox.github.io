@@ -96,6 +96,10 @@ exactly: no tolerance, or the page refuses the measure.
 `functions` and `files` may be `null` when a producer cannot count them. A function is `named` when
 its symbol is not a tool-generated address label (`fn_<hex>`, `func_<hex>`); a file is a source unit,
 `named` when it is not a tool-generated address range, `exact` when it is named and fully matched.
+`files.closed` is optional: present only when the producer sets `metadata.closed` on every unit of
+its report, it counts the units closed by the producer's own done rule, and `closed <= exact`. A
+report that sets the flag on some units only, or closes a unit that is not named and fully matched,
+is refused.
 
 `source.runUrl` is the provenance: the CI run that measured these numbers.
 
