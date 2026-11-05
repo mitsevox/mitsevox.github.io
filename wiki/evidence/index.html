@@ -2,7 +2,7 @@
 <p>Recover what the target supports, record it, and never manufacture a match.</p>
 <p>A byte match proves that the compiler produced the same code from the submitted source; it proves nothing about names, types, intent or where the original source file boundaries were. The project's value is the evidence behind those claims, so the evidence is recorded in the repository next to the configuration it supports and is reviewed with it.</p>
 <h2 id="what-counts-as-evidence">What counts as evidence</h2>
-<p>What a claim needs depends on what the project has. Each project declares its evidence regime once, in <code>config/&lt;target id&gt;/README.md</code>, and reviewers hold claims to that regime, not to a stricter one.</p>
+<p>What a claim needs depends on what the project has for each target. Each target declares its evidence regime in <code>config/&lt;target id&gt;/README.md</code>, and reviewers hold claims to that regime, not to a stricter one.</p>
 <div class="wiki-table"><table>
 <thead>
 <tr>
@@ -18,10 +18,10 @@
 <tr>
 <td>A: own debug data</td>
 <td>Symbols, DWARF or a linker map for this build, or for another revision of this game</td>
-<td>A name, boundary or type read from that data</td>
-<td>A sibling build's data</td>
+<td>A name, boundary or type read from this build's own debug data</td>
+<td>A name, boundary or type read from another revision's or another build's debug data; its edges stay <code>provisional</code> until this build's own evidence confirms them (<a href="/wiki/multi-target/">Multiple targets</a>)</td>
 <td>Rare: a claim the debug data does not cover</td>
-<td>The claim matches the debug data. A name or edge that disagrees with it is wrong.</td>
+<td>A claim matches this build's debug data; one that disagrees with it is wrong. A claim carried from another revision is <code>related</code> and is checked as in Multiple targets.</td>
 </tr>
 <tr>
 <td>B: sibling debug data</td>
@@ -45,11 +45,11 @@
 <h3 id="reasoned-and-uncontradicted">Reasoned and uncontradicted</h3>
 <p>An <code>inferred</code> row is accepted when:</p>
 <ol>
-<li>Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling suggests.</li>
+<li>Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling corroborates (cited in its own <code>related</code> row).</li>
 <li>Nothing in the target contradicts it: no load, store, caller, data item or string that the claim cannot explain.</li>
 </ol>
 <p>To reject an inferred claim, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.</p>
-<p>The accuracy pass still interprets each function with the proposed names withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.</p>
+<p>In tier A, the accuracy pass still interprets the scoped functions with the proposed names and comments withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.</p>
 <h3 id="why-the-bar-differs">Why the bar differs</h3>
 <p>Decompilation without debug data is not deterministic. The bytes are; the structure around them is an inference, and a project that demands proof for every edge and name stops at address labels. The regime makes the inference explicit and reviewable instead of pretending it is not there. A project in regime B or C can still raise a claim to <code>target</code> later, when the evidence appears, and the row's origin records that change.</p>
 <h3 id="declaring-the-regime">Declaring the regime</h3>

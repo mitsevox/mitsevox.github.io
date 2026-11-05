@@ -546,11 +546,11 @@ A byte match proves that the compiler produced the same code from the submitted 
 
 ## What counts as evidence
 
-What a claim needs depends on what the project has. Each project declares its evidence regime once, in `config/<target id>/README.md`, and reviewers hold claims to that regime, not to a stricter one.
+What a claim needs depends on what the project has for each target. Each target declares its evidence regime in `config/<target id>/README.md`, and reviewers hold claims to that regime, not to a stricter one.
 
 | Regime | The project has | What `target` means | What `related` means | What `inferred` means | The review bar |
 | --- | --- | --- | --- | --- | --- |
-| A: own debug data | Symbols, DWARF or a linker map for this build, or for another revision of this game | A name, boundary or type read from that data | A sibling build's data | Rare: a claim the debug data does not cover | The claim matches the debug data. A name or edge that disagrees with it is wrong. |
+| A: own debug data | Symbols, DWARF or a linker map for this build, or for another revision of this game | A name, boundary or type read from this build's own debug data | A name, boundary or type read from another revision's or another build's debug data; its edges stay `provisional` until this build's own evidence confirms them ([Multiple targets](/wiki/multi-target/)) | Rare: a claim the debug data does not cover | A claim matches this build's debug data; one that disagrees with it is wrong. A claim carried from another revision is `related` and is checked as in Multiple targets. |
 | B: sibling debug data | Debug data for related games on the same engine or from the same studio, builds of this game on other platforms, strings in this build | Strings, symbols or bytes present in this build | A name, size sequence, string copy or file order read from an identified sibling build | The normal case: a name, type, field or edge read from what the code does | Reasoned and uncontradicted (below). Related rows corroborate; they are never required and never proof. |
 | C: the binary only | Nothing beyond this build | As in B | None | The normal case | Reasoned and uncontradicted. |
 
@@ -560,12 +560,12 @@ In every regime, `target` stays strict: only strings, symbols or bytes in this b
 
 An `inferred` row is accepted when:
 
-1. Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling suggests.
+1. Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling corroborates (cited in its own `related` row).
 2. Nothing in the target contradicts it: no load, store, caller, data item or string that the claim cannot explain.
 
 To reject an inferred claim, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.
 
-The accuracy pass still interprets each function with the proposed names withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.
+In tier A, the accuracy pass still interprets the scoped functions with the proposed names and comments withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.
 
 ### Why the bar differs
 
@@ -966,7 +966,7 @@ Findings: location, evidence and required correction
 Coverage: earlier records carried forward and delta checked
 ```
 
-'Not enough evidence' alone is not a finding. A rejection of an inferred name or edge names a contradicting observation, an alternative the target supports better, or a row that gives no reason; a reviewer who prefers another name or edge without one records a note, not a `FIX`. The bar is the project's declared evidence regime ([Evidence](/wiki/evidence/#what-counts-as-evidence)).
+For an inferred name or edge, 'not enough evidence' alone is not a finding: a rejection names a contradicting observation, an alternative the target supports better, or a row that gives no reason; a reviewer who prefers another name or edge without one records a note, not a `FIX`. The bar is the project's declared evidence regime ([Evidence](/wiki/evidence/#what-counts-as-evidence)).
 
 Accepted values: `Accuracy: PASS` or `Accuracy: N/A - <reason>` (the reason is required), and `Hostile: SHIP`, `FIX`, `REDO` or `BLOCKED`. Nothing parses these comments; they are for the owner and the next reviewer to read, and the format exists so that they can be read at a glance.
 
