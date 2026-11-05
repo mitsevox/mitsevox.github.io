@@ -4,6 +4,37 @@ Recover what the target supports, record it, and never manufacture a match.
 
 A byte match proves that the compiler produced the same code from the submitted source; it proves nothing about names, types, intent or where the original source file boundaries were. The project's value is the evidence behind those claims, so the evidence is recorded in the repository next to the configuration it supports and is reviewed with it.
 
+## What counts as evidence
+
+What a claim needs depends on what the project has for each target. Each target declares its evidence regime in `config/<target id>/README.md`, and reviewers hold claims to that regime, not to a stricter one.
+
+| Regime | The project has | What `target` means | What `related` means | What `inferred` means | The review bar |
+| --- | --- | --- | --- | --- | --- |
+| A: own debug data | Symbols, DWARF or a linker map for this build | A name, boundary or type read from this build's own debug data | A name, boundary or type read from another revision's or another build's debug data; its edges stay `provisional` until this build's own evidence confirms them ([Multiple targets](/wiki/multi-target/)) | Rare: a claim the debug data does not cover | A claim matches this build's debug data; one that disagrees with it is wrong. A claim carried from another revision is `related` and is checked as in Multiple targets. |
+| B: sibling debug data | Debug data for other revisions of this game, its builds on other platforms, or related games on the same engine or from the same studio; strings in this build | Strings, symbols or bytes present in this build | A name, size sequence, string copy or file order read from an identified sibling build | The normal case: a name, type, field or edge read from what the code does | Reasoned and uncontradicted (below). Related rows corroborate; they are never required and never proof. |
+| C: the binary only | Nothing beyond this build | As in B | None | The normal case | Reasoned and uncontradicted. |
+
+In every regime, `target` stays strict: only strings, symbols, debug information or bytes of this build earn it. A matching body from another build, however close, is `related`.
+
+### Reasoned and uncontradicted
+
+An `inferred` name or edge is accepted when:
+
+1. Its reason is written in the evidence column, in one or two sentences a reviewer can challenge: what the code does, what its callers and data say, what the neighbors are, what a sibling corroborates (cited in its own `related` row).
+2. Nothing in the target contradicts it: no load, store, caller, data item or string that the claim cannot explain.
+
+Accepting an inferred edge does not decide its value: whether it is `exact` or `provisional` still follows the edge definitions in the kit's `config/README.md`. Type and field rows are not eased: they still cite the loads and stores that show each offset, and unknown offsets stay unknown ([Bounded tasks](#bounded-tasks)). To reject an inferred name or edge, the reviewer shows something concrete: the contradicting observation, an alternative the target supports better, or that the row gives no reason at all. A reviewer who prefers another name or edge without such an observation records that as a note, not as a required correction.
+
+In tier A, the accuracy pass still interprets the scoped functions with the proposed names and comments withheld and reconciles; that is where a wrong inferred name is caught, by a reading that disagrees, not by the absence of proof.
+
+### Why the bar differs
+
+Decompilation without debug data is not deterministic. The bytes are; the structure around them is an inference, and a project that demands proof for every edge and name stops at address labels. The regime makes the inference explicit and reviewable instead of pretending it is not there. A target in regime B or C can still raise a claim to `target` later, when the evidence appears, and the row's origin records that change.
+
+### Declaring the regime
+
+`config/<target id>/README.md` states the regime in one line, with the inventory that justifies it: which debug data exists, for which builds, and where it is under `references/`. The hostile checklist's Names and Unit boundaries rows read "to the target's declared evidence regime". The regime changes what a claim needs, never what a match needs: the [matching integrity](#matching-integrity) rules hold in every regime.
+
 ## Inventory before interpretation
 
 Inventory what the target and its references actually contain: the parsed filesystem, executables, symbols, debug information, linker maps, diagnostic strings, SDK references and related builds. Record hashes or revisions and which files were parsed. A claim that an artifact does not exist must say how thoroughly it was searched; a file-name search or a few strings is not enough.
@@ -52,7 +83,7 @@ kind  start  end  subject  origin  start_boundary  end_boundary  evidence
 | `start_boundary`, `end_boundary` | `exact`, `provisional`, `open` or `-`, claimed independently of each other; anything but `-` only on `function`, `data`, `unit`, `assembly` and `linker` rows |
 | `evidence` | A reproducible locator and what it establishes and leaves unknown |
 
-Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
+In every regime, `target` is strict: strings, symbols, debug information or bytes of this build; a matching body from another build is `related` ([What counts as evidence](#what-counts-as-evidence)). Use separate rows for a name, a function extent, a field layout and a source-unit boundary: one claim never silently proves another. A `name` row with origin `target` needs explicit name evidence in the target; a name supported only by behavior is `inferred`. Compiler profiles are `compiler` rows at the unit or library level. The starter `config/README.md` is the full definition and goes into the repository as is.
 
 ## What earns a row
 

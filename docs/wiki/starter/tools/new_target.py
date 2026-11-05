@@ -41,7 +41,10 @@ def files(target,original):
     readme=('# %s\n\n%s, region %s, disc revision %s. Original SHA-1 `%s` (config/targets.json).\n\n'
             'Status: %s. This directory holds the target\'s own inputs: the toolkit configuration, the '
             'expected hash of the relinked executable and the evidence records. Shared source stays in '
-            '`src/` and `include/`.\n'%(tid,target['label'],target['region'],target['revision'],target['sha1'],target['status']))
+            '`src/` and `include/`.\n\n'
+            'Evidence regime: PARAMETER (A own debug data, B sibling debug data, or C the binary only), '
+            'with the inventory that justifies it: which debug data exists, for which builds, and where it '
+            'is under `references/` (wiki: Evidence, What counts as evidence).\n'%(tid,target['label'],target['region'],target['revision'],target['sha1'],target['status']))
     return {'config/%s/config.yml'%tid:config,'config/%s/evidence.tsv'%tid:HEADER,
             'config/%s/README.md'%tid:readme,'orig/%s/.gitkeep'%tid:''}
 
