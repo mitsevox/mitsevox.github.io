@@ -88,11 +88,13 @@ Measures, all in bytes of the original binary:
 | --- | --- |
 | `total` | bytes of that kind (code or data) in the original |
 | `linked` | bytes in units that link from source into a byte-identical executable |
-| `matched` | bytes that match exactly, linked or not |
+| `matched` | bytes that match exactly, linked or not; a linked unit's data counts whole |
 | `fuzzy` | size-weighted similarity: each function or data section counts `size × match%`; may be `null` |
 
 `linked`, `matched` and `fuzzy` overlap; they are never added together. `matched ≤ fuzzy ≤ total`,
 exactly: no tolerance, or the page refuses the measure.
+The publish action also holds data `linked ≤ matched` on what it writes; history rows published
+before that rule (2026-11-08) may break it.
 `functions` and `files` may be `null` when a producer cannot count them. A function is `named` when
 its symbol is not a tool-generated address label (`fn_<hex>`, `func_<hex>`); a file is a source unit,
 `named` when it is not a tool-generated address range, `exact` when it is named and fully matched.
