@@ -166,9 +166,11 @@ class ConversionTests(unittest.TestCase):
     def rounding_report(self):
         # nflstreet2's dvd.c: 408 of 632 data bytes exact, sent as one percent on each of its six
         # data extents. Back in bytes they sum to 407.99999999999994, a rounding step below
-        # matched_data.
+        # matched_data. The unit is not linked here: a linked unit's data counts as exact whole.
         r = report()
         unit = r['units'][0]
+        unit['metadata']['complete'] = False
+        r['measures'].update(complete_code='0')
         address = 2147500000
         unit['sections'][1:] = []
         for size in (384, 152, 24, 60, 8, 4):
@@ -176,8 +178,32 @@ class ConversionTests(unittest.TestCase):
                                      'metadata': {'virtual_address': str(address)}})
             address += size
         unit['measures'].update(total_data='632', matched_data='408')
-        r['measures'].update(total_data='632', matched_data='408', complete_data='632')
+        r['measures'].update(total_data='632', matched_data='408', complete_data='0')
         return r
+
+    def linked_short_data_report(self):
+        # n100f's zEntVillain: a linked unit, byte-identical in the executable, whose data objdiff
+        # scores below 100% and leaves out of matched_data.
+        r = self.rounding_report()
+        r['units'][0]['metadata']['complete'] = True
+        r['measures'].update(complete_code='32', complete_data='632')
+        return r
+
+    def test_linked_data_counts_as_matched(self):
+        r = self.linked_short_data_report()
+        s = publish.summary(r, SECTIONS)
+        m = publish.map_document(r, SECTIONS)
+        publish.check_map(m, s)
+        tile = next(f for f in m['files'] if f['kind'] == 'data')
+        self.assertEqual((tile['linked'], tile['matched'], tile['fuzzy']), (632, 632, 632))
+        self.assertEqual((s['data']['linked'], s['data']['matched'], s['data']['fuzzy']), (632, 632, 632))
+
+    def test_linked_data_above_matched_is_refused(self):
+        # complete_data that counts a unit the report does not mark complete.
+        r = self.rounding_report()
+        r['measures'].update(complete_data='632')
+        with self.assertRaisesRegex(publish.ContractError, 'linked 632 exceeds matched 408'):
+            publish.summary(r, SECTIONS)
 
     def test_data_fuzzy_stays_within_matched_and_total(self):
         r = self.rounding_report()
@@ -189,7 +215,7 @@ class ConversionTests(unittest.TestCase):
 
     def test_the_page_accepts_the_map(self):
         # The page validates every map again before drawing it; run its own check on ours.
-        for r in (report(), self.rounding_report()):
+        for r in (report(), self.rounding_report(), self.linked_short_data_report()):
             s = publish.summary(r, SECTIONS)
             measures = {kind: {k: s[kind][k] for k in ('total', 'linked', 'matched', 'fuzzy')}
                         for kind in ('code', 'data')}

@@ -108,14 +108,25 @@ def fuzzy_bytes(function):
     return num(function.get('size')) * min(function.get('fuzzy_match_percent', 0), 100) / 100
 
 
+def matched_data_bytes(unit):
+    """A unit's exact data bytes. A linked unit (metadata.complete) links from source into the
+    byte-identical executable, so all of its data is exact, even where objdiff's section diff
+    scores it below 100% (relocations it cannot pair, for example) and leaves it out of
+    matched_data. Without this, linked data can exceed matched data, which the contract defines
+    as a superset of it."""
+    m = unit.get('measures', {})
+    if unit.get('metadata', {}).get('complete'):
+        return num(m.get('total_data'))
+    return num(m.get('matched_data'))
+
+
 def data_fuzzy_bytes(unit, code_sections):
     # objdiff reports a match percent per data section and rolls only 100% sections up into
     # matched_data; size-weighted, as for functions. A percent turned back into bytes can land a
-    # rounding step outside [matched_data, total_data], which the page rejects, so it is held there.
-    m = unit.get('measures', {})
+    # rounding step outside [matched, total_data], which the page rejects, so it is held there.
     fuzzy = math.fsum(num(s.get('size')) * min(s.get('fuzzy_match_percent', 0), 100) / 100
                       for s in unit.get('sections', []) if s['name'] not in code_sections)
-    return min(max(fuzzy, num(m.get('matched_data'))), num(m.get('total_data')))
+    return min(max(fuzzy, matched_data_bytes(unit)), num(unit.get('measures', {}).get('total_data')))
 
 
 def other_code(unit, code_sections):
@@ -185,7 +196,8 @@ def summary(report, code_sections, unnamed=UNNAMED, map_doc=None):
 
     def complete(u):
         um = u.get('measures', {})
-        return all(num(um.get('matched_' + k)) == num(um.get('total_' + k)) for k in ('code', 'data'))
+        return (num(um.get('matched_code')) == num(um.get('total_code'))
+                and matched_data_bytes(u) == num(um.get('total_data')))
     # A producer may opt in to a done rule of its own by setting metadata.closed on every unit:
     # all or none, and a closed unit is also named and fully matched.
     flagged = [u for u in units if 'closed' in u.get('metadata', {})]
@@ -199,7 +211,7 @@ def summary(report, code_sections, unnamed=UNNAMED, map_doc=None):
         'code': {'total': total_code, 'linked': num(m.get('complete_code')),
                  'matched': num(m.get('matched_code')), 'fuzzy': fuzzy},
         'data': {'total': total_data, 'linked': num(m.get('complete_data')),
-                 'matched': num(m.get('matched_data')), 'fuzzy': data_fuzzy},
+                 'matched': sum(matched_data_bytes(u) for u in units), 'fuzzy': data_fuzzy},
         'functions': {'total': len(functions), 'exact': exact, 'named': named},
         # A unit is a file; named = not a tool-generated address range, exact = named and fully matched.
         'files': {'total': len(units), 'exact': sum(1 for u in units if complete(u) and not auto(u)),
@@ -207,6 +219,12 @@ def summary(report, code_sections, unnamed=UNNAMED, map_doc=None):
     }
     if flagged:
         result['files']['closed'] = sum(1 for u in units if u['metadata']['closed'])
+    # Linked data is exact data (matched_data_bytes), so it never exceeds it. The page draws the
+    # linked fill over the matched one and would hide the matched number otherwise. Checked here,
+    # on what is published, and not in check_measure: earlier history rows predate the rule.
+    require(result['data']['linked'] <= result['data']['matched'],
+            'data: linked %d exceeds matched %d (complete_data counts a unit that is not marked complete?)'
+            % (result['data']['linked'], result['data']['matched']))
     check_summary(result)
     return result
 
@@ -285,7 +303,7 @@ def map_document(report, code_sections, unit_prefix='main/'):
         if total_data:
             require(sum(b - a for a, b in data) == total_data, '%s: data sections do not add up to total_data' % name)
             tile = {'name': name, 'kind': 'data', 'size': total_data,
-                    'linked': total_data if complete else 0, 'matched': num(m.get('matched_data')),
+                    'linked': total_data if complete else 0, 'matched': matched_data_bytes(unit),
                     'fuzzy': data_fuzzy_bytes(unit, code_sections),
                     'mapped_extents': extents(data), '_ranges': data}
             files.append(tile)
